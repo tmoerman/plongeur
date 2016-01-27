@@ -6,8 +6,6 @@ import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.stat.Statistics.colStats
 import org.apache.spark.rdd.RDD
 
-import scala.annotation.tailrec
-
 /**
   * @author Thomas Moerman
   */
@@ -21,7 +19,7 @@ object Skeleton extends Serializable {
   }
 
   def coverageFunction(lens: Lens,
-                       rdd: RDD[LabeledPoint]): CoverageFunction = {
+                       rdd: RDD[LabeledPoint]) = {
 
     val result =
       (filterBoundaries(lens.functions, rdd) zip lens.functions)
@@ -58,17 +56,11 @@ object Skeleton extends Serializable {
       .takeWhile(_ < end)
   }
 
-  def combineCoordinates[A](coveringValues: List[List[A]]) = {
-
-    @tailrec
-    def recur(acc: List[Vector[A]],
-              values: List[List[A]]): List[Vector[A]] = values match {
-      case Nil => acc
-      case x :: xs => recur(x.flatMap(v => acc.map(combos => combos :+ v)), xs)
-    }
-
-    recur(List(Vector[A]()), coveringValues)
-  }
+  def combineCoordinates(coveringValues: Seq[Seq[Any]]): Set[Vector[Any]] =
+    coveringValues
+      .foldLeft(Seq(Vector[Any]())) {
+        (acc, intervals) => intervals.flatMap(coordinate => acc.map(combos => combos :+ coordinate)) }
+      .toSet
 
   def filterBoundaries(functions: Array[FilterFunction],
                        rdd: RDD[LabeledPoint]): Array[(Double, Double)] = {
