@@ -32,14 +32,33 @@ object Skeleton extends Serializable {
     (p: LabeledPoint) => ???
   }
 
-  def coordinates(min: BigDecimal,
-                  max: BigDecimal,
-                  pctLength:  BigDecimal,
-                  pctOverlap: BigDecimal)
-                 (x: BigDecimal): Seq[BigDecimal] = {
+  def intersectingIntervals(min: BigDecimal,
+                            max: BigDecimal,
+                            pctLength:  BigDecimal,
+                            pctOverlap: BigDecimal)
+                           (x: BigDecimal): Seq[BigDecimal] = {
 
+    if (x == min) return Seq(min)
 
-    ???
+    val length = (max - min) * pctLength
+
+    val increment = (1 - pctOverlap) * length
+
+    val diff = (x - min) % increment
+    val base = x - diff
+
+    val q = length quot increment
+    val r = length % increment
+
+    val factorL = if (r == 0) q - 1 else q
+
+    val start = base - increment * factorL
+    val end   = base + increment
+
+    Stream
+      .continually(increment)
+      .scanLeft(start)(_ + _)
+      .takeWhile(_ < end)
   }
 
   def combineCoordinates[A](coveringValues: List[List[A]]) = {
