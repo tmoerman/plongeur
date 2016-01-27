@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.spark.Partitioner
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, RowMatrix}
 import org.apache.spark.mllib.regression.LabeledPoint
@@ -12,39 +13,42 @@ import org.apache.spark.rdd.RDD
 object Skeleton extends Serializable {
   import Model._
 
-  def execute {
+  def execute(lens: Lens,
+              distanceFunction: DistanceFunction,
+              rdd: RDD[LabeledPoint]) {
 
+    val covering = coveringFunction(lens, rdd)
 
+    val bla =
+      rdd
+        .flatMap(p => covering(p).map(k => (k, p)))
+        .treeAggregate()
 
   }
 
-  def coverageFunction(lens: Lens,
-                       rdd: RDD[LabeledPoint]) = {
-
-    val result =
-      (filterBoundaries(lens.functions, rdd) zip lens.functions)
-        .map { case ((min, max), f) =>
-          ???
-        }
-
-    (p: LabeledPoint) => ???
-  }
+  def coveringFunction(lens: Lens, rdd: RDD[LabeledPoint]): CoveringFunction = (p: LabeledPoint) =>
+      hyperCubeCoordinates(
+        filterBoundaries(lens.functions, rdd)
+          .zip(lens.filters)
+          .map { case ((min, max), filter) =>
+            intersectingIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) })
 
   def intersectingIntervals(min: BigDecimal,
                             max: BigDecimal,
-                            pctLength:  BigDecimal,
-                            pctOverlap: BigDecimal)
+                            length:  Percentage,
+                            overlap: Percentage)
                            (x: BigDecimal): Seq[BigDecimal] = {
 
-    val length = (max - min) * pctLength
+    val intervalLength = (max - min) * length
 
-    val increment = (1 - pctOverlap) * length
+    val increment = (1 - overlap) * intervalLength
 
     val diff = (x - min) % increment
     val base = x - diff
 
-    val q = length quot increment
-    val r = length % increment
+    val q = intervalLength quot increment
+    val r = intervalLength  %   increment
+
     val factor = if (r == 0) q - 1 else q
 
     val start = base - increment * factor
@@ -56,7 +60,7 @@ object Skeleton extends Serializable {
       .takeWhile(_ < end)
   }
 
-  def combineCoordinates(coveringValues: Seq[Seq[Any]]): Set[Vector[Any]] =
+  def hyperCubeCoordinates(coveringValues: Seq[Seq[Any]]): Set[HyperCubeCoordinates] =
     coveringValues
       .foldLeft(Seq(Vector[Any]())) {
         (acc, intervals) => intervals.flatMap(coordinate => acc.map(combos => combos :+ coordinate)) }

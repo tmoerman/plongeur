@@ -9,9 +9,15 @@ import org.apache.spark.mllib.regression.LabeledPoint
   */
 object Model extends Serializable {
 
-  type A_id = Vector[BigDecimal] // ID for 1 n-dimensional A bin
+  type HyperCubeCoordinates = Vector[Any]
 
-  type CoveringFunction = (LabeledPoint) => Seq[A_id]
+  type CoveringFunction = (LabeledPoint) => Set[HyperCubeCoordinates]
+
+  type DistanceFunction = (LabeledPoint, LabeledPoint) => Double
+
+  val pearsonDistance: DistanceFunction = ???
+
+  val spearmanDistance: DistanceFunction = ???
 
   case class Lens(val filters: Array[Filter]) extends Serializable {
 
@@ -21,16 +27,22 @@ object Model extends Serializable {
 
   type FilterFunction = (LabeledPoint) => Double
 
-  type Percentage = Double
+  type Percentage = BigDecimal
 
   case class Filter(val function: FilterFunction,
                     val length:   Percentage,
                     val overlap:  Percentage) extends Serializable {
 
-    require(length >= 0.0 && length <= 1.0, "length must be a percentage.")
+    require(length >= 0 && length <= 1, "length must be a percentage.")
 
-    require(overlap >= 0.0,   "overlap cannot be negative")
-    require(overlap <= 0.666, "overlap > 2/3 is discouraged")
+    require(overlap >= 0,   "overlap cannot be negative")
+    require(overlap <= 2/3, "overlap > 2/3 is discouraged")
   }
+
+  /*
+
+
+
+   */
 
 }
