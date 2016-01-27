@@ -6,7 +6,7 @@ import org.tmoerman.plongeur.tda.Skeleton.intersectingIntervals
 /**
   * @author Thomas Moerman
   */
-class AlgoTest extends FlatSpec with Matchers {
+class IntersectingIntervalsTest extends FlatSpec with Matchers {
 
   def bdSeq(d: Double *) = d.map(BigDecimal(_))
 
@@ -54,7 +54,7 @@ class AlgoTest extends FlatSpec with Matchers {
   "calculating intersecting intervals" should "yield correct results with 50% overlap" in {
     val f = intersectingIntervals(12, 22, .2, 0.5) _
 
-    f(12) shouldBe bdSeq(12)
+    f(12) shouldBe bdSeq(11, 12)
 
     f(13) shouldBe bdSeq(12, 13)
 
@@ -68,7 +68,7 @@ class AlgoTest extends FlatSpec with Matchers {
   "calculating intersecting intervals" should "yield correct results with 70% overlap" in {
     val f = intersectingIntervals(12, 22, .2, .7) _
 
-    f(12) shouldBe bdSeq(12.0)
+    f(12) shouldBe bdSeq(10.2, 10.8, 11.4, 12.0)
 
     f(16.9) shouldBe bdSeq(15.0, 15.6, 16.2, 16.8)
 

@@ -38,8 +38,6 @@ object Skeleton extends Serializable {
                             pctOverlap: BigDecimal)
                            (x: BigDecimal): Seq[BigDecimal] = {
 
-    if (x == min) return Seq(min)
-
     val length = (max - min) * pctLength
 
     val increment = (1 - pctOverlap) * length
@@ -49,10 +47,9 @@ object Skeleton extends Serializable {
 
     val q = length quot increment
     val r = length % increment
+    val factor = if (r == 0) q - 1 else q
 
-    val factorL = if (r == 0) q - 1 else q
-
-    val start = base - increment * factorL
+    val start = base - increment * factor
     val end   = base + increment
 
     Stream
