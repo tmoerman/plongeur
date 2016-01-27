@@ -11,7 +11,7 @@ object Model extends Serializable {
 
   type A_id = Vector[BigDecimal] // ID for 1 n-dimensional A bin
 
-  type CoverageFunction = (LabeledPoint) => Seq[A_id]
+  type CoveringFunction = (LabeledPoint) => Seq[A_id]
 
   case class Lens(val filters: Array[Filter]) extends Serializable {
 
@@ -23,7 +23,7 @@ object Model extends Serializable {
 
   type Percentage = Double
 
-  case class Filter(val function:    FilterFunction,
+  case class Filter(val function: FilterFunction,
                     val length:   Percentage,
                     val overlap:  Percentage) extends Serializable {
 

@@ -37,7 +37,9 @@ class IntersectingIntervalsTest extends FlatSpec with Matchers {
 
   */
 
-  "calculating intersecting intervals" should "yield correct results with 0% overlap" in {
+  behavior of "calculating intersecting intervals"
+
+  it should "be correct with 0% overlap" in {
     val f = intersectingIntervals(12, 22, .2, 0) _
 
     f(12) shouldBe bdSeq(12)
@@ -51,7 +53,7 @@ class IntersectingIntervalsTest extends FlatSpec with Matchers {
     f(22) shouldBe bdSeq(22)
   }
 
-  "calculating intersecting intervals" should "yield correct results with 50% overlap" in {
+  it should "be correct with 50% overlap" in {
     val f = intersectingIntervals(12, 22, .2, 0.5) _
 
     f(12) shouldBe bdSeq(11, 12)
@@ -65,7 +67,7 @@ class IntersectingIntervalsTest extends FlatSpec with Matchers {
     f(22) shouldBe bdSeq(21, 22)
   }
 
-  "calculating intersecting intervals" should "yield correct results with 70% overlap" in {
+  it should "be correct with 70% overlap" in {
     val f = intersectingIntervals(12, 22, .2, .7) _
 
     f(12) shouldBe bdSeq(10.2, 10.8, 11.4, 12.0)
