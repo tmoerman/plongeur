@@ -1,7 +1,7 @@
 package org.tmoerman.plongeur.util
 
 /**
-  * Created by tmo on 09/02/16.
+  * @author Thomas Moerman
   */
 object VectorFunctions {
 
