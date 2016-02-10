@@ -13,6 +13,8 @@ import org.apache.spark.rdd.RDD
 object Skeleton extends Serializable {
   import Model._
 
+  implicit def myOrdering[T <: Ordering[T]]: Ordering[Vector[Any]] = ??? // TODO fix
+
   def execute(lens: Lens,
               distanceFunction: DistanceFunction,
               rdd: RDD[LabeledPoint]) {
@@ -21,14 +23,15 @@ object Skeleton extends Serializable {
 
     val bla =
       rdd
-        .flatMap(p => covering(p).map(k => (k, p)))
-        .treeAggregate()
+        .flatMap(p => covering(p).map(k => (k, p))) // RDD[(HypercubeCoordinateVector, LabeledPoint)]
+
+        //.repartitionAndSortWithinPartitions(rdd.partitioner.get) // TODO which partitioner?
 
   }
 
   def coveringFunction(lens: Lens, rdd: RDD[LabeledPoint]): CoveringFunction = (p: LabeledPoint) =>
-      hyperCubeCoordinates(
-        filterBoundaries(lens.functions, rdd)
+      hyperCubeCoordinateVectors(
+        boundaries(lens.functions, rdd)
           .zip(lens.filters)
           .map { case ((min, max), filter) =>
             intersectingIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) })
@@ -60,14 +63,14 @@ object Skeleton extends Serializable {
       .takeWhile(_ < end)
   }
 
-  def hyperCubeCoordinates(coveringValues: Seq[Seq[Any]]): Set[HyperCubeCoordinates] =
+  def hyperCubeCoordinateVectors(coveringValues: Seq[Seq[Any]]): Set[HyperCubeCoordinateVector] =
     coveringValues
       .foldLeft(Seq(Vector[Any]())) {
         (acc, intervals) => intervals.flatMap(coordinate => acc.map(combos => combos :+ coordinate)) }
       .toSet
 
-  def filterBoundaries(functions: Array[FilterFunction],
-                       rdd: RDD[LabeledPoint]): Array[(Double, Double)] = {
+  def boundaries(functions: Array[FilterFunction],
+                 rdd: RDD[LabeledPoint]): Array[(Double, Double)] = {
 
     val filterValues = rdd.map(p => dense(functions.map(f => f(p))))
 

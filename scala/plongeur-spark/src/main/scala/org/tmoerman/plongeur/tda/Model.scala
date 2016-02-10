@@ -9,9 +9,9 @@ import org.apache.spark.mllib.regression.LabeledPoint
   */
 object Model extends Serializable {
 
-  type HyperCubeCoordinates = Vector[Any]
+  type HyperCubeCoordinateVector = Vector[Any]
 
-  type CoveringFunction = (LabeledPoint) => Set[HyperCubeCoordinates]
+  type CoveringFunction = (LabeledPoint) => Set[HyperCubeCoordinateVector]
 
   type DistanceFunction = (LabeledPoint, LabeledPoint) => Double
 
@@ -38,11 +38,5 @@ object Model extends Serializable {
     require(overlap >= 0,   "overlap cannot be negative")
     require(overlap <= 2/3, "overlap > 2/3 is discouraged")
   }
-
-  /*
-
-
-
-   */
 
 }

@@ -1,7 +1,7 @@
 package org.tmoerman.plongeur.tda
 
 import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.tda.Skeleton.hyperCubeCoordinates
+import org.tmoerman.plongeur.tda.Skeleton.hyperCubeCoordinateVectors
 
 /**
   * @author Thomas Moerman
@@ -11,32 +11,32 @@ class HyperCubeCoordinatesTest extends FlatSpec with Matchers {
   behavior of "combining coordinates"
 
   it should "be correct with 1x1 interval coordinates" in {
-    hyperCubeCoordinates(Seq(Seq(1), Seq("a"))) shouldBe Set(
+    hyperCubeCoordinateVectors(Seq(Seq(1), Seq("a"))) shouldBe Set(
 
       Vector(1, "a"))
   }
 
   it should "be correct with 1x2 interval coordinates" in {
-    hyperCubeCoordinates(Seq(Seq(1), Seq("a", "b"))) shouldBe Set(
+    hyperCubeCoordinateVectors(Seq(Seq(1), Seq("a", "b"))) shouldBe Set(
 
       Vector(1, "a"), Vector(1, "b"))
   }
 
   it should "be correct with 2x1 interval coordinates" in {
-    hyperCubeCoordinates(Seq(Seq(1, 2), Seq("a"))) shouldBe Set(
+    hyperCubeCoordinateVectors(Seq(Seq(1, 2), Seq("a"))) shouldBe Set(
 
       Vector(1, "a"), Vector(2, "a"))
   }
 
   it should "be correct with 2x2 interval coordinates" in {
-    hyperCubeCoordinates(Seq(Seq(1, 2), Seq("a", "b"))) shouldBe Set(
+    hyperCubeCoordinateVectors(Seq(Seq(1, 2), Seq("a", "b"))) shouldBe Set(
 
       Vector(1, "a"), Vector(1, "b"),
       Vector(2, "a"), Vector(2, "b"))
   }
 
   it should "be correct with 3x3 interval coordinates" in {
-    hyperCubeCoordinates(Seq(Seq(1, 2, 3), Seq("a", "b", "c"))) shouldBe Set(
+    hyperCubeCoordinateVectors(Seq(Seq(1, 2, 3), Seq("a", "b", "c"))) shouldBe Set(
 
       Vector(1, "a"), Vector(1, "b"), Vector(1, "c"),
       Vector(2, "a"), Vector(2, "b"), Vector(2, "c"),
@@ -44,7 +44,7 @@ class HyperCubeCoordinatesTest extends FlatSpec with Matchers {
   }
 
   it should "be correct with 2x2x2 interval coordinates" in {
-    hyperCubeCoordinates(Seq(Seq(1, 2), Seq("a", "b"), Seq('X, 'Y))) shouldBe Set(
+    hyperCubeCoordinateVectors(Seq(Seq(1, 2), Seq("a", "b"), Seq('X, 'Y))) shouldBe Set(
 
       Vector(1, "a", 'X), Vector(1, "b", 'X),
       Vector(2, "a", 'X), Vector(2, "b", 'X),
