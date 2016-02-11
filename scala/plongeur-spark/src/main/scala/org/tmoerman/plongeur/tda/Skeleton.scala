@@ -19,23 +19,55 @@ object Skeleton extends Serializable {
               distanceFunction: DistanceFunction,
               rdd: RDD[LabeledPoint]) {
 
-    val covering = coveringFunction(lens, rdd)
+    val boundaries = calculateBoundaries(lens.functions, rdd)
+
+    val covering = coveringFunction(lens, boundaries)
 
     val bla =
       rdd
-        .flatMap(p => covering(p).map(k => (k, p))) // RDD[(HypercubeCoordinateVector, LabeledPoint)]
+        .flatMap(p => covering(p).map(k => (k, p))) // RDD[(HypercubeCoordinate, LabeledPoint)]
 
         //.repartitionAndSortWithinPartitions(rdd.partitioner.get) // TODO which partitioner?
 
   }
 
-  def coveringFunction(lens: Lens, rdd: RDD[LabeledPoint]): CoveringFunction = (p: LabeledPoint) =>
-      hyperCubeCoordinateVectors(
-        boundaries(lens.functions, rdd)
-          .zip(lens.filters)
-          .map { case ((min, max), filter) =>
-            intersectingIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) })
+  /**
+    * @param filterFunctions The filter functions.
+    * @param rdd The data RDD.
+    * @return Returns an Array of Double tuples, representing the (min, max) boundaries of the filter functions applied
+    *         on the RDD.
+    */
+  def calculateBoundaries(filterFunctions: Array[FilterFunction],
+                          rdd: RDD[LabeledPoint]): Array[(Double, Double)] = {
 
+    val filterValues = rdd.map(p => dense(filterFunctions.map(f => f(p))))
+
+    val stats = colStats(filterValues)
+
+    stats.min.toArray zip stats.max.toArray
+  }
+
+  /**
+    * @param lens The TDA Lens specification.
+    * @param boundaries The boundaries in function of which to define the covering function.
+    * @return Returns the CoveringFunction instance.
+    */
+  def coveringFunction(lens: Lens,
+                       boundaries: Array[(Double, Double)]): CoveringFunction = (p: LabeledPoint) =>
+    hyperCubeCoordinateVectors(
+      boundaries
+        .zip(lens.filters)
+        .map { case ((min, max), filter) =>
+          intersectingIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) })
+
+  /**
+    * @param min
+    * @param max
+    * @param length
+    * @param overlap
+    * @param x
+    * @return Returns the
+    */
   def intersectingIntervals(min: BigDecimal,
                             max: BigDecimal,
                             length:  Percentage,
@@ -68,15 +100,5 @@ object Skeleton extends Serializable {
       .foldLeft(Seq(Vector[Any]())) {
         (acc, intervals) => intervals.flatMap(coordinate => acc.map(combos => combos :+ coordinate)) }
       .toSet
-
-  def boundaries(functions: Array[FilterFunction],
-                 rdd: RDD[LabeledPoint]): Array[(Double, Double)] = {
-
-    val filterValues = rdd.map(p => dense(functions.map(f => f(p))))
-
-    val stats = colStats(filterValues)
-
-    stats.min.toArray zip stats.max.toArray
-  }
 
 }

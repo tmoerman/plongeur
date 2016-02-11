@@ -15,17 +15,19 @@ object Model extends Serializable {
 
   type DistanceFunction = (LabeledPoint, LabeledPoint) => Double
 
-  val pearsonDistance: DistanceFunction = ???
+  // val pearsonDistance: DistanceFunction = ???
 
-  val spearmanDistance: DistanceFunction = ???
+  // val spearmanDistance: DistanceFunction = ???
 
-  case class Lens(val filters: Array[Filter]) extends Serializable {
+  case class Lens(val filters: Filter*) extends Serializable {
 
-    def functions =  filters.map(_.function)
+    def functions =  filters.toArray.map(_.function)
 
   }
 
   type FilterFunction = (LabeledPoint) => Double
+
+  def feature(n: Int) = (p: LabeledPoint) => p.features(n)
 
   type Percentage = BigDecimal
 
@@ -36,7 +38,7 @@ object Model extends Serializable {
     require(length >= 0 && length <= 1, "length must be a percentage.")
 
     require(overlap >= 0,   "overlap cannot be negative")
-    require(overlap <= 2/3, "overlap > 2/3 is discouraged")
+    require(overlap >= 2/3, "overlap > 2/3 is discouraged")
   }
 
 }
