@@ -5,7 +5,7 @@ import org.scalatest.{FlatSpec, Matchers}
 /**
   * @author Thomas Moerman
   */
-class OrderingSpec extends FlatSpec with Matchers {
+class IterableFunctionsSpec extends FlatSpec with Matchers {
 
   import IterableFunctions._
 
