@@ -1,6 +1,7 @@
 package org.tmoerman.plongeur.tda
 
 import java.util.UUID
+import java.util.UUID.randomUUID
 
 import org.apache.spark.mllib.regression.LabeledPoint
 
@@ -11,25 +12,17 @@ import org.apache.spark.mllib.regression.LabeledPoint
   */
 object Model extends Serializable {
 
+  // TDA
+
   type HyperCubeCoordinateVector = Vector[BigDecimal]
 
   type CoveringFunction = (LabeledPoint) => Set[HyperCubeCoordinateVector]
-
-  type DistanceFunction = (LabeledPoint, LabeledPoint) => Double
-
-  // val pearsonDistance: DistanceFunction = ???
-
-  // val spearmanDistance: DistanceFunction = ???
 
   case class Lens(val filters: Filter*) extends Serializable {
 
     def functions =  filters.toArray.map(_.function)
 
   }
-
-  type ClusterID = UUID
-
-  type Clustering = Set[LabeledPoint] => Set[(LabeledPoint, ClusterID)]
 
   type FilterFunction = (LabeledPoint) => Double
 
@@ -42,8 +35,12 @@ object Model extends Serializable {
                     val overlap:  Percentage) extends Serializable {
 
     require(length >= 0 && length <= 1, "length must be a percentage.")
-    require(overlap >= 0,   "overlap cannot be negative")
-    require(overlap >= 2/3, "overlap > 2/3 is discouraged")
+    require(overlap >= 0,               "overlap cannot be negative")
+    require(overlap >= 2/3,             "overlap > 2/3 is discouraged")
   }
+
+  // Clustering
+
+  // type Clustering = (List[LabeledPoint], DistanceFunction) => Set[(ClusterID, LabeledPoint)]
 
 }
