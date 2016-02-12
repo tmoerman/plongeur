@@ -20,11 +20,11 @@ class SyntheticPointsSpec extends FlatSpec with TestResources with Matchers {
     val labeledPoints =
       pointsRDD
         ._2
-        .map{ case (x, y, cat) => LabeledPoint(cat, Vectors.dense(x, y)) }
+        .zipWithIndex()
+        .map{ case ((x, y, _), idx) => LabeledPoint(idx, Vectors.dense(x, y)) }
 
     val lens = Lens(Filter(feature(0), 1, 0.5),
-                    Filter(feature(1), 1, 0.5)
-    )
+                    Filter(feature(1), 1, 0.5))
 
     val size = 12.0
 
@@ -35,7 +35,7 @@ class SyntheticPointsSpec extends FlatSpec with TestResources with Matchers {
     val result = labeledPoints.flatMap(p => covering(p).map(k => (k, p))).collect
 
     result
-      .foreach{ case (hyperCubeCoordinateVector: Vector[Any], LabeledPoint(cluster, features: DenseVector)) =>
+      .foreach{ case (hyperCubeCoordinateVector: Vector[Any], LabeledPoint(_, features: DenseVector)) =>
 
         def testCoveringContainsPoint(i: Int): Unit = {
           val coordinate = hyperCubeCoordinateVector(i).asInstanceOf[BigDecimal].toDouble

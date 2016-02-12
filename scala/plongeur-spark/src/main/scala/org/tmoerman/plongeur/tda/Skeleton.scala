@@ -1,8 +1,6 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.spark.Partitioner
 import org.apache.spark.mllib.linalg.Vectors.dense
-import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, RowMatrix}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.stat.Statistics.colStats
 import org.apache.spark.rdd.RDD
@@ -28,7 +26,6 @@ object Skeleton extends Serializable {
         .flatMap(p => covering(p).map(k => (k, p))) // RDD[(HypercubeCoordinate, LabeledPoint)]
 
         //.repartitionAndSortWithinPartitions(rdd.partitioner.get) // TODO which partitioner?
-
   }
 
   /**
@@ -61,24 +58,24 @@ object Skeleton extends Serializable {
           intersectingIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) })
 
   /**
-    * @param min
-    * @param max
-    * @param length
-    * @param overlap
-    * @param x
-    * @return Returns the
+    * @param boundaryMin The lower boundary of the filter function span.
+    * @param boundaryMax The upper boundary of the filter function span.
+    * @param lengthPct The percentage of length of the filter function span for an interval.
+    * @param overlapPct The percentage of overlap between intervals.
+    * @param x A filter function value.
+    * @return Returns the lower coordinates of the intervals covering the specified filter value x.
     */
-  def intersectingIntervals(min: BigDecimal,
-                            max: BigDecimal,
-                            length:  Percentage,
-                            overlap: Percentage)
+  def intersectingIntervals(boundaryMin: BigDecimal,
+                            boundaryMax: BigDecimal,
+                            lengthPct:  Percentage,
+                            overlapPct: Percentage)
                            (x: BigDecimal): Seq[BigDecimal] = {
 
-    val intervalLength = (max - min) * length
+    val intervalLength = (boundaryMax - boundaryMin) * lengthPct
 
-    val increment = (1 - overlap) * intervalLength
+    val increment = (1 - overlapPct) * intervalLength
 
-    val diff = (x - min) % increment
+    val diff = (x - boundaryMin) % increment
     val base = x - diff
 
     val q = intervalLength quot increment
@@ -95,6 +92,10 @@ object Skeleton extends Serializable {
       .takeWhile(_ < end)
   }
 
+  /**
+    * @param coveringValues
+    * @return Combines the covering intervals in the individual dimensions to a hyper cube coordinates vector.
+    */
   def hyperCubeCoordinateVectors(coveringValues: Seq[Seq[Any]]): Set[HyperCubeCoordinateVector] =
     coveringValues
       .foldLeft(Seq(Vector[Any]())) {
