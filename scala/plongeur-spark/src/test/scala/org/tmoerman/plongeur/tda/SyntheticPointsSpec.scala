@@ -35,10 +35,10 @@ class SyntheticPointsSpec extends FlatSpec with TestResources with Matchers {
     val result = labeledPoints.flatMap(p => covering(p).map(k => (k, p))).collect
 
     result
-      .foreach{ case (hyperCubeCoordinateVector: Vector[Any], LabeledPoint(_, features: DenseVector)) =>
+      .foreach{ case (hyperCubeCoordinateVector: Vector[BigDecimal], LabeledPoint(_, features: DenseVector)) =>
 
         def testCoveringContainsPoint(i: Int): Unit = {
-          val coordinate = hyperCubeCoordinateVector(i).asInstanceOf[BigDecimal].toDouble
+          val coordinate = hyperCubeCoordinateVector(i).toDouble
 
           coordinate        should be <= features(i)
           coordinate + size should be >  features(i)

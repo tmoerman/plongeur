@@ -11,7 +11,7 @@ import org.apache.spark.mllib.regression.LabeledPoint
   */
 object Model extends Serializable {
 
-  type HyperCubeCoordinateVector = Vector[Any]
+  type HyperCubeCoordinateVector = Vector[BigDecimal]
 
   type CoveringFunction = (LabeledPoint) => Set[HyperCubeCoordinateVector]
 
