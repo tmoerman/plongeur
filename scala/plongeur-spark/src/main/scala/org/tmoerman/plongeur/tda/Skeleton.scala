@@ -11,15 +11,27 @@ import org.apache.spark.rdd.RDD
 object Skeleton extends Serializable {
   import Model._
 
-  //implicit def myOrdering[T <: Ordering[T]]: Ordering[Vector[Any]] = ??? // TODO fix
+  /**
+    * @param ordering Implicit Ordering on type T
+    * @tparam T The generic type with an implicit Ordering.
+    * @tparam IterableLike Generic type for collections that inherit from Iterable.
+    * @return Returns an Ordering defined on IterableLike collections of a generic type T with implicit Ordering.
+    */
+  implicit def pimpIterableOrdering[T, IterableLike[T] <: Iterable[T]](implicit ordering: Ordering[T]): Ordering[IterableLike[T]] =
+    new Ordering[IterableLike[T]] {
+
+      def compare(v1: IterableLike[T], v2: IterableLike[T]): Int = {
+        (v1.toStream zip v2.toStream)
+          .dropWhile{ case (e1, e2) => ordering.compare(e1, e2) == 0 } match {
+          case (a, b) #:: _ => ordering.compare(a, b)
+          case _            => 0
+        }
+      }
+    }
 
   def execute(lens: Lens,
               distanceFunction: DistanceFunction,
               rdd: RDD[LabeledPoint]) {
-
-//    val tuningRDD = rdd.first.toSeq.zipWithIndex.map(_.swap))
-//    val nrPartitions: Int = rdd.getNumPartitions
-//    val partitioner = new RangePartitioner(nrPartitions, tuningRDD)
 
     val boundaries = calculateBoundaries(lens.functions, rdd)
 
@@ -28,8 +40,7 @@ object Skeleton extends Serializable {
     val bla =
       rdd
         .flatMap(p => covering(p).map(hcc => (hcc, p))) // RDD[(HypercubeCoordinate, LabeledPoint)]
-
-        //.rep(rdd.partitioner.get) // TODO which partitioner?
+        .repartitionAndSortWithinPartitions(rdd.partitioner.get) // TODO which partitioner?
   }
 
   /**
@@ -100,9 +111,9 @@ object Skeleton extends Serializable {
     * @param coveringIntervals The covering intervals corresponding to different filter functions.
     * @return Combines the covering intervals in the individual dimensions to a hyper cube coordinates vector.
     */
-  def hyperCubeCoordinateVectors(coveringIntervals: Seq[Seq[Any]]): Set[HyperCubeCoordinateVector] =
+  def hyperCubeCoordinateVectors[BigDecimal](coveringIntervals: Seq[Seq[BigDecimal]]): Set[Vector[BigDecimal]] =
     coveringIntervals
-      .foldLeft(Seq(Vector[Any]())) {
+      .foldLeft(Seq(Vector[BigDecimal]())) {
         (acc, intervals) => intervals.flatMap(coordinate => acc.map(combos => combos :+ coordinate)) }
       .toSet
 
