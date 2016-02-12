@@ -11,9 +11,10 @@ class HyperCubeCoordinatesTest extends FlatSpec with Matchers {
   behavior of "combining coordinates"
 
   it should "be correct with 1x1 interval coordinates" in {
-    hyperCubeCoordinateVectors(Seq(Seq(1), Seq("a"))) shouldBe Set(
 
-      Vector(1, "a"))
+    val s = Set(Vector(1, "a"))
+
+    hyperCubeCoordinateVectors(Seq(Seq(1), Seq("a"))) shouldBe s
   }
 
   it should "be correct with 1x2 interval coordinates" in {
