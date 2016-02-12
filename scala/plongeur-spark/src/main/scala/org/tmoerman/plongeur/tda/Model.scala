@@ -1,5 +1,7 @@
 package org.tmoerman.plongeur.tda
 
+import java.util.UUID
+
 import org.apache.spark.mllib.regression.LabeledPoint
 
 /**
@@ -25,6 +27,10 @@ object Model extends Serializable {
 
   }
 
+  type ClusterID = UUID
+
+  type Clustering = Set[LabeledPoint] => Set[(LabeledPoint, ClusterID)]
+
   type FilterFunction = (LabeledPoint) => Double
 
   def feature(n: Int) = (p: LabeledPoint) => p.features(n)
@@ -36,7 +42,6 @@ object Model extends Serializable {
                     val overlap:  Percentage) extends Serializable {
 
     require(length >= 0 && length <= 1, "length must be a percentage.")
-
     require(overlap >= 0,   "overlap cannot be negative")
     require(overlap >= 2/3, "overlap > 2/3 is discouraged")
   }
