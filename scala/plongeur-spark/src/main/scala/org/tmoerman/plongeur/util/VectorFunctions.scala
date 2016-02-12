@@ -12,8 +12,13 @@ object VectorFunctions {
 class VectorFunctions[T](v: Vector[T]) extends Serializable {
 
   private class HasIndex[A](n: Int) extends (A => Boolean) {
+
     private[this] var i = -1
-    def apply(a: A): Boolean = { i += 1; i==n }
+
+    def apply(a: A): Boolean = {
+      i += 1
+      i==n
+    }
   }
 
   def dropByIndex(n: Int): Vector[T] = v.filterNot(new HasIndex[T](n))
