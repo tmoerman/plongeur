@@ -6,7 +6,7 @@ import Model._
 /**
   * @author Thomas Moerman
   */
-class ModelTest extends FlatSpec with Matchers {
+class ModelSpec extends FlatSpec with Matchers {
 
   "a FilterFunction" should "not be instantiable with an illegal overlap value" in {
     intercept[IllegalArgumentException] {

@@ -6,7 +6,7 @@ import org.tmoerman.plongeur.tda.Skeleton.coveringIntervals
 /**
   * @author Thomas Moerman
   */
-class IntersectingIntervalsTest extends FlatSpec with Matchers {
+class IntersectingIntervalsSpec extends FlatSpec with Matchers {
 
   def bdSeq(d: Double *) = d.map(BigDecimal(_))
 

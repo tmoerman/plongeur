@@ -1,13 +1,13 @@
-package org.tmoerman.plongeur.tda
+package org.tmoerman.plongeur.util
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * @author Thomas Moerman
   */
 class OrderingSpec extends FlatSpec with Matchers {
 
-  import Skeleton.pimpIterableOrdering
+  import IterableFunctions._
 
   behavior of "ordering on a collection of collections"
 
@@ -27,8 +27,7 @@ class OrderingSpec extends FlatSpec with Matchers {
 
   it should "order an empty list" in {
 
-    val empty: List[BigDecimal] = Nil
-    empty.sorted shouldBe Nil
+    List[BigDecimal]().sorted shouldBe Nil
 
   }
 

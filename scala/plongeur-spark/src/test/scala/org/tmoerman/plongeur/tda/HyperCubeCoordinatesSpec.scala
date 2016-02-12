@@ -6,7 +6,7 @@ import org.tmoerman.plongeur.tda.Skeleton.hyperCubeCoordinateVectors
 /**
   * @author Thomas Moerman
   */
-class HyperCubeCoordinatesTest extends FlatSpec with Matchers {
+class HyperCubeCoordinatesSpec extends FlatSpec with Matchers {
 
   behavior of "combining coordinates"
 

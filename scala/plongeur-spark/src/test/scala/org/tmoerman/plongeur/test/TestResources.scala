@@ -7,7 +7,7 @@ import org.apache.commons.lang.StringUtils.trim
 /**
   * @author Thomas Moerman
   */
-trait TestResources extends SparkContextSpec{
+trait TestResources extends SparkContextSpec {
 
   val wd     = "src/test/resources/data/"
   val points = wd + "points.csv"
