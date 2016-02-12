@@ -11,11 +11,15 @@ import org.apache.spark.rdd.RDD
 object Skeleton extends Serializable {
   import Model._
 
-  implicit def myOrdering[T <: Ordering[T]]: Ordering[Vector[Any]] = ??? // TODO fix
+  //implicit def myOrdering[T <: Ordering[T]]: Ordering[Vector[Any]] = ??? // TODO fix
 
   def execute(lens: Lens,
               distanceFunction: DistanceFunction,
               rdd: RDD[LabeledPoint]) {
+
+//    val tuningRDD = rdd.first.toSeq.zipWithIndex.map(_.swap))
+//    val nrPartitions: Int = rdd.getNumPartitions
+//    val partitioner = new RangePartitioner(nrPartitions, tuningRDD)
 
     val boundaries = calculateBoundaries(lens.functions, rdd)
 
@@ -23,9 +27,9 @@ object Skeleton extends Serializable {
 
     val bla =
       rdd
-        .flatMap(p => covering(p).map(k => (k, p))) // RDD[(HypercubeCoordinate, LabeledPoint)]
+        .flatMap(p => covering(p).map(hcc => (hcc, p))) // RDD[(HypercubeCoordinate, LabeledPoint)]
 
-        //.repartitionAndSortWithinPartitions(rdd.partitioner.get) // TODO which partitioner?
+        //.rep(rdd.partitioner.get) // TODO which partitioner?
   }
 
   /**
@@ -55,7 +59,7 @@ object Skeleton extends Serializable {
       boundaries
         .zip(lens.filters)
         .map { case ((min, max), filter) =>
-          intersectingIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) })
+          coveringIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) })
 
   /**
     * @param boundaryMin The lower boundary of the filter function span.
@@ -65,11 +69,11 @@ object Skeleton extends Serializable {
     * @param x A filter function value.
     * @return Returns the lower coordinates of the intervals covering the specified filter value x.
     */
-  def intersectingIntervals(boundaryMin: BigDecimal,
-                            boundaryMax: BigDecimal,
-                            lengthPct:  Percentage,
-                            overlapPct: Percentage)
-                           (x: BigDecimal): Seq[BigDecimal] = {
+  def coveringIntervals(boundaryMin: BigDecimal,
+                        boundaryMax: BigDecimal,
+                        lengthPct:   Percentage,
+                        overlapPct:  Percentage)
+                       (x: BigDecimal): Seq[BigDecimal] = {
 
     val intervalLength = (boundaryMax - boundaryMin) * lengthPct
 
@@ -93,11 +97,11 @@ object Skeleton extends Serializable {
   }
 
   /**
-    * @param coveringValues
+    * @param coveringIntervals The covering intervals corresponding to different filter functions.
     * @return Combines the covering intervals in the individual dimensions to a hyper cube coordinates vector.
     */
-  def hyperCubeCoordinateVectors(coveringValues: Seq[Seq[Any]]): Set[HyperCubeCoordinateVector] =
-    coveringValues
+  def hyperCubeCoordinateVectors(coveringIntervals: Seq[Seq[Any]]): Set[HyperCubeCoordinateVector] =
+    coveringIntervals
       .foldLeft(Seq(Vector[Any]())) {
         (acc, intervals) => intervals.flatMap(coordinate => acc.map(combos => combos :+ coordinate)) }
       .toSet
