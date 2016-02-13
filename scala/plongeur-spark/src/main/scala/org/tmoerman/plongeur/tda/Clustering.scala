@@ -17,6 +17,8 @@ import scalaz.Memo
   */
 object Clustering extends Serializable {
 
+  // TODO use Breeze distance metrics instead of SMILE Distance
+
   implicit def lift(dist: Distance[Array[Double]]): Distance[LabeledPoint] = new Distance[LabeledPoint] {
 
     override def d(l1: LabeledPoint, l2: LabeledPoint) = dist.d(l1.features.toArray, l2.features.toArray)
@@ -112,7 +114,7 @@ object Clustering extends Serializable {
       .map{ case (clusterLabel, pointIdx) => (clusterLabel, data(pointIdx)) }
       .groupBy(_._1)
       .mapValues(_.map(_._2))
-      .map{ case (clusterLabel, points) => Cluster(identifier.apply(clusterLabel), points.toSet) }
+      .map{ case (clusterLabel, points) => Cluster(identifier(clusterLabel), points.toSet) }
       .toList
   }
 
