@@ -40,7 +40,9 @@ object Clustering extends Serializable {
       small.exists(e => large.contains(e))
     }
 
-    override def toString = s"""Cluster($id, ${labels.mkString(", ")})"""
+    override def toString = s"Cluster($id)"
+
+    def verbose = s"""Cluster($id, $points)"""
 
   }
 

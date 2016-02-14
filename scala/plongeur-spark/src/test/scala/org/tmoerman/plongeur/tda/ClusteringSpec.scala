@@ -7,8 +7,6 @@ import smile.clustering.HierarchicalClustering
 
 import Clustering._
 
-import scala.math.sqrt
-
 /**
   * @author Thomas Moerman
   */
@@ -25,11 +23,11 @@ class ClusteringSpec extends FlatSpec with TestResources with Matchers {
 
   }
 
-  behavior of "clustering the data set for the partitioning heuristic"
+  behavior of "clustering the data set with histogram partitioning heuristic"
 
-  it should "yield 2 clusters" in {
+  val data = heuristicLabeledPointsRDD.collect.toList
 
-    val data = heuristicLabeledPointsRDD.collect.toList
+  it should "yield expected cluster labels" in {
 
     val distanceMatrix = distances(data, euclidean)
 
@@ -37,21 +35,15 @@ class ClusteringSpec extends FlatSpec with TestResources with Matchers {
 
     val heights = hierarchicalClustering.getHeight
 
-    val bla = (1 to 10).map(_ * 5).map(k => histogramPartitionHeuristic(k)(heights))
+    val cutoff = histogramPartitionHeuristic()(heights)
 
-    println(hierarchicalClustering.partition(bla(0)).mkString("\n"))
-
-    //print(labels.zipWithIndex.map{ case (label, idx) => s"$idx,$label" }.mkString("\n"))
+    hierarchicalClustering.partition(cutoff) shouldBe Array(0, 0, 0, 0, 1, 1, 1, 1)
 
   }
 
-  behavior of "cluster partition heuristic"
+  it should "yield correct clusters and members" in {
 
-  it should "boo" in {
-
-    val heights = Array[Double](1, 1, 1, 1, 1, 1, sqrt(8.0))
-
-    println(histogramPartitionHeuristic(10)(heights))
+    println(cluster()(data).map(_.verbose).mkString("\n"))
 
   }
 
