@@ -11,17 +11,11 @@ import Skeleton._
 /**
   * @author Thomas Moerman
   */
-class SyntheticPointsSpec extends FlatSpec with TestResources with Matchers {
+class Test2DSpec extends FlatSpec with TestResources with Matchers {
 
   behavior of "Covering the points"
 
   it should "associate points with the correct HyperCubeCoordinateVectors" in {
-
-    val labeledPoints =
-      pointsRDD
-        ._2
-        .zipWithIndex()
-        .map{ case ((x, y, _), idx) => LabeledPoint(idx, Vectors.dense(x, y)) }
 
     val lens = Lens(Filter(feature(0), 1, 0.5),
                     Filter(feature(1), 1, 0.5))
@@ -32,7 +26,7 @@ class SyntheticPointsSpec extends FlatSpec with TestResources with Matchers {
 
     val covering = coveringFunction(lens, boundaries)
 
-    val result = labeledPoints.flatMap(p => covering(p).map(k => (k, p))).collect
+    val result = test2DLabeledPointsRDD.flatMap(p => covering(p).map(k => (k, p))).collect
 
     result
       .foreach{ case (hyperCubeCoordinateVector: Vector[BigDecimal], LabeledPoint(_, features: DenseVector)) =>

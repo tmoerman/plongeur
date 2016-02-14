@@ -14,9 +14,9 @@ class RDDFunctionsSpec extends FlatSpec with TestResources with Matchers {
 
   it should "work" in {
 
-    irisRDD._2.drop(1).first._1 shouldBe 4.9
+    irisParsed._2.drop(1).first._1 shouldBe 4.9
 
-    irisRDD._2.drop(3).first._1 shouldBe 4.6
+    irisParsed._2.drop(3).first._1 shouldBe 4.6
 
   }
 

@@ -25,6 +25,8 @@ libraryDependencies ++= Seq(
   "com.github.haifengl"    % "smile-core"        % "1.0.4",
   "com.github.haifengl"    % "smile-plot"        % "1.0.4",
 
+  "org.scalanlp"           %% "breeze-natives"   % "0.12",
+
   "org.scalaz"             %% "scalaz-core"      % "7.2.0",
 
   "org.scalatest"          %% "scalatest"        % "2.2.4"  % "test"
