@@ -6,7 +6,7 @@ package org.tmoerman.plongeur.util
 object IterableFunctions {
 
   /**
-    * @param ordering Implicit Ordering on type T
+    * @param ordering Implicit Ordering on type T.
     * @tparam T The generic type with an implicit Ordering.
     * @tparam IterableLike Generic type for collections that inherit from Iterable.
     *
@@ -26,14 +26,25 @@ object IterableFunctions {
 
   implicit def iteratorToIterable[V](it: Iterator[V]): Iterable[V] = it.toIterable
 
+  implicit def pimpIterable[V](it: Iterable[V]): IterableFunctions[V] = new IterableFunctions[V](it)
+
+}
+
+class IterableFunctions[V](it: Iterable[V]) extends Serializable {
+
   /**
-    * @param it An Iterable
+    * @return Returns a Map of frequencies of the elements.
+    */
+  def frequencies: Map[V, Int] =
+    it.foldLeft(Map[V, Int]() withDefaultValue 0) { (acc, v) => acc.updated(v, acc(v) + 1) }
+
+  /**
     * @param selector Selector function, defaults to the identity function.
     *
     * @return List of Lists of V instances,
     *         grouping repeats of the result of the selector function applied to the V instances.
     */
-  def groupRepeats[V](it: Iterable[V], selector: (V) => Any = (v: V) => v): List[List[V]] =
+  def groupRepeats(selector: (V) => Any = (v: V) => v): List[List[V]] =
     it.foldLeft(List[List[V]]()) { (acc, i) =>
       acc match {
         case l :: ls => l match {
