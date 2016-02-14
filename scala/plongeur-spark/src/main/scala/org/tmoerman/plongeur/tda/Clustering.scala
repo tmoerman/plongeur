@@ -4,11 +4,12 @@ import java.util.UUID
 import java.util.UUID._
 
 import org.apache.spark.mllib.regression.LabeledPoint
+import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, euclidean}
+import org.tmoerman.plongeur.util.IterableFunctions._
 
 import smile.clustering.HierarchicalClustering
 import smile.clustering.linkage._
-import smile.math.distance.Distance
-import scalaz.Memo
+import scalaz.Memo.mutableHashMapMemo
 
 /**
   * Recycled a few methods from smile-scala, which is not released as a Maven artifact.
@@ -16,16 +17,6 @@ import scalaz.Memo
   * @author Thomas Moerman
   */
 object Clustering extends Serializable {
-
-  // TODO use Breeze distance metrics instead of SMILE Distance
-
-  implicit def lift(dist: Distance[Array[Double]]): Distance[LabeledPoint] = new Distance[LabeledPoint] {
-
-    override def d(l1: LabeledPoint, l2: LabeledPoint) = dist.d(l1.features.toArray, l2.features.toArray)
-
-  }
-
-  //type DistanceFunction[T] = (T, T) => Double
 
   type DistanceMatrix = Array[Array[Double]]
 
@@ -41,9 +32,7 @@ object Clustering extends Serializable {
       * @return Returns whether any point is common to both clusters.
       */
     def intersects(that: Cluster[ID]) = {
-      // some optimization going on here
-
-      val (small, large) =
+      val (small, large) = // some optimization going on here
         if (this.points.size < that.points.size)
           (this.labels, that.labels) else
           (that.labels, this.labels)
@@ -57,7 +46,7 @@ object Clustering extends Serializable {
 
   type ClusterIdentifier[ID] = (Int) => ID
 
-  def uuidClusterIdentifier: ClusterIdentifier[UUID] = Memo.mutableHashMapMemo(_ => {println("tetten"); randomUUID})
+  def uuidClusterIdentifier: ClusterIdentifier[UUID] = mutableHashMapMemo(_ => randomUUID)
 
   def linkage(method: String, distanceMatrix: DistanceMatrix) = method match {
     case "single"   => new SingleLinkage(distanceMatrix)
@@ -71,45 +60,59 @@ object Clustering extends Serializable {
     case _ => throw new IllegalArgumentException(s"Unknown agglomeration method: $method")
   }
 
-  def distanceMatrix[T](data: List[T], dist: Distance[T]): DistanceMatrix = {
+  def distances(data: Seq[LabeledPoint], distance: DistanceFunction): DistanceMatrix = {
     val n = data.length
     val result = new Array[Array[Double]](n)
 
     for (i <- 0 until n) {
       result(i) = new Array[Double](i+1)
-      for (j <- 0 until i)
-        result(i)(j) = dist.d(data(i), data(j))
+      for (j <- 0 until i) {
+        result(i)(j) = distance(data(i), data(j))
+      }
     }
 
     result
   }
 
-  type PartitionHeuristic = (HierarchicalClustering) => Int // TODO height cutoff perhaps?
+  type Heights = Iterable[Double]
+
+  type PartitionHeuristic = (Heights) => Double
+
+  def histogramPartitionHeuristic(k: Int = 10) = (heights: Heights) => {
+
+    val inc = (heights.max - heights.min) / k
+
+    val frequencies = heights.map(d => (BigDecimal(d) quot inc).toInt).frequencies
+
+    (frequencies.keys.min to frequencies.keys.max)
+      .dropWhile(x => frequencies(x) != 0)
+      .headOption
+      .getOrElse(1) * inc
+  }
 
   /**
-    *
     * @param data The LabeledPoint instances to cluster.
     * @param dist The distance function.
     * @param identifier A function that translates the cluster label to a global cluster ID.
     * @param method The hierarchical clustering method: single, complete, etc. Default = "single".
-    * @param heur The hierarchical clustering cutoff heuristic
+    * @param partitionHeuristic The hierarchical clustering cutoff heuristic
     * @tparam ID The generic cluster ID type.
     * @return Returns a list of Cluster instances.
     */
-  def cluster[ID](data: List[LabeledPoint],
-                  dist: Distance[LabeledPoint],
+  def cluster[ID](data: Seq[LabeledPoint],
                   identifier: ClusterIdentifier[ID],
+                  dist: DistanceFunction = euclidean,
                   method: String = "single",
-                  heur: PartitionHeuristic = (_) => 4): List[Cluster[ID]] = {
+                  partitionHeuristic: PartitionHeuristic = (_) => 4): List[Cluster[ID]] = {
 
-    val distances = distanceMatrix(data, dist)
+    val distanceMatrix = distances(data, dist)
 
-    val hierarchicalClustering = new HierarchicalClustering(linkage(method, distances))
+    val hierarchicalClustering = new HierarchicalClustering(linkage(method, distanceMatrix))
 
-    val k = heur(hierarchicalClustering)
+    val cutoffHeight = partitionHeuristic(hierarchicalClustering.getHeight)
 
     hierarchicalClustering
-      .partition(k)
+      .partition(cutoffHeight)
       .zipWithIndex
       .map{ case (clusterLabel, pointIdx) => (clusterLabel, data(pointIdx)) }
       .groupBy(_._1)
