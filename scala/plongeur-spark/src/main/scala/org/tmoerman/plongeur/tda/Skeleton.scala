@@ -6,7 +6,6 @@ import org.apache.spark.mllib.stat.Statistics.colStats
 import org.apache.spark.rdd.RDD
 
 import org.tmoerman.plongeur.util._
-import smile.math.distance.Distance
 
 /**
   * @author Thomas Moerman
