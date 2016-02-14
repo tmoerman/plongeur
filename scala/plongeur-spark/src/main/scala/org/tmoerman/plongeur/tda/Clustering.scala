@@ -40,6 +40,8 @@ object Clustering extends Serializable {
       small.exists(e => large.contains(e))
     }
 
+    override def toString = s"""Cluster($id, ${labels.mkString(", ")})"""
+
   }
 
   def uuidCluster(points: Set[LabeledPoint]) = new Cluster(randomUUID, points)
@@ -91,19 +93,18 @@ object Clustering extends Serializable {
   }
 
   /**
-    * @param data The LabeledPoint instances to cluster.
     * @param dist The distance function.
-    * @param identifier A function that translates the cluster label to a global cluster ID.
     * @param method The hierarchical clustering method: single, complete, etc. Default = "single".
     * @param partitionHeuristic The hierarchical clustering cutoff heuristic
-    * @tparam ID The generic cluster ID type.
+    *
+    * @param data The LabeledPoint instances to cluster.
+    *
     * @return Returns a list of Cluster instances.
     */
-  def cluster[ID](data: Seq[LabeledPoint],
-                  identifier: ClusterIdentifier[ID],
-                  dist: DistanceFunction = euclidean,
-                  method: String = "single",
-                  partitionHeuristic: PartitionHeuristic = (_) => 4): List[Cluster[ID]] = {
+  def cluster(dist: DistanceFunction = euclidean,
+              method: String = "single",
+              partitionHeuristic: PartitionHeuristic = histogramPartitionHeuristic())
+             (data: Seq[LabeledPoint]): List[Cluster[Int]] = {
 
     val distanceMatrix = distances(data, dist)
 
@@ -117,7 +118,7 @@ object Clustering extends Serializable {
       .map{ case (clusterLabel, pointIdx) => (clusterLabel, data(pointIdx)) }
       .groupBy(_._1)
       .mapValues(_.map(_._2))
-      .map{ case (clusterLabel, points) => Cluster(identifier(clusterLabel), points.toSet) }
+      .map{ case (clusterLabel, points) => Cluster(clusterLabel, points.toSet) }
       .toList
   }
 
