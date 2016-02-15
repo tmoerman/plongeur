@@ -28,13 +28,14 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
 
     val clean = result.map(_.map(s => StringUtils.replaceChars(s.toString, "-", "_")))
 
-    println(clean.flatten.toSet.mkString("\n"))
+    val graph =
+      Seq(
+        "graph X {",
+        clean.flatten.toSet.mkString("\n"),
+        clean.map(_.toArray match { case Array(x, y) => s"$x -- $y" }).mkString("\n"),
+        "}").mkString("\n")
 
-    println(
-      clean
-        .flatMap(s => s.subsets(2).map(s => s.toArray match { case Array(x, y) => s"$x -- $y" }))
-        .mkString("\n"))
-
+    println(graph)
   }
 
 

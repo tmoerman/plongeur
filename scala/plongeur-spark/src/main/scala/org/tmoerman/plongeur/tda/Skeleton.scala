@@ -46,12 +46,15 @@ object Skeleton extends Serializable {
                           cluster(points) }))             // cluster points
         .flatMap(identity)
         .flatMap(cluster => cluster.points.map(point => (point.label, cluster.id))) // melt all clusters by points
-        .combineByKey((id: Any) => Set(id),
+        .combineByKey((clusterId: Any) => Set(clusterId),
                       (acc: Set[Any], id: Any) => acc + id,
                       (acc1: Set[Any], acc2: Set[Any]) => acc1 ++ acc2)
         .values
+        .flatMap(_.subsets(2)) // hypertetrahedra
         .distinct
         .collect
+
+    // TODO break up the computation an cache intermediary results
 
     result
   }
