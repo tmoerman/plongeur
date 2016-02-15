@@ -41,9 +41,9 @@ object Skeleton extends Serializable {
         .repartitionAndSortWithinPartitions(defaultPartitioner(data)) // TODO which partitioner?
         .mapPartitions(_
           .toIterable
-          .map(_._2)
-          .groupRepeats()                  // group by A
-          .map(points => cluster(points))) // cluster by A
+          .groupRepeats(selector = _._1)                  // group by A
+          .map(pairs => { val points = pairs.map(_._2)
+                          cluster(points) }))             // cluster points
         .flatMap(identity)
         .flatMap(cluster => cluster.points.map(point => (point.label, cluster.id))) // melt all clusters by points
         .combineByKey((id: Any) => Set(id),

@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.commons.lang.StringUtils
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.scalatest.{Matchers, FlatSpec}
 import org.tmoerman.plongeur.tda.Model.{Filter, Lens}
@@ -12,7 +13,7 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
 
   behavior of "the skeleton"
 
-  it should "work" in {
+  it should "work with specified boundaries" in {
 
     val boundaries = Array((0.0, 12.0), (0.0, 12.0))
 
@@ -25,8 +26,17 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
         data = test2DLabeledPointsRDD,
         boundaries = Some(boundaries))
 
-    println(result)
+    val clean = result.map(_.map(s => StringUtils.replaceChars(s.toString, "-", "_")))
+
+    println(clean.flatten.toSet.mkString("\n"))
+
+    println(
+      clean
+        .flatMap(s => s.subsets(2).map(s => s.toArray match { case Array(x, y) => s"$x -- $y" }))
+        .mkString("\n"))
 
   }
+
+
 
 }

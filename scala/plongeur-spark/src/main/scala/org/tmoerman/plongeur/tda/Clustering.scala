@@ -97,6 +97,8 @@ object Clustering extends Serializable {
 
   def uuidClusterIdentifier: ClusterIdentifier[UUID] = mutableHashMapMemo(_ => UUID.randomUUID)
 
+  def sequenceClusterIdentifier: ClusterIdentifier[Long] = mutableHashMapMemo(_ => UUID.randomUUID().hashCode)
+
   val SINGLE_LINKAGE = "single"
 
   /**
