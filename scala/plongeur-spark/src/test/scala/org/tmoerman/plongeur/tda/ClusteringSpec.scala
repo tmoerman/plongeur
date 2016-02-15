@@ -1,9 +1,9 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.spark.mllib.linalg.Vectors.dense
+import org.apache.spark.mllib.regression.LabeledPoint
 import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.tda.Distance.euclidean
 import org.tmoerman.plongeur.test.TestResources
-import smile.clustering.HierarchicalClustering
 
 import Clustering._
 
@@ -23,27 +23,35 @@ class ClusteringSpec extends FlatSpec with TestResources with Matchers {
 
   }
 
-  behavior of "clustering the data set with histogram partitioning heuristic"
+  behavior of "clustering the heuristic data set with histogram partitioning heuristic"
 
   val data = heuristicLabeledPointsRDD.collect.toList
 
   it should "yield expected cluster labels" in {
 
-    val distanceMatrix = distances(data, euclidean)
-
-    val hierarchicalClustering = new HierarchicalClustering(linkage("single", distanceMatrix))
-
-    val heights = hierarchicalClustering.getHeight
-
-    val cutoff = histogramPartitionHeuristic()(heights)
-
-    hierarchicalClustering.partition(cutoff) shouldBe Array(0, 0, 0, 0, 1, 1, 1, 1)
+    clusterLabels(data) shouldBe Array(0, 0, 0, 0, 1, 1, 1, 1)
 
   }
 
   it should "yield correct clusters and members" in {
 
-    println(cluster()(data).map(_.verbose).mkString("\n"))
+    println(cluster(data).map(_.verbose).mkString("\n"))
+
+  }
+
+  "clustering a singleton data set with histogram partitioning heuristic" should "return a single cluster" in {
+
+    val singleton = List(LabeledPoint(66.6, dense(1.0, 2.0)))
+
+    clusterLabels(singleton) shouldBe Array(0)
+
+  }
+
+  "clustering a pair of data with histogram partitioning heuristic" should "return two clusters" in {
+
+    val pair = List(LabeledPoint(66.6, dense(1.0, 2.0)), LabeledPoint(77.7, dense(10.0, 20.0)))
+
+    clusterLabels(pair) shouldBe Array(0, 1)
 
   }
 

@@ -26,6 +26,8 @@ object IterableFunctions {
 
   implicit def iteratorToIterable[V](it: Iterator[V]): Iterable[V] = it.toIterable
 
+  implicit def iterableToIterator[V](it: Iterable[V]): Iterator[V] = it.toIterator
+
   implicit def pimpIterable[V](it: Iterable[V]): IterableFunctions[V] = new IterableFunctions[V](it)
 
 }

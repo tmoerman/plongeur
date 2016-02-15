@@ -1,7 +1,6 @@
 package org.tmoerman.plongeur.tda
 
 import java.util.UUID
-import java.util.UUID._
 
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, euclidean}
@@ -9,7 +8,8 @@ import org.tmoerman.plongeur.util.IterableFunctions._
 
 import smile.clustering.HierarchicalClustering
 import smile.clustering.linkage._
-import scalaz.Memo.mutableHashMapMemo
+
+import scalaz.Memo._
 
 /**
   * Recycled a few methods from smile-scala, which is not released as a Maven artifact.
@@ -20,8 +20,6 @@ object Clustering extends Serializable {
 
   type DistanceMatrix = Array[Array[Double]]
 
-  type ClusterID = UUID
-
   case class Cluster[ID](val id: ID,
                          val points: Set[LabeledPoint]) extends Serializable {
 
@@ -31,6 +29,7 @@ object Clustering extends Serializable {
       * @param that a Cluster.
       * @return Returns whether any point is common to both clusters.
       */
+    @Deprecated // this would require a Cartesian combination of 2 RDDs of clusters -> Maybe test this strategy later.
     def intersects(that: Cluster[ID]) = {
       val (small, large) = // some optimization going on here
         if (this.points.size < that.points.size)
@@ -45,12 +44,6 @@ object Clustering extends Serializable {
     def verbose = s"""Cluster($id, $points)"""
 
   }
-
-  def uuidCluster(points: Set[LabeledPoint]) = new Cluster(randomUUID, points)
-
-  type ClusterIdentifier[ID] = (Int) => ID
-
-  def uuidClusterIdentifier: ClusterIdentifier[UUID] = mutableHashMapMemo(_ => randomUUID)
 
   def linkage(method: String, distanceMatrix: DistanceMatrix) = method match {
     case "single"   => new SingleLinkage(distanceMatrix)
@@ -82,46 +75,85 @@ object Clustering extends Serializable {
 
   type PartitionHeuristic = (Heights) => Double
 
-  def histogramPartitionHeuristic(k: Int = 10) = (heights: Heights) => {
+  /**
+    * @param k Resolution.
+    * @return Returns the cutoff height for partitioning a Hierarchical clustering.
+    */
+  def histogramPartitionHeuristic(k: Int = 10) = (heights: Heights) => heights.toList match {
+    case Nil      => 0
+    case x :: Nil => 0
+    case        _ =>
+      val inc = (heights.max - heights.min) / k
 
-    val inc = (heights.max - heights.min) / k
+      val frequencies = heights.map(d => (BigDecimal(d) quot inc).toInt).frequencies
 
-    val frequencies = heights.map(d => (BigDecimal(d) quot inc).toInt).frequencies
-
-    (frequencies.keys.min to frequencies.keys.max)
-      .dropWhile(x => frequencies(x) != 0)
-      .headOption
-      .getOrElse(1) * inc
+      (frequencies.keys.min to frequencies.keys.max)
+        .dropWhile(x => frequencies(x) != 0)
+        .headOption
+        .getOrElse(1) * inc
   }
 
+  type ClusterIdentifier[ID] = (Int) => ID
+
+  def uuidClusterIdentifier: ClusterIdentifier[UUID] = mutableHashMapMemo(_ => UUID.randomUUID)
+
+  val SINGLE_LINKAGE = "single"
+
   /**
-    * @param dist The distance function.
-    * @param method The hierarchical clustering method: single, complete, etc. Default = "single".
-    * @param partitionHeuristic The hierarchical clustering cutoff heuristic
-    *
     * @param data The LabeledPoint instances to cluster.
+    * @param distanceFunction The distance function.
+    * @param method The hierarchical clustering method: single, complete, etc. Default = "single".
+    * @param partitionHeuristic The hierarchical clustering cutoff heuristic.
+    * @param clusterIdentifier The function that turns cluster labels into global identifiers.
     *
-    * @return Returns a list of Cluster instances.
+    * @return The List of Clusters.
     */
-  def cluster(dist: DistanceFunction = euclidean,
-              method: String = "single",
-              partitionHeuristic: PartitionHeuristic = histogramPartitionHeuristic())
-             (data: Seq[LabeledPoint]): List[Cluster[Int]] = {
+  def cluster(data: Seq[LabeledPoint],
+              distanceFunction: DistanceFunction = euclidean,
+              method: String = SINGLE_LINKAGE,
+              partitionHeuristic: PartitionHeuristic = histogramPartitionHeuristic(),
+              clusterIdentifier: ClusterIdentifier[Any] = uuidClusterIdentifier): List[Cluster[Any]] =
+    makeClusters(
+      data,
+      clusterLabels(data, distanceFunction, method, partitionHeuristic),
+      clusterIdentifier)
 
-    val distanceMatrix = distances(data, dist)
 
-    val hierarchicalClustering = new HierarchicalClustering(linkage(method, distanceMatrix))
+  /**
+    * @param data The LabeledPoint instances to cluster.
+    * @param distanceFunction The distance function.
+    * @param method The hierarchical clustering method: single, complete, etc. Default = "single".
+    * @param partitionHeuristic The hierarchical clustering cutoff heuristic.
+    *
+    * @return Returns an Array of Ints that represent for each LabeledPoint in the data, to which cluster it belongs.
+    */
+  def clusterLabels(data: Seq[LabeledPoint],
+                    distanceFunction: DistanceFunction = euclidean,
+                    method: String = SINGLE_LINKAGE,
+                    partitionHeuristic: PartitionHeuristic = histogramPartitionHeuristic()): Array[Int] =
+    data.size match {
+      case 0 => throw new scala.IllegalArgumentException("data size cannot be 0")
+      case 1 => Array(0)
+      case _ =>
+        val distanceMatrix = distances(data, distanceFunction)
 
-    val cutoffHeight = partitionHeuristic(hierarchicalClustering.getHeight)
+        val hierarchicalClustering = new HierarchicalClustering(linkage(method, distanceMatrix))
 
-    hierarchicalClustering
-      .partition(cutoffHeight)
+        val cutoffHeight = partitionHeuristic(hierarchicalClustering.getHeight)
+
+        hierarchicalClustering.partition(cutoffHeight)
+    }
+
+
+  private def makeClusters(data: Seq[LabeledPoint],
+                   clusterLabels: Array[Int],
+                   clusterIdentifier: ClusterIdentifier[Any]): List[Cluster[Any]] =
+    clusterLabels
       .zipWithIndex
       .map{ case (clusterLabel, pointIdx) => (clusterLabel, data(pointIdx)) }
       .groupBy(_._1)
       .mapValues(_.map(_._2))
-      .map{ case (clusterLabel, points) => Cluster(clusterLabel, points.toSet) }
+      .map{ case (clusterLabel, points) => Cluster(clusterIdentifier(clusterLabel), points.toSet) }
       .toList
-  }
 
 }
