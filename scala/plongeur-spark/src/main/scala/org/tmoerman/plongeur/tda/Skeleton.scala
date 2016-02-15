@@ -1,34 +1,59 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner
+import org.apache.spark.Partitioner
+import org.apache.spark.Partitioner.defaultPartitioner
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.stat.Statistics.colStats
 import org.apache.spark.rdd.RDD
+import org.tmoerman.plongeur.tda.Distance.{euclidean, DistanceFunction}
 
-import org.tmoerman.plongeur.util._
+import org.tmoerman.plongeur.util.IterableFunctions._
+import Clustering._
+import Model._
 
 /**
   * @author Thomas Moerman
   */
 object Skeleton extends Serializable {
-  import Model._
-  import IterableFunctions._
 
+  /**
+    * @param lens
+    * @param data
+    * @param boundaries
+    * @param distanceFunction
+    * @return
+    */
   def execute(lens: Lens,
-              //distanceFunction: Distance[LabeledPoint],
-              rdd: RDD[LabeledPoint]) = {
+              data: RDD[LabeledPoint],
+              boundaries: Option[Array[(Double, Double)]] = None,
+              distanceFunction: DistanceFunction = euclidean): Array[Set[Any]] = {
 
-    val boundaries = calculateBoundaries(lens.functions, rdd)
+    val covering =
+      coveringFunction(
+        lens,
+        boundaries.getOrElse(calculateBoundaries(lens.functions, data)))
 
-    val covering = coveringFunction(lens, boundaries)
+    val result =
+      data
+        .flatMap(p => covering(p).map(A => (A, p)))
+        .repartitionAndSortWithinPartitions(defaultPartitioner(data)) // TODO which partitioner?
+        .mapPartitions(_
+          .toIterable
+          .map(_._2)
+          .groupRepeats()                  // group by A
+          .map(points => cluster(points))) // cluster by A
+        .flatMap(identity)
+        .flatMap(cluster => cluster.points.map(point => (point.label, cluster.id))) // melt all clusters by points
+        .combineByKey((id: Any) => Set(id),
+                      (acc: Set[Any], id: Any) => acc + id,
+                      (acc1: Set[Any], acc2: Set[Any]) => acc1 ++ acc2)
+        .values
+        .distinct
+        .collect
 
-    val bla =
-      rdd
-        .flatMap(p => covering(p).map(hcc => (hcc, p))) // RDD[(HypercubeCoordinate, LabeledPoint)]
-        .repartitionAndSortWithinPartitions(rdd.partitioner.get) // TODO which partitioner?
-        //.mapPartitions(it => )
-
-    ???
+    result
   }
 
   /**
