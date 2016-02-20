@@ -1,5 +1,7 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang.StringUtils.replaceChars
 import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner
 import org.apache.spark.Partitioner
 import org.apache.spark.Partitioner.defaultPartitioner
@@ -28,35 +30,49 @@ object Skeleton extends Serializable {
   def execute(lens: Lens,
               data: RDD[LabeledPoint],
               boundaries: Option[Array[(Double, Double)]] = None,
-              distanceFunction: DistanceFunction = euclidean): Array[Set[Any]] = {
+              distanceFunction: DistanceFunction = euclidean): TDAResult = {
 
-    val covering =
-      coveringFunction(
-        lens,
-        boundaries.getOrElse(calculateBoundaries(lens.functions, data)))
+    val bounds = boundaries.getOrElse(calculateBoundaries(lens.functions, data))
 
-    val result =
+    val covering = coveringFunction(lens, bounds)
+
+    val clustersRDD: RDD[Cluster[Any]] =
       data
         .flatMap(p => covering(p).map(A => (A, p)))
         .repartitionAndSortWithinPartitions(defaultPartitioner(data)) // TODO which partitioner?
         .mapPartitions(_
           .toIterable
-          .groupRepeats(selector = _._1)                  // group by A
-          .map(pairs => { val points = pairs.map(_._2)
-                          cluster(points) }))             // cluster points
-        .flatMap(identity)
+          .groupRepeats(selector = _._1)                          // group by A
+          .map(pairs => { val coveringA = pairs.head._1
+                          val points = pairs.map(_._2)
+                          cluster(points, distanceFunction) }))   // cluster points
+        .flatMap(_.map(c => (c.points, c)))   //
+        .reduceByKey((c1, c2) => c1)          // collapse equivalent clusters
+        .values
+        .cache
+
+    val edgesRDD: RDD[Set[Any]] =
+      clustersRDD
         .flatMap(cluster => cluster.points.map(point => (point.label, cluster.id))) // melt all clusters by points
         .combineByKey((clusterId: Any) => Set(clusterId),
                       (acc: Set[Any], id: Any) => acc + id,
-                      (acc1: Set[Any], acc2: Set[Any]) => acc1 ++ acc2)
+                      (acc1: Set[Any], acc2: Set[Any]) => acc1 ++ acc2)     // create proto-clusters, collapse doubles
         .values
-        .flatMap(_.subsets(2)) // hypertetrahedra
+        .flatMap(_.subsets(2))
         .distinct
-        .collect
+        .cache
 
-    // TODO break up the computation an cache intermediary results
+    TDAResult(bounds, clustersRDD, edgesRDD)
+  }
 
-    result
+  case class TDAResult(val bounds: Array[(Double, Double)],
+                       val clustersRDD: RDD[Cluster[Any]],
+                       val edgesRDD: RDD[Set[Any]]) extends Serializable {
+
+    def clusters = clustersRDD.collect
+
+    def edges = edgesRDD.collect
+
   }
 
   /**
