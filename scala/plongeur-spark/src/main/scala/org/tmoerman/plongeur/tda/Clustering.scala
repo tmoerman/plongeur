@@ -18,30 +18,14 @@ import scalaz.Memo._
   */
 object Clustering extends Serializable {
 
-  type DistanceMatrix = Array[Array[Double]]
-
   case class Cluster[ID](val id: ID,
                          val points: Set[LabeledPoint]) extends Serializable {
 
-    lazy val labels = points.map(_.label)
-
-    /**
-      * @param that a Cluster.
-      * @return Returns whether any point is common to both clusters.
-      */
-    @Deprecated // this would require a Cartesian combination of 2 RDDs of clusters -> Maybe test this strategy later.
-    def intersects(that: Cluster[ID]) = {
-      val (small, large) = // some optimization going on here
-        if (this.points.size < that.points.size)
-          (this.labels, that.labels) else
-          (that.labels, this.labels)
-
-      small.exists(e => large.contains(e))
-    }
-
-    override def toString = s"Cluster($id)"
+    def size = points.size
 
     def verbose = s"""Cluster($id, $points)"""
+
+    override def toString = s"Cluster($id)"
 
   }
 
@@ -56,6 +40,8 @@ object Clustering extends Serializable {
 
     case _ => throw new IllegalArgumentException(s"Unknown agglomeration method: $method")
   }
+
+  type DistanceMatrix = Array[Array[Double]]
 
   def distances(data: Seq[LabeledPoint], distance: DistanceFunction): DistanceMatrix = {
     val n = data.length
@@ -97,9 +83,7 @@ object Clustering extends Serializable {
 
   def uuidClusterIdentifier: ClusterIdentifier[UUID] = mutableHashMapMemo(_ => UUID.randomUUID)
 
-  def sequenceClusterIdentifier: ClusterIdentifier[Long] = mutableHashMapMemo(_ => UUID.randomUUID().hashCode)
-
-  val SINGLE_LINKAGE = "single"
+  private val SINGLE_LINKAGE = "single"
 
   /**
     * @param data The LabeledPoint instances to cluster.
@@ -107,7 +91,6 @@ object Clustering extends Serializable {
     * @param method The hierarchical clustering method: single, complete, etc. Default = "single".
     * @param partitionHeuristic The hierarchical clustering cutoff heuristic.
     * @param clusterIdentifier The function that turns cluster labels into global identifiers.
-    *
     * @return The List of Clusters.
     */
   def cluster(data: Seq[LabeledPoint],
@@ -115,7 +98,7 @@ object Clustering extends Serializable {
               method: String = SINGLE_LINKAGE,
               partitionHeuristic: PartitionHeuristic = histogramPartitionHeuristic(),
               clusterIdentifier: ClusterIdentifier[Any] = uuidClusterIdentifier): List[Cluster[Any]] =
-    makeClusters(
+    createClusters(
       data,
       clusterLabels(data, distanceFunction, method, partitionHeuristic),
       clusterIdentifier)
@@ -126,7 +109,6 @@ object Clustering extends Serializable {
     * @param distanceFunction The distance function.
     * @param method The hierarchical clustering method: single, complete, etc. Default = "single".
     * @param partitionHeuristic The hierarchical clustering cutoff heuristic.
-    *
     * @return Returns an Array of Ints that represent for each LabeledPoint in the data, to which cluster it belongs.
     */
   def clusterLabels(data: Seq[LabeledPoint],
@@ -147,9 +129,9 @@ object Clustering extends Serializable {
     }
 
 
-  private def makeClusters(data: Seq[LabeledPoint],
-                   clusterLabels: Array[Int],
-                   clusterIdentifier: ClusterIdentifier[Any]): List[Cluster[Any]] =
+  private def createClusters(data: Seq[LabeledPoint],
+                             clusterLabels: Array[Int],
+                             clusterIdentifier: ClusterIdentifier[Any]): List[Cluster[Any]] =
     clusterLabels
       .zipWithIndex
       .map{ case (clusterLabel, pointIdx) => (clusterLabel, data(pointIdx)) }

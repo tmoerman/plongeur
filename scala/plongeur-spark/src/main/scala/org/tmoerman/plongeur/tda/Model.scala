@@ -39,8 +39,4 @@ object Model extends Serializable {
     require(overlap >= 2/3,             "overlap > 2/3 is discouraged")
   }
 
-  // Clustering
-
-  // type Clustering = (List[LabeledPoint], DistanceFunction) => Set[(ClusterID, LabeledPoint)]
-
 }
