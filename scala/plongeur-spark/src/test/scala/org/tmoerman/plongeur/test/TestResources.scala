@@ -12,9 +12,14 @@ import org.apache.commons.lang.StringUtils.trim
 trait TestResources extends SparkContextSpec {
 
   val wd     = "src/test/resources/data/"
+
   val test2DFile    = wd + "test2D.csv"
   val irisFile      = wd + "iris.csv"
   val heuristicFile = wd + "heuristic.csv"
+
+  val circle100 = wd + "circle.100.csv"
+  val circle1k  = wd + "circle.1k.csv"
+  val circle10k = wd + "circle.10k.csv"
 
   lazy val test2DParsed =
     sc
@@ -40,5 +45,16 @@ trait TestResources extends SparkContextSpec {
       .map(_.split(",").map(trim))
       .zipWithIndex()
       .map{ case (Array(a, b), idx) => LabeledPoint(idx, dense(a.toDouble, b.toDouble)) }
+
+  def readCircle(file: String) =
+    sc
+      .textFile(file)
+      .map(_.split(",").map(trim))
+      .zipWithIndex()
+      .map{ case (Array(x, y), idx) => LabeledPoint(idx, dense(x.toDouble, y.toDouble))}
+
+  val circle100RDD = readCircle(circle100)
+  val circle1kRDD  = readCircle(circle1k)
+  val circle10kRDD = readCircle(circle10k)
 
 }

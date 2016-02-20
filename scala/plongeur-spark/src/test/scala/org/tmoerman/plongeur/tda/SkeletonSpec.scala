@@ -10,6 +10,7 @@ import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
   * @author Thomas Moerman
   */
 class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
+  import Inspections._
 
   behavior of "the skeleton"
 
@@ -26,18 +27,35 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
         data = test2DLabeledPointsRDD,
         boundaries = Some(boundaries))
 
-    val clean = result.map(_.map(s => StringUtils.replaceChars(s.toString, "-", "_")))
-
-    val graph =
-      Seq(
-        "graph X {",
-        clean.flatten.toSet.mkString("\n"),
-        clean.map(_.toArray match { case Array(x, y) => s"$x -- $y" }).mkString("\n"),
-        "}").mkString("\n")
-
-    println(graph)
+    println(result.dotGraph("test2D"))
   }
 
+  it should "work with calculated boundaries" in {
+
+    val lens = Lens(Filter((l: LabeledPoint) => l.features(0), 1.0, 0.5),
+                    Filter((l: LabeledPoint) => l.features(1), 1.0, 0.5))
+
+    val result =
+      Skeleton.execute(
+        lens = lens,
+        data = test2DLabeledPointsRDD)
+
+    val intro = result.clusterPoints
+
+    println(result.dotGraph("test2Dc"))
+  }
+
+  it should "recover the 100 entries circle topology" in {
+
+    val lens = Lens(Filter((l: LabeledPoint) => l.features(0), 0.5, 0.5))
+
+    val result =
+      Skeleton.execute(
+        lens = lens,
+        data = circle1kRDD)
+
+    println(result.dotGraph("Circle1K"))
+  }
 
 
 }
