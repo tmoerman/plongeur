@@ -67,7 +67,10 @@ object Clustering extends Serializable {
     * @param k Resolution.
     * @return Returns the cutoff height for partitioning a Hierarchical clustering.
     */
-  def histogramPartitionHeuristic(k: Int = 100) = (heights: Heights) => heights.toList match {
+  def histogramPartitionHeuristic(k: Int = 10) = (heights: Heights) => heights.toList match {
+
+    // TODO this is not correct, replace with First Gap algorithm
+
     case Nil      => 0
     case x :: Nil => 0
     case        _ =>
