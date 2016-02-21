@@ -1,6 +1,5 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.commons.lang.StringUtils
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.scalatest.{Matchers, FlatSpec}
 import org.tmoerman.plongeur.tda.Model.{Filter, Lens}
@@ -13,6 +12,8 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
   import Inspections._
 
   behavior of "the skeleton"
+
+  implicit val counters = (new MapToInt, new MapToInt)
 
   it should "work with specified boundaries" in {
 
@@ -47,14 +48,25 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
 
   it should "recover the 100 entries circle topology" in {
 
-    val lens = Lens(Filter((l: LabeledPoint) => l.features(0), 0.5, 0.5))
+    val rdd = circle250RDD
 
-    val result =
-      Skeleton.execute(
-        lens = lens,
-        data = circle1kRDD)
+    println(rdd.map(l => l.features(0) + "," + l.features(1)).collect.mkString("\n"))
 
-    println(result.dotGraph("Circle1K"))
+    val data = rdd.collect
+
+    val lens = Lens(Filter((l: LabeledPoint) => l.features(0), 0.25, 0.5))
+
+    val result = Skeleton.execute(lens = lens, data = rdd)
+
+    val intro = result.clusterPoints
+
+    val toCl = result.pointsToClusters
+
+    val byCoords = result.coordsToClusters
+
+    println(byCoords.mkString("\n\n"))
+
+    println(result.dotGraph("Circle250"))
   }
 
 
