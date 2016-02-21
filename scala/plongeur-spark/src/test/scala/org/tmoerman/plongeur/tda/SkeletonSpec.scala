@@ -13,7 +13,7 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
 
   behavior of "the skeleton"
 
-  implicit val counters = (new MapToInt, new MapToInt)
+  implicit val counter = mapToInt
 
   it should "work with specified boundaries" in {
 

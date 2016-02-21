@@ -9,13 +9,10 @@ import org.apache.commons.lang.StringUtils.trim
 /**
   * @author Thomas Moerman
   */
-trait TestResources extends SparkContextSpec {
-
-  val wd = "src/test/resources/data/"
+trait TestResources extends SparkContextSpec with FileResources {
 
   val test2DFile    = wd + "test2D.csv"
   val irisFile      = wd + "iris.csv"
-  val heuristicFile = wd + "heuristic.csv"
 
   val circle100 = wd + "circle.100.csv"
   val circle250 = wd + "circle.250.csv"

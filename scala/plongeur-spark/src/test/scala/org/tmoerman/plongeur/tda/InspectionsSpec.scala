@@ -1,23 +1,26 @@
 package org.tmoerman.plongeur.tda
 
 import org.scalatest.{Matchers, FlatSpec}
+import org.tmoerman.plongeur.test.FileResources
 
 /**
   * @author Thomas Moerman
   */
-class InspectionsSpec extends FlatSpec with Matchers {
+class InspectionsSpec extends FlatSpec with FileResources with Matchers {
 
-  val pretty = new MapToInt
+  val cachedInt = Inspections.mapToInt
 
   "MapToInt" should "return correct translations" in {
+    cachedInt("a") shouldBe 0
+    cachedInt("b") shouldBe 1
+    cachedInt("c") shouldBe 2
+    cachedInt("a") shouldBe 0
+    cachedInt("b") shouldBe 1
+    cachedInt("c") shouldBe 2
+  }
 
-    pretty("a") shouldBe 0
-    pretty("b") shouldBe 1
-    pretty("c") shouldBe 2
-    pretty("a") shouldBe 0
-    pretty("b") shouldBe 1
-    pretty("c") shouldBe 2
-
+  "reading file" should "work" in {
+    println(heuristicData.mkString("\n"))
   }
 
 }

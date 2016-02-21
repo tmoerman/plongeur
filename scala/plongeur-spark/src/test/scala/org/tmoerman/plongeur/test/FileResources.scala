@@ -1,0 +1,29 @@
+package org.tmoerman.plongeur.test
+
+import org.apache.commons.lang.StringUtils._
+import org.apache.spark.mllib.linalg.Vectors._
+import org.apache.spark.mllib.regression.LabeledPoint
+
+import scala.io.Source
+
+/**
+  * @author Thomas Moerman
+  */
+trait FileResources {
+
+  val wd = "src/test/resources/data/"
+
+  val heuristicFile = wd + "heuristic.csv"
+
+  def parseToLabeledPoints(file: String) =
+    Source
+      .fromFile(file)
+      .getLines
+      .map(_.split(",").map(trim))
+      .zipWithIndex
+      .map{ case (Array(x, y), idx) => new LabeledPoint(idx, dense(x.toDouble, y.toDouble)) }
+      .toList
+
+  val heuristicData = parseToLabeledPoints(heuristicFile)
+
+}
