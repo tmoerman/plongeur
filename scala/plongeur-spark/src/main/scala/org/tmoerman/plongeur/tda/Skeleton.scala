@@ -1,9 +1,5 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.commons.lang.StringUtils
-import org.apache.commons.lang.StringUtils.replaceChars
-import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner
-import org.apache.spark.Partitioner
 import org.apache.spark.Partitioner.defaultPartitioner
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.apache.spark.mllib.regression.LabeledPoint
@@ -38,14 +34,14 @@ object Skeleton extends Serializable {
 
     val clustersRDD: RDD[Cluster[Any]] =
       data
-        .flatMap(p => covering(p).map(A => (A, p)))
+        .flatMap(p => covering(p).map(coords => (coords, p)))
         .repartitionAndSortWithinPartitions(defaultPartitioner(data)) // TODO which partitioner?
         .mapPartitions(_
           .toIterable
           .groupRepeats(selector = _._1)                          // group by A
-          .map(pairs => { val coveringA = pairs.head._1
+          .map(pairs => { val coords = pairs.head._1
                           val points = pairs.map(_._2)
-                          cluster(points, distanceFunction) }))   // cluster points
+                          cluster(points, coords, distanceFunction) }))   // cluster points
         .flatMap(_.map(c => (c.points, c)))   //
         .reduceByKey((c1, c2) => c1)          // collapse equivalent clusters
         .values
@@ -54,7 +50,7 @@ object Skeleton extends Serializable {
     val edgesRDD: RDD[Set[Any]] =
       clustersRDD
         .flatMap(cluster => cluster.points.map(point => (point.label, cluster.id))) // melt all clusters by points
-        .combineByKey((clusterId: Any) => Set(clusterId),
+        .combineByKey((clusterId: Any) => Set(clusterId),  // TODO turn into groupByKey?
                       (acc: Set[Any], id: Any) => acc + id,
                       (acc1: Set[Any], acc2: Set[Any]) => acc1 ++ acc2)     // create proto-clusters, collapse doubles
         .values

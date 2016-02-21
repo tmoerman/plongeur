@@ -4,6 +4,7 @@ import java.util.UUID
 
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, euclidean}
+import org.tmoerman.plongeur.tda.Model.HyperCubeCoordinateVector
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 import smile.clustering.HierarchicalClustering
@@ -19,6 +20,7 @@ import scalaz.Memo._
 object Clustering extends Serializable {
 
   case class Cluster[ID](val id: ID,
+                         val coords: HyperCubeCoordinateVector,
                          val points: Set[LabeledPoint]) extends Serializable {
 
     def size = points.size
@@ -65,7 +67,7 @@ object Clustering extends Serializable {
     * @param k Resolution.
     * @return Returns the cutoff height for partitioning a Hierarchical clustering.
     */
-  def histogramPartitionHeuristic(k: Int = 10) = (heights: Heights) => heights.toList match {
+  def histogramPartitionHeuristic(k: Int = 100) = (heights: Heights) => heights.toList match {
     case Nil      => 0
     case x :: Nil => 0
     case        _ =>
@@ -94,12 +96,14 @@ object Clustering extends Serializable {
     * @return The List of Clusters.
     */
   def cluster(data: Seq[LabeledPoint],
+              coords: HyperCubeCoordinateVector = Vector(),
               distanceFunction: DistanceFunction = euclidean,
               method: String = SINGLE_LINKAGE,
               partitionHeuristic: PartitionHeuristic = histogramPartitionHeuristic(),
               clusterIdentifier: ClusterIdentifier[Any] = uuidClusterIdentifier): List[Cluster[Any]] =
     createClusters(
       data,
+      coords,
       clusterLabels(data, distanceFunction, method, partitionHeuristic),
       clusterIdentifier)
 
@@ -130,6 +134,7 @@ object Clustering extends Serializable {
 
 
   private def createClusters(data: Seq[LabeledPoint],
+                             coords: HyperCubeCoordinateVector,
                              clusterLabels: Array[Int],
                              clusterIdentifier: ClusterIdentifier[Any]): List[Cluster[Any]] =
     clusterLabels
@@ -137,7 +142,7 @@ object Clustering extends Serializable {
       .map{ case (clusterLabel, pointIdx) => (clusterLabel, data(pointIdx)) }
       .groupBy(_._1)
       .mapValues(_.map(_._2))
-      .map{ case (clusterLabel, points) => Cluster(clusterIdentifier(clusterLabel), points.toSet) }
+      .map{ case (clusterLabel, points) => Cluster(clusterIdentifier(clusterLabel), coords, points.toSet) }
       .toList
 
 }
