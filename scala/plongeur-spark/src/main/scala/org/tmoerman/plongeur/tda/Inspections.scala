@@ -2,44 +2,27 @@ package org.tmoerman.plongeur.tda
 
 import org.tmoerman.plongeur.tda.Clustering.Cluster
 import org.tmoerman.plongeur.tda.Skeleton.TDAResult
+import org.tmoerman.plongeur.util.IterableFunctions
 
-import scala.collection.mutable
+import scalaz.Memo
 
 /**
   * @author Thomas Moerman
   */
 object Inspections {
 
-  implicit def pimpTdaResult(result: TDAResult)(implicit counters: ((Any => Int), (Any => Int))): TDAResultInspections =
-    new TDAResultInspections(result, counters)
+  implicit def pimpTdaResult(result: TDAResult)(implicit counter: (Any => Int)): TDAResultInspections =
+    new TDAResultInspections(result, counter)
 
-}
-
-class MapToInt extends (Any => Int) {
-
-  private[this] var i = 0
-
-  def next: Int = {
-    val result = i
-
-    i+=1
-
-    result
+  def mapToInt: (Any => Int) = {
+    val source = Stream.iterate(0)(_ + 1).iterator
+    Memo.mutableHashMapMemo(_ => source.next)
   }
-
-  private[this] val cache = mutable.Map[Any, Int]()
-
-  def apply(a: Any): Int = cache.getOrElseUpdate(a, next)
 
 }
 
 class TDAResultInspections(val result: TDAResult,
-                           val counters: ((Any => Int), (Any => Int))) extends Serializable {
-
-  import org.tmoerman.plongeur.util.IterableFunctions._
-
-  val clusterCounter = counters._1
-  val coordsCounter = counters._2
+                           val clusterCounter: (Any => Int)) extends Serializable {
 
   def dotGraph(name: String) =
     Seq(
@@ -58,6 +41,8 @@ class TDAResultInspections(val result: TDAResult,
       .map(cluster => "[c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.points.map(_.label.toInt).toList.sorted.mkString(", "))
 
   type CA = Cluster[Any]
+
+  import IterableFunctions._
 
   def coordsToClusters =
     result
