@@ -2,7 +2,6 @@ package org.tmoerman.plongeur.tda
 
 import org.apache.spark.Partitioner.defaultPartitioner
 import org.apache.spark.mllib.linalg.Vectors.dense
-import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.stat.Statistics.colStats
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distance.{euclidean, DistanceFunction}
@@ -24,7 +23,7 @@ object Skeleton extends Serializable {
     * @return
     */
   def execute(lens: Lens,
-              data: RDD[LabeledPoint],
+              data: RDD[DataPoint],
               boundaries: Option[Array[(Double, Double)]] = None,
               distanceFunction: DistanceFunction = euclidean): TDAResult = {
 
@@ -49,7 +48,7 @@ object Skeleton extends Serializable {
 
     val edgesRDD: RDD[Set[Any]] =
       clustersRDD
-        .flatMap(cluster => cluster.points.map(point => (point.label, cluster.id))) // melt all clusters by points
+        .flatMap(cluster => cluster.points.map(p => (p.index, cluster.id))) // melt all clusters by points
         .combineByKey((clusterId: Any) => Set(clusterId),  // TODO turn into groupByKey?
                       (acc: Set[Any], id: Any) => acc + id,
                       (acc1: Set[Any], acc2: Set[Any]) => acc1 ++ acc2)     // create proto-clusters, collapse doubles
@@ -78,7 +77,7 @@ object Skeleton extends Serializable {
     *         on the RDD.
     */
   def calculateBoundaries(filterFunctions: Array[FilterFunction],
-                          rdd: RDD[LabeledPoint]): Array[(Double, Double)] = {
+                          rdd: RDD[DataPoint]): Array[(Double, Double)] = {
 
     val filterValues = rdd.map(p => dense(filterFunctions.map(f => f(p))))
 
@@ -93,7 +92,7 @@ object Skeleton extends Serializable {
     * @return Returns the CoveringFunction instance.
     */
   def coveringFunction(lens: Lens,
-                       boundaries: Array[(Double, Double)]): CoveringFunction = (p: LabeledPoint) =>
+                       boundaries: Array[(Double, Double)]): CoveringFunction = (p: DataPoint) =>
     hyperCubeCoordinateVectors(
       boundaries
         .zip(lens.filters)

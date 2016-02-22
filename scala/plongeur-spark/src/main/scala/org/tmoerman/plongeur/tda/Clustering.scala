@@ -2,9 +2,8 @@ package org.tmoerman.plongeur.tda
 
 import java.util.UUID
 
-import org.apache.spark.mllib.regression.LabeledPoint
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, euclidean}
-import org.tmoerman.plongeur.tda.Model.HyperCubeCoordinateVector
+import org.tmoerman.plongeur.tda.Model.{DataPoint, HyperCubeCoordinateVector}
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 import smile.clustering.HierarchicalClustering
@@ -21,7 +20,7 @@ object Clustering extends Serializable {
 
   case class Cluster[ID](val id: ID,
                          val coords: HyperCubeCoordinateVector,
-                         val points: Set[LabeledPoint]) extends Serializable {
+                         val points: Set[DataPoint]) extends Serializable {
 
     def size = points.size
 
@@ -45,7 +44,8 @@ object Clustering extends Serializable {
 
   type DistanceMatrix = Array[Array[Double]]
 
-  def distances(data: Seq[LabeledPoint], distance: DistanceFunction): DistanceMatrix = {
+  // TODO where does this come from?
+  def distances(data: Seq[DataPoint], distance: DistanceFunction): DistanceMatrix = {
     val n = data.length
     val result = new Array[Array[Double]](n)
 
@@ -71,6 +71,8 @@ object Clustering extends Serializable {
 
     // TODO this is not correct, replace with First Gap algorithm
 
+    // TODO simulate with 250 circle data in second interval
+
     case Nil      => 0
     case x :: Nil => 0
     case        _ =>
@@ -78,10 +80,14 @@ object Clustering extends Serializable {
 
       val frequencies = heights.map(d => (BigDecimal(d) quot inc).toInt).frequencies
 
-      (frequencies.keys.min to frequencies.keys.max)
-        .dropWhile(x => frequencies(x) != 0)
-        .headOption
-        .getOrElse(1) * inc
+      val head =
+        (frequencies.keys.min to frequencies.keys.max)
+          .dropWhile(x => frequencies(x) != 0)
+          .headOption
+
+      println(frequencies.mkString(", "), head)
+
+      head.getOrElse(1) * inc
   }
 
   type ClusterIdentifier[ID] = (Int) => ID
@@ -98,7 +104,7 @@ object Clustering extends Serializable {
     * @param clusterIdentifier The function that turns cluster labels into global identifiers.
     * @return The List of Clusters.
     */
-  def cluster(data: Seq[LabeledPoint],
+  def cluster(data: Seq[DataPoint],
               coords: HyperCubeCoordinateVector = Vector(),
               distanceFunction: DistanceFunction = euclidean,
               method: String = SINGLE_LINKAGE,
@@ -118,7 +124,7 @@ object Clustering extends Serializable {
     * @param partitionHeuristic The hierarchical clustering cutoff heuristic.
     * @return Returns an Array of Ints that represent for each LabeledPoint in the data, to which cluster it belongs.
     */
-  def clusterLabels(data: Seq[LabeledPoint],
+  def clusterLabels(data: Seq[DataPoint],
                     distanceFunction: DistanceFunction = euclidean,
                     method: String = SINGLE_LINKAGE,
                     partitionHeuristic: PartitionHeuristic = histogramPartitionHeuristic()): Array[Int] =
@@ -136,7 +142,7 @@ object Clustering extends Serializable {
     }
 
 
-  private def createClusters(data: Seq[LabeledPoint],
+  private def createClusters(data: Seq[DataPoint],
                              coords: HyperCubeCoordinateVector,
                              clusterLabels: Array[Int],
                              clusterIdentifier: ClusterIdentifier[Any]): List[Cluster[Any]] =

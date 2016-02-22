@@ -38,7 +38,7 @@ class TDAResultInspections(val result: TDAResult,
     result
       .clusters
       .sortBy(_.id.toString)
-      .map(cluster => "[c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.points.map(_.label.toInt).toList.sorted.mkString(", "))
+      .map(cluster => "[c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.points.map(_.index).toList.sorted.mkString(", "))
 
   type CA = Cluster[Any]
 
@@ -54,14 +54,14 @@ class TDAResultInspections(val result: TDAResult,
           (acc1: Set[CA], acc2: Set[CA]) => acc1 ++ acc2)
         .sortBy(_._1)
         .collect
-        .map{ case (coords, clusters) => coords.mkString(" ") + " [" + clusters.flatMap(_.points).map(_.label.toInt).min + ", " + clusters.flatMap(_.points).map(_.label.toInt).max + "]" + "\n" +
-          clusters.map(cluster => "  [c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.points.map(_.label.toInt).toList.sorted.mkString(", ")).mkString("\n")
+        .map{ case (coords, clusters) => coords.mkString(" ") + " [" + clusters.flatMap(_.points).map(_.index).min + ", " + clusters.flatMap(_.points).map(_.index).max + "]" + "\n" +
+          clusters.map(cluster => "  [c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.points.map(_.index).toList.sorted.mkString(", ")).mkString("\n")
         }
 
   def pointsToClusters =
     result
       .clustersRDD
-      .flatMap(cluster => cluster.points.map(p => (p.label.toInt, cluster.id)))
+      .flatMap(cluster => cluster.points.map(p => (p.index, cluster.id)))
       .combineByKey(
         (clusterId: Any) => Set(clusterId),
         (acc: Set[Any], id: Any) => acc + id,

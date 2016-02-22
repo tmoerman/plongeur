@@ -29,13 +29,13 @@ class Test2DSpec extends FlatSpec with TestResources with Matchers {
     val result = test2DLabeledPointsRDD.flatMap(p => covering(p).map(k => (k, p))).collect
 
     result
-      .foreach{ case (hyperCubeCoordinateVector: Vector[BigDecimal], LabeledPoint(_, features: DenseVector)) =>
+      .foreach{ case (hyperCubeCoordinateVector: Vector[BigDecimal], p: DataPoint) =>
 
         def testCoveringContainsPoint(i: Int): Unit = {
           val coordinate = hyperCubeCoordinateVector(i).toDouble
 
-          coordinate        should be <= features(i)
-          coordinate + size should be >  features(i)
+          coordinate        should be <= p.features(i)
+          coordinate + size should be >  p.features(i)
         }
 
         testCoveringContainsPoint(0)

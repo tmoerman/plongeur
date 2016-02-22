@@ -2,7 +2,7 @@ package org.tmoerman.plongeur.tda
 
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.tda.Model.{Filter, Lens}
+import org.tmoerman.plongeur.tda.Model.{DataPoint, Filter, Lens}
 import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
 
 /**
@@ -19,8 +19,8 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
 
     val boundaries = Array((0.0, 12.0), (0.0, 12.0))
 
-    val lens = Lens(Filter((l: LabeledPoint) => l.features(0), 1.0, 0.5),
-                    Filter((l: LabeledPoint) => l.features(1), 1.0, 0.5))
+    val lens = Lens(Filter((p: DataPoint) => p.features(0), 1.0, 0.5),
+                    Filter((p: DataPoint) => p.features(1), 1.0, 0.5))
 
     val result =
       Skeleton.execute(
@@ -33,8 +33,8 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
 
   it should "work with calculated boundaries" in {
 
-    val lens = Lens(Filter((l: LabeledPoint) => l.features(0), 1.0, 0.5),
-                    Filter((l: LabeledPoint) => l.features(1), 1.0, 0.5))
+    val lens = Lens(Filter((p: DataPoint) => p.features(0), 1.0, 0.5),
+                    Filter((p: DataPoint) => p.features(1), 1.0, 0.5))
 
     val result =
       Skeleton.execute(
@@ -54,7 +54,7 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
 
     val data = rdd.collect
 
-    val lens = Lens(Filter((l: LabeledPoint) => l.features(0), 0.25, 0.5))
+    val lens = Lens(Filter((p: DataPoint) => p.features(0), 0.25, 0.5))
 
     val result = Skeleton.execute(lens = lens, data = rdd)
 

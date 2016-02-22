@@ -1,11 +1,13 @@
 package org.tmoerman.plongeur.tda
 
 import org.apache.spark.mllib.linalg.Vectors.dense
-import org.apache.spark.mllib.regression.LabeledPoint
 import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.test.{FileResources, TestResources}
+import org.tmoerman.plongeur.tda.Distance.euclidean
+import org.tmoerman.plongeur.tda.Model.IndexedDataPoint
+import org.tmoerman.plongeur.test.{FileResources}
 
 import Clustering._
+import smile.clustering.HierarchicalClustering
 
 /**
   * @author Thomas Moerman
@@ -25,6 +27,26 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
 
   behavior of "clustering the heuristic data set with histogram partitioning heuristic"
 
+  it should "specify heights" in {
+
+    val partitionHeuristic = histogramPartitionHeuristic(10)
+
+    val distanceMatrix = distances(heuristicData, euclidean)
+
+    val link = linkage("single", distanceMatrix)
+
+    val hierarchicalClustering = new HierarchicalClustering(link)
+
+    val cutoffHeight = partitionHeuristic(hierarchicalClustering.getHeight)
+
+    val heights = hierarchicalClustering.getHeight
+
+    val tree = hierarchicalClustering.getTree
+
+    println(heights.mkString("\n"))
+
+  }
+
   it should "yield expected cluster labels" in {
 
     clusterLabels(heuristicData) shouldBe Array(0, 0, 0, 0, 1, 1, 1, 1)
@@ -39,7 +61,7 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
 
   "clustering a singleton data set with histogram partitioning heuristic" should "return a single cluster" in {
 
-    val singleton = List(LabeledPoint(66.6, dense(1.0, 2.0)))
+    val singleton = List(IndexedDataPoint(66, dense(1.0, 2.0)))
 
     clusterLabels(singleton) shouldBe Array(0)
 
@@ -47,10 +69,13 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
 
   "clustering a pair of data with histogram partitioning heuristic" should "return two clusters" in {
 
-    val pair = List(LabeledPoint(66.6, dense(1.0, 2.0)), LabeledPoint(77.7, dense(10.0, 20.0)))
+    val pair =
+      List(
+        IndexedDataPoint(66, dense(1.0, 2.0)),
+        IndexedDataPoint(77, dense(10.0, 20.0)))
 
     clusterLabels(pair) shouldBe Array(0, 1)
-    
+
   }
 
 }

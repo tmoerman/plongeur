@@ -1,9 +1,6 @@
 package org.tmoerman.plongeur.tda
 
-import java.util.UUID
-import java.util.UUID.randomUUID
-
-import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.linalg.{Vector => MLVector}
 
 /**
   * Model types for the TDA mapper.
@@ -16,7 +13,7 @@ object Model extends Serializable {
 
   type HyperCubeCoordinateVector = Vector[BigDecimal]
 
-  type CoveringFunction = (LabeledPoint) => Set[HyperCubeCoordinateVector]
+  type CoveringFunction = (DataPoint) => Set[HyperCubeCoordinateVector]
 
   case class Lens(val filters: Filter*) extends Serializable {
 
@@ -24,9 +21,9 @@ object Model extends Serializable {
 
   }
 
-  type FilterFunction = (LabeledPoint) => Double
+  type FilterFunction = (DataPoint) => Double
 
-  def feature(n: Int) = (p: LabeledPoint) => p.features(n)
+  def feature(n: Int) = (p: DataPoint) => p.features(n)
 
   type Percentage = BigDecimal
 
@@ -38,5 +35,12 @@ object Model extends Serializable {
     require(overlap >= 0,               "overlap cannot be negative")
     require(overlap >= 2/3,             "overlap > 2/3 is discouraged")
   }
+
+  trait DataPoint {
+    def features: MLVector
+    def index: Long
+  }
+
+  case class IndexedDataPoint(val index: Long, val features: MLVector) extends DataPoint with Serializable
 
 }
