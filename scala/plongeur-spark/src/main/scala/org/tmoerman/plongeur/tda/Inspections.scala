@@ -7,6 +7,8 @@ import org.tmoerman.plongeur.util.IterableFunctions
 import scalaz.Memo
 
 /**
+  * Inspections on a TDA result only needed in debugging/analysis context.
+  *
   * @author Thomas Moerman
   */
 object Inspections {
