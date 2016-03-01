@@ -1,12 +1,10 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.spark.mllib.linalg.{DenseVector, Vectors}
-import org.apache.spark.mllib.regression.LabeledPoint
 import org.scalatest.{Matchers, FlatSpec}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.test.TestResources
 
-import Skeleton._
+import Covering._
 
 /**
   * @author Thomas Moerman
@@ -24,7 +22,7 @@ class Test2DSpec extends FlatSpec with TestResources with Matchers {
 
     val boundaries = Array((0.0, size), (0.0, size))
 
-    val covering = coveringFunction(lens, boundaries)
+    val covering = toLevelSetInverseFunction(lens, boundaries)
 
     val result = test2DLabeledPointsRDD.flatMap(p => covering(p).map(k => (k, p))).collect
 

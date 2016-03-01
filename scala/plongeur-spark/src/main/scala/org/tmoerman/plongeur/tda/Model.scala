@@ -11,9 +11,9 @@ object Model extends Serializable {
 
   // TDA
 
-  type HyperCubeCoordinateVector = Vector[BigDecimal]
+  type LevelSetID = Vector[BigDecimal]
 
-  type CoveringFunction = (DataPoint) => Set[HyperCubeCoordinateVector]
+  type LevelSetInverseFunction = (DataPoint) => Set[LevelSetID]
 
   case class Lens(val filters: Filter*) extends Serializable {
 

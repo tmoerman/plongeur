@@ -62,7 +62,7 @@ class SkeletonSpec extends FlatSpec with SparkContextSpec with TestResources wit
 
     val toCl = result.pointsToClusters
 
-    val byCoords = result.coordsToClusters
+    val byCoords = result.levelSetsToClusters
 
     println(byCoords.mkString("\n\n"))
 
