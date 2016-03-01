@@ -12,5 +12,5 @@
     - [ ] zero_filter
 - [x] collapse equal clusters
     - [ ] make this optional
-- [ ] retain hypercubecoordinates per cluster
+- [x] retain levelSetID per cluster
 - [x] replace `LabeledPoint` with a better domain abstraction
