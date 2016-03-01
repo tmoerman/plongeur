@@ -3,7 +3,7 @@ package org.tmoerman.plongeur.tda
 import java.util.UUID
 
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, euclidean}
-import org.tmoerman.plongeur.tda.Model.{DataPoint, HyperCubeCoordinateVector}
+import org.tmoerman.plongeur.tda.Model.{DataPoint, LevelSetID}
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 import smile.clustering.HierarchicalClustering
@@ -19,7 +19,7 @@ import scalaz.Memo._
 object Clustering extends Serializable {
 
   case class Cluster[ID](val id: ID,
-                         val coords: HyperCubeCoordinateVector,
+                         val levelSetID: LevelSetID,
                          val points: Set[DataPoint]) extends Serializable {
 
     def size = points.size
@@ -97,23 +97,24 @@ object Clustering extends Serializable {
   private val SINGLE_LINKAGE = "single"
 
   /**
-    * @param data The LabeledPoint instances to cluster.
+    * @param dataPoints The LabeledPoint instances to cluster.
+    * @param levelSetID The LevelSetID.
     * @param distanceFunction The distance function.
     * @param method The hierarchical clustering method: single, complete, etc. Default = "single".
     * @param partitionHeuristic The hierarchical clustering cutoff heuristic.
     * @param clusterIdentifier The function that turns cluster labels into global identifiers.
     * @return The List of Clusters.
     */
-  def cluster(data: Seq[DataPoint],
-              coords: HyperCubeCoordinateVector = Vector(),
+  def cluster(dataPoints: Seq[DataPoint],
+              levelSetID: LevelSetID = Vector[BigDecimal](),
               distanceFunction: DistanceFunction = euclidean,
               method: String = SINGLE_LINKAGE,
               partitionHeuristic: PartitionHeuristic = histogramPartitionHeuristic(),
               clusterIdentifier: ClusterIdentifier[Any] = uuidClusterIdentifier): List[Cluster[Any]] =
     createClusters(
-      data,
-      coords,
-      clusterLabels(data, distanceFunction, method, partitionHeuristic),
+      dataPoints,
+      levelSetID,
+      clusterLabels(dataPoints, distanceFunction, method, partitionHeuristic),
       clusterIdentifier)
 
 
@@ -143,7 +144,7 @@ object Clustering extends Serializable {
 
 
   private def createClusters(data: Seq[DataPoint],
-                             coords: HyperCubeCoordinateVector,
+                             levelSetID: LevelSetID,
                              clusterLabels: Array[Int],
                              clusterIdentifier: ClusterIdentifier[Any]): List[Cluster[Any]] =
     clusterLabels
@@ -151,7 +152,7 @@ object Clustering extends Serializable {
       .map{ case (clusterLabel, pointIdx) => (clusterLabel, data(pointIdx)) }
       .groupBy(_._1)
       .mapValues(_.map(_._2))
-      .map{ case (clusterLabel, points) => Cluster(clusterIdentifier(clusterLabel), coords, points.toSet) }
+      .map{ case (clusterLabel, points) => Cluster(clusterIdentifier(clusterLabel), levelSetID, points.toSet) }
       .toList
 
 }

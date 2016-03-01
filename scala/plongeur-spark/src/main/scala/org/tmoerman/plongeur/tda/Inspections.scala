@@ -46,17 +46,17 @@ class TDAResultInspections(val result: TDAResult,
 
   import IterableFunctions._
 
-  def coordsToClusters =
+  def levelSetsToClusters =
     result
         .clustersRDD
-        .map(cluster => (cluster.coords, cluster))
+        .map(cluster => (cluster.levelSetID, cluster))
         .combineByKey(
           (cluster: CA) => Set(cluster),
           (acc: Set[CA], c: CA) => acc + c,
           (acc1: Set[CA], acc2: Set[CA]) => acc1 ++ acc2)
         .sortBy(_._1)
         .collect
-        .map{ case (coords, clusters) => coords.mkString(" ") + " [" + clusters.flatMap(_.points).map(_.index).min + ", " + clusters.flatMap(_.points).map(_.index).max + "]" + "\n" +
+        .map{ case (levelSetID, clusters) => levelSetID.mkString(" ") + " [" + clusters.flatMap(_.points).map(_.index).min + ", " + clusters.flatMap(_.points).map(_.index).max + "]" + "\n" +
           clusters.map(cluster => "  [c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.points.map(_.index).toList.sorted.mkString(", ")).mkString("\n")
         }
 

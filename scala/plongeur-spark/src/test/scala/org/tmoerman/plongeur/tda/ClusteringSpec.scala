@@ -55,7 +55,7 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
 
   it should "yield correct clusters and members" in {
 
-    println(cluster(heuristicData).map(_.verbose).mkString("\n"))
+    println(cluster(dataPoints = heuristicData).map(_.verbose).mkString("\n"))
 
   }
 
