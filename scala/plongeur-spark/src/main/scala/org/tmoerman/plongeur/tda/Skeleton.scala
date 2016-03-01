@@ -36,8 +36,8 @@ object Skeleton extends Serializable {
         .flatMap(p => covering(p).map(coords => (coords, p)))
         .repartitionAndSortWithinPartitions(defaultPartitioner(data)) // TODO which partitioner?
         .mapPartitions(_
-          .toIterable
-          .groupRepeats(selector = _._1)                          // group by A
+          .view                           // TODO view ok here?
+          .groupRepeats(selector = _._1)  // group by A
           .map(pairs => { val coords = pairs.head._1
                           val points = pairs.map(_._2)
                           cluster(points, coords, distanceFunction) }))   // cluster points
