@@ -10,6 +10,7 @@
     - [ ] graph_Laplacian
     - [ ] dm_eigenvector
     - [ ] zero_filter
-- [ ] collapse equal clusters
+- [x] collapse equal clusters
+    - [ ] make this optional
 - [ ] retain hypercubecoordinates per cluster
 - [x] replace `LabeledPoint` with a better domain abstraction
