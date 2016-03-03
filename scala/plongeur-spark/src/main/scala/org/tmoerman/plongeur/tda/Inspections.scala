@@ -30,10 +30,11 @@ class TDAResultInspections[ID](val result: TDAResult[ID],
   def dotGraph(name: String) =
     Seq(
       s"graph $name {",
-      result.clusters.map(_.id).map(clusterCounter).mkString("\n"),
+      result.clusters.map(_.id).map(clusterCounter).sorted.mkString("\n"),
       result.edges
         .map(_.map(clusterCounter))
         .map(_.toArray match { case Array(x, y) => s"$x -- $y" })
+        .sorted
         .mkString("\n"),
       "}").mkString("\n")
 
@@ -41,7 +42,7 @@ class TDAResultInspections[ID](val result: TDAResult[ID],
     result
       .clusters
       .sortBy(_.id.toString)
-      .map(cluster => "[c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.dataPoints.map(_.index).toList.sorted.mkString(", "))
+      .map(cluster => "[c." + clusterCounter(cluster.id) + "]" + " -> " + cluster.dataPoints.map(_.index).toList.sorted.mkString(", "))
 
   type C = Cluster[ID]
 
@@ -58,7 +59,11 @@ class TDAResultInspections[ID](val result: TDAResult[ID],
         .sortBy(_._1)
         .collect
         .map{ case (levelSetID, clusters) => levelSetID.mkString(" ") + " [" + clusters.flatMap(_.dataPoints).map(_.index).min + ", " + clusters.flatMap(_.dataPoints).map(_.index).max + "]" + "\n" +
-          clusters.map(cluster => "  [c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.dataPoints.map(_.index).toList.sorted.mkString(", ")).mkString("\n")
+          clusters
+            .toSeq
+            .map(cluster => "  [c." + clusterCounter(cluster.id) + "]" + " -> " + cluster.dataPoints.map(_.index).toList.sorted.mkString(", "))
+            .sorted
+            .mkString("\n")
         }
 
   def pointsToClusters =
