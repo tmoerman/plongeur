@@ -1,19 +1,14 @@
 package org.tmoerman.plongeur.tda.cluster
 
-import java.util.UUID
-import java.util.UUID.randomUUID
-
 import org.tmoerman.plongeur.tda.Distance._
 import org.tmoerman.plongeur.tda.Model._
-
-import scalaz.Memo._
 
 /**
   * @author Thomas Moerman
   */
 object Clustering extends Serializable {
 
-  type ScaleSelection = (LocalClustering) => Double
+  type ScaleSelection = (Seq[Double]) => Double
 
   /**
     * Project specific protocol for hierarchical clustering. Not to be confused with the SMILE implementation.

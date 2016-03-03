@@ -36,7 +36,10 @@ object SmileClusteringProvider extends LocalClusteringProvider with Serializable
         dataPoints match {
           case      Nil => Nil
           case _ :: Nil => 0 :: Nil
-          case _        => hierarchicalClustering.partition(scaleSelection(this))
+          case _        =>
+            val cutoff = scaleSelection(heights(true))
+
+            hierarchicalClustering.partition(cutoff)
         }
 
     }
