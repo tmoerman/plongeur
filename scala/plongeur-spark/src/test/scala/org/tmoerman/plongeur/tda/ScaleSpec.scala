@@ -2,7 +2,6 @@ package org.tmoerman.plongeur.tda
 
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.cluster.Scale.histogram
-import org.tmoerman.plongeur.test.{FileResources, TestResources}
 
 /**
   * @author Thomas Moerman
@@ -30,7 +29,5 @@ class ScaleSpec extends FlatSpec with Matchers {
 
     histogram(10).apply(heights) shouldBe 11.2
   }
-
-
 
 }

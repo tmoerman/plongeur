@@ -29,11 +29,7 @@ object Clustering extends Serializable {
       * @return Returns the cluster labels in function of the
       */
     def labels(scaleSelection: ScaleSelection): Seq[Any]
-
-    def heightPercentages = {
-
-    }
-
+    
   }
 
   sealed trait ClusteringMethod
