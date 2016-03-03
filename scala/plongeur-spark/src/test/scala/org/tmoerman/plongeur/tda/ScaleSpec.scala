@@ -2,13 +2,14 @@ package org.tmoerman.plongeur.tda
 
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.cluster.Scale.histogram
+import org.tmoerman.plongeur.test.{FileResources, TestResources}
 
 /**
   * @author Thomas Moerman
   */
 class ScaleSpec extends FlatSpec with Matchers {
 
-  behavior of "histogram scale selection"
+  behavior of "histogram(10) scale selection"
 
   it should "yield 0 if the heights are empty" in {
     histogram(10).apply(Nil) shouldBe 0

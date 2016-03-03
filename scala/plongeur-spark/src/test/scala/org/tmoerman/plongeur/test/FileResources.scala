@@ -14,6 +14,7 @@ trait FileResources {
   val wd = "src/test/resources/data/"
 
   val heuristicFile = wd + "heuristic.csv"
+  val test2dFile    = wd + "test.2d.csv"
 
   def parseToLabeledPoints(file: String) =
     Source
@@ -25,5 +26,7 @@ trait FileResources {
       .toList
 
   val heuristicData = parseToLabeledPoints(heuristicFile)
+
+  val test2dData = parseToLabeledPoints(test2dFile)
 
 }
