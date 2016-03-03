@@ -1,11 +1,10 @@
 package org.tmoerman.plongeur.test
 
+import org.apache.commons.lang.StringUtils.trim
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Model.{DataPoint, IndexedDataPoint}
+import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.RDDFunctions._
-
-import org.apache.commons.lang.StringUtils.trim
 
 /**
   * @author Thomas Moerman

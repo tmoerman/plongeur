@@ -1,7 +1,7 @@
 package org.tmoerman.plongeur.tda
 
 import org.scalatest.{FlatSpec, Matchers}
-import Model._
+import org.tmoerman.plongeur.tda.Model._
 
 /**
   * @author Thomas Moerman

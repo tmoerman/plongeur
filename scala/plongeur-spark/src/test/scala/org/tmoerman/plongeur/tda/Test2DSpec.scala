@@ -1,10 +1,11 @@
 package org.tmoerman.plongeur.tda
 
 import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.test.TestResources
 
 import Covering._
+import Model._
+import TDA._
 
 /**
   * @author Thomas Moerman

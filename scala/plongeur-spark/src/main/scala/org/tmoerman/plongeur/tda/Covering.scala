@@ -11,6 +11,22 @@ import org.tmoerman.plongeur.tda.Model._
 object Covering {
 
   /**
+    * @param lens The TDA Lens specification.
+    * @param coveringBoundaries The boundaries in function of which to define the covering function.
+    * @return Returns the CoveringFunction instance.
+    */
+  def toLevelSetInverseFunction(lens: Lens,
+                                coveringBoundaries: Array[(Double, Double)]): LevelSetInverseFunction = (p: DataPoint) => {
+    val coveringIntervals =
+      coveringBoundaries
+        .zip(lens.filters)
+        .map { case ((min, max), filter) =>
+          toCoveringIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) }
+
+    combineToLevelSetIDs(coveringIntervals)
+  }
+
+  /**
     * @param filterFunctions The filter functions.
     * @param rdd The data RDD.
     * @return Returns an Array of Double tuples, representing the (min, max) boundaries of the filter functions applied
@@ -25,24 +41,6 @@ object Covering {
 
     stats.min.toArray zip stats.max.toArray
   }
-
-  /**
-    * @param lens The TDA Lens specification.
-    * @param boundaries The boundaries in function of which to define the covering function.
-    * @return Returns the CoveringFunction instance.
-    */
-  def toLevelSetInverseFunction(lens: Lens,
-                                boundaries: Array[(Double, Double)]): LevelSetInverseFunction = (p: DataPoint) => {
-
-    val coveringIntervals =
-      boundaries
-        .zip(lens.filters)
-        .map { case ((min, max), filter) =>
-          toCoveringIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) }
-
-    combineToLevelSetIDs(coveringIntervals)
-  }
-
 
   /**
     * @param boundaryMin The lower boundary of the filter function span.

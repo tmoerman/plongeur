@@ -1,6 +1,6 @@
 package org.tmoerman.plongeur.tda
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Covering.toCoveringIntervals
 
 /**

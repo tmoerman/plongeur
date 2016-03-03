@@ -1,15 +1,39 @@
 package org.tmoerman.plongeur.tda
 
-import breeze.linalg.DenseVector
 import breeze.linalg.functions._
-
 import org.apache.spark.mllib.linalg.VectorConversions._
-import org.tmoerman.plongeur.tda.Model.{IndexedDataPoint, DataPoint}
+import org.tmoerman.plongeur.tda.Model._
 
 /**
   * @author Thomas Moerman
   */
 object Distance {
+
+  type DistanceMatrix = Array[Array[Double]]
+
+  /**
+    * See smile-scala.
+    *
+    * @param dataPoints The data points.
+    * @param distanceFunction The distance function, e.g. Euclidean.
+    * @return Returns a distance matrix
+    */
+  def distanceMatrix(dataPoints: Seq[DataPoint],
+                     distanceFunction: DistanceFunction): DistanceMatrix = {
+    val n = dataPoints.length
+    val result = new Array[Array[Double]](n)
+
+    for (i <- 0 until n) {
+      result(i) = new Array[Double](i+1)
+      for (j <- 0 until i) {
+        result(i)(j) = distanceFunction(dataPoints(i), dataPoints(j))
+      }
+    }
+
+    result
+  }
+
+  def max(distanceMatrix: DistanceMatrix): Double = distanceMatrix.flatten.max
 
   type DistanceFunction = (DataPoint, DataPoint) => Double
 
@@ -22,13 +46,5 @@ object Distance {
   val manhattan = (a: DataPoint, b: DataPoint) => manhattanDistance(a.features.toBreeze, b.features.toBreeze)
 
   def minkowski(exponent: Double) = (a: DataPoint, b: DataPoint) => minkowskiDistance(a.features.toBreeze, b.features.toBreeze, exponent)
-
-  def bla: Unit = {
-
-    val a = DenseVector(1.0, 2.9)
-
-    val r = minkowski(3)(IndexedDataPoint(1, a.toMLLib), IndexedDataPoint(2, a.toMLLib))
-
-  }
 
 }

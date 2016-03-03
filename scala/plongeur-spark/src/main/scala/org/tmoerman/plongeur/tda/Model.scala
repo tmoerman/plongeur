@@ -1,19 +1,51 @@
 package org.tmoerman.plongeur.tda
 
+import java.util.UUID
+import java.util.UUID._
+
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 
+import scalaz.Memo._
+
 /**
-  * Model types for the TDA mapper.
-  *
   * @author Thomas Moerman
   */
-object Model extends Serializable {
+object Model {
 
-  // TDA
+  def feature(n: Int) = (p: DataPoint) => p.features(n)
+
+  trait DataPoint {
+    def features: MLVector
+    def index: Long
+  }
+
+  case class IndexedDataPoint(val index: Long, val features: MLVector) extends DataPoint with Serializable
 
   type LevelSetID = Vector[BigDecimal]
 
   type LevelSetInverseFunction = (DataPoint) => Set[LevelSetID]
+
+  /**
+    * @param id The cluster ID.
+    * @param levelSetID The level set ID.
+    * @param dataPoints The data points contained by this cluster.
+    * @tparam ID Type parameter for the cluster identifier.
+    */
+  case class Cluster[ID](val id: ID,
+                         val levelSetID: LevelSetID,
+                         val dataPoints: Set[DataPoint]) extends Serializable {
+
+    def size = dataPoints.size
+
+    def verbose = s"""Cluster($id, $dataPoints)"""
+
+    override def toString = s"Cluster($id)"
+
+  }
+
+  type ClusterIdentifier[ID] = (Any) => ID
+
+  def uuidClusterIdentifier: ClusterIdentifier[UUID] = mutableHashMapMemo(_ => randomUUID)
 
   case class Lens(val filters: Filter*) extends Serializable {
 
@@ -22,8 +54,6 @@ object Model extends Serializable {
   }
 
   type FilterFunction = (DataPoint) => Double
-
-  def feature(n: Int) = (p: DataPoint) => p.features(n)
 
   type Percentage = BigDecimal
 
@@ -35,12 +65,5 @@ object Model extends Serializable {
     require(overlap >= 0,               "overlap cannot be negative")
     require(overlap >= 2/3,             "overlap > 2/3 is discouraged")
   }
-
-  trait DataPoint {
-    def features: MLVector
-    def index: Long
-  }
-
-  case class IndexedDataPoint(val index: Long, val features: MLVector) extends DataPoint with Serializable
 
 }

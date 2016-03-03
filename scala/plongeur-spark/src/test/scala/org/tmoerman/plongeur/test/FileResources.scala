@@ -2,8 +2,7 @@ package org.tmoerman.plongeur.test
 
 import org.apache.commons.lang.StringUtils._
 import org.apache.spark.mllib.linalg.Vectors._
-import org.apache.spark.mllib.regression.LabeledPoint
-import org.tmoerman.plongeur.tda.Model.IndexedDataPoint
+import org.tmoerman.plongeur.tda.Model._
 
 import scala.io.Source
 

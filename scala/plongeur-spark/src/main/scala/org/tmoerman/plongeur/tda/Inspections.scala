@@ -1,9 +1,10 @@
 package org.tmoerman.plongeur.tda
 
-import org.tmoerman.plongeur.tda.Clustering.Cluster
-import org.tmoerman.plongeur.tda.Skeleton.TDAResult
+import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.TDA._
 import org.tmoerman.plongeur.util.IterableFunctions
 
+import scala.reflect.ClassTag
 import scalaz.Memo
 
 /**
@@ -13,8 +14,7 @@ import scalaz.Memo
   */
 object Inspections {
 
-  implicit def pimpTdaResult(result: TDAResult)(implicit counter: (Any => Int)): TDAResultInspections =
-    new TDAResultInspections(result, counter)
+  implicit def pimpTdaResult[ID](result: TDAResult[ID])(implicit counter: (Any => Int), tag: ClassTag[ID]): TDAResultInspections[ID] = new TDAResultInspections[ID](result, counter)(tag)
 
   def mapToInt: (Any => Int) = {
     val source = Stream.iterate(0)(_ + 1).iterator
@@ -23,8 +23,9 @@ object Inspections {
 
 }
 
-class TDAResultInspections(val result: TDAResult,
-                           val clusterCounter: (Any => Int)) extends Serializable {
+class TDAResultInspections[ID](val result: TDAResult[ID],
+                               val clusterCounter: (Any => Int))
+                              (implicit tag: ClassTag[ID]) extends Serializable {
 
   def dotGraph(name: String) =
     Seq(
@@ -40,30 +41,30 @@ class TDAResultInspections(val result: TDAResult,
     result
       .clusters
       .sortBy(_.id.toString)
-      .map(cluster => "[c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.points.map(_.index).toList.sorted.mkString(", "))
+      .map(cluster => "[c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.dataPoints.map(_.index).toList.sorted.mkString(", "))
 
-  type CA = Cluster[Any]
+  type C = Cluster[ID]
 
   import IterableFunctions._
 
   def levelSetsToClusters =
     result
         .clustersRDD
-        .map(cluster => (cluster.levelSetID, cluster))
+        .keyBy(_.levelSetID)
         .combineByKey(
-          (cluster: CA) => Set(cluster),
-          (acc: Set[CA], c: CA) => acc + c,
-          (acc1: Set[CA], acc2: Set[CA]) => acc1 ++ acc2)
+          (cluster: C) => Set(cluster),
+          (acc: Set[C], c: C) => acc + c,
+          (acc1: Set[C], acc2: Set[C]) => acc1 ++ acc2)
         .sortBy(_._1)
         .collect
-        .map{ case (levelSetID, clusters) => levelSetID.mkString(" ") + " [" + clusters.flatMap(_.points).map(_.index).min + ", " + clusters.flatMap(_.points).map(_.index).max + "]" + "\n" +
-          clusters.map(cluster => "  [c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.points.map(_.index).toList.sorted.mkString(", ")).mkString("\n")
+        .map{ case (levelSetID, clusters) => levelSetID.mkString(" ") + " [" + clusters.flatMap(_.dataPoints).map(_.index).min + ", " + clusters.flatMap(_.dataPoints).map(_.index).max + "]" + "\n" +
+          clusters.map(cluster => "  [c" + clusterCounter(cluster.id) + "]" + " -> " + cluster.dataPoints.map(_.index).toList.sorted.mkString(", ")).mkString("\n")
         }
 
   def pointsToClusters =
     result
       .clustersRDD
-      .flatMap(cluster => cluster.points.map(p => (p.index, cluster.id)))
+      .flatMap(cluster => cluster.dataPoints.map(p => (p.index, cluster.id)))
       .combineByKey(
         (clusterId: Any) => Set(clusterId),
         (acc: Set[Any], id: Any) => acc + id,
