@@ -1,6 +1,5 @@
 package org.tmoerman.plongeur.tda.cluster
 
-import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
@@ -8,20 +7,23 @@ import org.tmoerman.plongeur.util.IterableFunctions._
   */
 object Scale extends Serializable {
 
-  def histogram(nrBins: Int = 10) = (clustering: LocalClustering) => clustering.heights(true).toList match {
-    case Nil      => 0
-    case x :: Nil => 0
-    case heights  =>
-      val inc = (heights.max - heights.min) / nrBins
+  def histogram(nrBins: Int = 10) = (heights: Seq[Double]) => heights.toList match {
+    case      Nil => 0
+    case x :: Nil => x
+    case        _ =>
+      val min = heights.min
+      val max = heights.max
+      val inc = (max - min) / nrBins
 
-      val frequencies = heights.map(d => (BigDecimal(d) quot inc).toInt).frequencies
+      def bin(d: Double) = (BigDecimal(d - min) quot inc).toInt
 
-      val head =
-        (frequencies.keys.min to frequencies.keys.max)
-          .dropWhile(x => frequencies(x) != 0)
-          .headOption
+      val frequencies = heights.map(bin).frequencies
 
-      head.getOrElse(1) * inc
+      Stream
+        .from(0)
+        .dropWhile(i => frequencies(i) != 0)
+        .map(_ * inc + min)
+        .head
   }
 
   def firstGap() = ???
