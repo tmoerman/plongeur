@@ -1,7 +1,10 @@
 package org.tmoerman.plongeur.tda
 
+import java.lang.Math.sqrt
+
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.tda.cluster._
 import org.tmoerman.plongeur.test.FileResources
@@ -22,57 +25,40 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
 
   }
 
-  behavior of "clustering the heuristic data set with histogram partitioning heuristic"
+  behavior of "clustering with histogram(10) scale selection"
 
-  val scaleSelection = histogram(10)
+  it should "yield 1 cluster for homogeneous data points" in {
+    val homogeneous = heuristicData.take(4)
 
-//  it should "specify heights" in {
-//
-//    val distances = distanceMatrix(heuristicData, euclidean)
-//
-//    val linkage = createLinkage(SINGLE, distances)
-//
-//    val hierarchicalClustering = new HierarchicalClustering(linkage)
-//
-//    val cutoffHeight = partitionHeuristic(hierarchicalClustering.getHeight)
-//
-//    val heights = hierarchicalClustering.getHeight
-//
-//    val tree = hierarchicalClustering.getTree
-//
-//    println(heights.mkString("\n"))
-//
-//  }
+    val clustering = SmileClusteringProvider.apply(homogeneous)
 
-  it should "yield expected cluster labels" in {
+    clustering.heights() shouldBe Seq(1.0, 1.0, 1.0, sqrt(2))
 
-    SmileClusteringProvider.apply(heuristicData).labels(scaleSelection) shouldBe Array(0, 0, 0, 0, 1, 1, 1, 1)
-
+    clustering.labels(histogram(10)) shouldBe Seq(0, 0, 0, 0)
   }
 
-//  it should "yield correct clusters and members" in {
-//
-//    println(doClustering(dataPoints = heuristicData).map(_.verbose).mkString("\n"))
-//
-//  }
-//
-//  "clustering a singleton data set with histogram partitioning heuristic" should "return a single cluster" in {
-//
-//    val singleton = List(IndexedDataPoint(66, dense(1.0, 2.0)))
-//
-//    clusterLabels(singleton) shouldBe Array(0)
-//
-//  }
-//
-//  "clustering a pair of data with histogram partitioning heuristic" should "return two clusters" in {
-//
-//    val pair =
-//      List(
-//        IndexedDataPoint(66, dense(1.0, 2.0)),
-//        IndexedDataPoint(77, dense(10.0, 20.0)))
-//
-//    clusterLabels(pair) shouldBe Array(0, 1)
-//
-//  }
+  it should "yield 2 cluster for bipartite data points" in {
+    val clustering = SmileClusteringProvider.apply(heuristicData)
+
+    clustering.heights() shouldBe Seq(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, sqrt(8), 5.0)
+
+    clustering.labels(histogram(10)) shouldBe Seq(0, 0, 0, 0, 1, 1, 1, 1)
+  }
+
+  it should "yield 1 cluster for a singleton" in {
+    val singleton = heuristicData.take(1)
+
+    val clustering = SmileClusteringProvider.apply(singleton)
+
+    clustering.labels(histogram(10)) shouldBe Seq(0)
+  }
+
+  it should "yield 2 clusters for a pair" in {
+    val pair = heuristicData.take(2)
+
+    val clustering = SmileClusteringProvider.apply(pair)
+
+    clustering.labels(histogram(10)) shouldBe Seq(0, 1)
+  }
 
 }
