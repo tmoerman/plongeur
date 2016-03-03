@@ -43,9 +43,9 @@ object Model {
 
   }
 
-  type ClusterIdentifier[ID] = (Any) => ID
+  type ClusterIDGenerator[ID] = () => ID
 
-  def uuidClusterIdentifier: ClusterIdentifier[UUID] = mutableHashMapMemo(_ => randomUUID)
+  def uuidClusterIDGenerator: ClusterIDGenerator[UUID] = () => randomUUID
 
   case class Lens(val filters: Filter*) extends Serializable {
 

@@ -3,6 +3,8 @@ package org.tmoerman.plongeur.tda.cluster
 import org.tmoerman.plongeur.tda.Distance._
 import org.tmoerman.plongeur.tda.Model._
 
+import scalaz.Memo.mutableHashMapMemo
+
 /**
   * @author Thomas Moerman
   */
@@ -28,6 +30,10 @@ object Clustering extends Serializable {
       */
     def labels(scaleSelection: ScaleSelection): Seq[Any]
 
+    def heightPercentages = {
+
+    }
+
   }
 
   sealed trait ClusteringMethod
@@ -49,17 +55,21 @@ object Clustering extends Serializable {
   def localClusters[ID](levelSetID: LevelSetID,
                         dataPoints: Seq[DataPoint],
                         clusterLabels: Seq[Any],
-                        clusterIdentifier: ClusterIdentifier[ID]): List[Cluster[ID]] =
+                        clusterIDGenerator: ClusterIDGenerator[ID]): List[Cluster[ID]] = {
+
+    val clusterIdentifier: Any => ID = mutableHashMapMemo(_ => clusterIDGenerator())
+
     clusterLabels
       .zip(dataPoints)
       .groupBy(_._1)
       .mapValues(_.map(_._2))
-      .map{ case (clusterLabel, points) =>
+      .map { case (clusterLabel, points) =>
         Cluster(
           clusterIdentifier(clusterLabel),
           levelSetID,
-          points.toSet) }
+          points.toSet)
+      }
       .toList
-
+  }
 
 }

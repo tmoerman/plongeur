@@ -3,7 +3,6 @@ package org.tmoerman.plongeur.tda
 import java.lang.Math.sqrt
 
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.tda.cluster._
 import org.tmoerman.plongeur.test.FileResources
@@ -12,17 +11,6 @@ import org.tmoerman.plongeur.test.FileResources
   * @author Thomas Moerman
   */
 class ClusteringSpec extends FlatSpec with FileResources with Matchers {
-
-  behavior of "memoized cluster identifier"
-
-  it should "return the same uuid for same input" in {
-
-    val f = uuidClusterIdentifier
-
-    f(0) shouldBe f(0)
-    f(1) should not be f(2)
-
-  }
 
   behavior of "clustering with histogram(10) scale selection"
 
@@ -58,6 +46,24 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
     val clustering = SmileClusteringProvider.apply(pair)
 
     clustering.labels(histogram(10)) shouldBe Seq(0, 1)
+  }
+
+  it should "yield 9 clusters for test.2d.csv data" in {
+    val clustering = SmileClusteringProvider.apply(test2dData)
+
+    println(clustering.heights(true))
+
+    val resolutions =
+      Stream
+        .from(1)
+        .map(i => (i, clustering.labels(histogram(i)).distinct.size))
+        .takeWhile(_._1 <= 100)
+        .distinct.sorted
+        .mkString("\n")
+
+    println(resolutions)
+
+    clustering.labels(histogram(100)).distinct.size shouldBe 9
   }
 
 }
