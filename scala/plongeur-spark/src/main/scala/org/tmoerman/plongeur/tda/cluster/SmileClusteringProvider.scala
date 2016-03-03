@@ -6,6 +6,8 @@ import org.tmoerman.plongeur.tda.cluster.Clustering._
 import smile.clustering.HierarchicalClustering
 import smile.clustering.linkage._
 
+import scala.util.Try
+
 /**
   * Recycled a few methods from smile-scala, which is not released as a Maven artifact.
   *
@@ -39,7 +41,10 @@ object SmileClusteringProvider extends LocalClusteringProvider with Serializable
           case _        =>
             val cutoff = scaleSelection(heights(true))
 
-            hierarchicalClustering.partition(cutoff)
+            lazy val attempt = hierarchicalClustering.partition(cutoff).toSeq
+            lazy val backup  = Stream.fill(dataPoints.size)(0)
+
+            Try(attempt).getOrElse(backup)
         }
 
     }
