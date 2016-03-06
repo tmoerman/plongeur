@@ -3,30 +3,31 @@ package org.tmoerman.plongeur.tda
 import org.apache.spark.Partitioner._
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
-import org.tmoerman.plongeur.tda.Distance._
 import org.tmoerman.plongeur.tda.Model.{DataPoint, _}
 import org.tmoerman.plongeur.tda.cluster.Clustering._
-import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 import scala.reflect.ClassTag
 
 /**
+  * TODO turn into a part of the reactive machinery with observable input and observable output. Cfr. Cycle.js
+  *
   * @author Thomas Moerman
   */
 object TDA {
 
-  def execute[ID](lens: Lens,
-                  dataRDD: RDD[DataPoint],
-                  coveringBoundaries: Option[Array[(Double, Double)]] = None,
-                  distanceFunction: DistanceFunction = euclidean,
-                  clusteringMethod: ClusteringMethod = SINGLE,
-                  scaleSelection: ScaleSelection = histogram(),
-                  clusteringProvider: LocalClusteringProvider = SmileClusteringProvider,
-                  clusterIdentifier: ClusterIDGenerator[ID],
-                  collapseDuplicateClusters: Boolean = true)
+  case class TDAParams[ID](val lens: Lens,
+                           val clusteringParams: ClusteringParams[ID],
+                           val coveringBoundaries: Option[Array[(Double, Double)]] = None) extends Serializable
+
+  def execute[ID](dataRDD: RDD[DataPoint],
+                  tdaParams: TDAParams[ID],
+                  clusteringProvider: LocalClusteringProvider = SmileClusteringProvider)
                  (implicit tag: ClassTag[ID]): TDAResult[ID] = {
+
+    import tdaParams._
+    import tdaParams.clusteringParams._
 
     val boundaries = coveringBoundaries.getOrElse(toBoundaries(lens.functions, dataRDD))
 
@@ -52,7 +53,7 @@ object TDA {
     val partitionedClustersRDD: RDD[List[Cluster[ID]]] =
       tripletsRDD
         .map{ case (levelSetID, dataPoints, clustering) =>
-          localClusters(levelSetID, dataPoints, clustering.labels(scaleSelection), clusterIdentifier) }
+          localClusters(levelSetID, dataPoints, clustering.labels(scaleSelection), clusterIDGenerator) }
 
     lazy val duplicatesAllowed: RDD[Cluster[ID]] =
       partitionedClustersRDD
@@ -69,9 +70,10 @@ object TDA {
     val clusterEdgesRDD: RDD[Set[ID]] =
       clustersRDD
         .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id)))   // melt all clusters by points
-        .combineByKey((clusterID: ID) => Set(clusterID),                                  // TODO turn into groupByKey?
-        (acc: Set[ID], clusterID: ID) => acc + clusterID,
-        (acc1: Set[ID], acc2: Set[ID]) => acc1 ++ acc2)   // create proto-clusters, collapse doubles
+        .combineByKey(
+          (clusterID: ID)                => Set(clusterID),                               // TODO turn into groupByKey?
+          (acc: Set[ID], clusterID: ID)  => acc + clusterID,
+          (acc1: Set[ID], acc2: Set[ID]) => acc1 ++ acc2)                                 // create proto-clusters, collapse doubles
         .values
         .flatMap(_.subsets(2))
         .distinct

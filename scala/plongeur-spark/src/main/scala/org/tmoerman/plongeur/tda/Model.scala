@@ -1,11 +1,6 @@
 package org.tmoerman.plongeur.tda
 
-import java.util.UUID
-import java.util.UUID._
-
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
-
-import scalaz.Memo._
 
 /**
   * @author Thomas Moerman
@@ -42,10 +37,6 @@ object Model {
     override def toString = s"Cluster($id)"
 
   }
-
-  type ClusterIDGenerator[ID] = () => ID
-
-  def uuidClusterIDGenerator: ClusterIDGenerator[UUID] = () => randomUUID
 
   case class Lens(val filters: Filter*) extends Serializable {
 

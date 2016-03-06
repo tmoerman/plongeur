@@ -5,7 +5,8 @@ import java.util.UUID
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Inspections._
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.TDA.TDAResult
+import org.tmoerman.plongeur.tda.TDA.{TDAParams, TDAResult}
+import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
 
@@ -23,24 +24,28 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
       Seq(
         result.levelSetsToClusters.mkString("\n"),
         result.pointsToClusters.mkString("\n"),
-        result.dotGraph(name)
+        result.dotGraph(name),
+        result.connectedComponents.mkString(" \n ")
       ).mkString("\n"))
   }
 
   it should "work with specified boundaries" in {
 
-    val boundaries = Array((0.0, 12.0), (0.0, 12.0))
+    val tdaParams =
+      TDAParams(
+        lens = Lens(
+          Filter((p: DataPoint) => p.features(0), 1.0, 0.5),
+          Filter((p: DataPoint) => p.features(1), 1.0, 0.5)),
+        clusteringParams = ClusteringParams(
+          clusterIDGenerator = uuidClusterIDGenerator,
+          scaleSelection = histogram(10)),
+        coveringBoundaries = Some(Array((0.0, 12.0), (0.0, 12.0))))
 
-    val lens = Lens(Filter((p: DataPoint) => p.features(0), 1.0, 0.5),
-                    Filter((p: DataPoint) => p.features(1), 1.0, 0.5))
+    val result = TDA.execute(test2DLabeledPointsRDD, tdaParams)
 
-    val result =
-      TDA.execute(
-        lens = lens,
-        dataRDD = test2DLabeledPointsRDD,
-        scaleSelection = histogram(100),
-        clusterIdentifier = uuidClusterIDGenerator,
-        coveringBoundaries = Some(boundaries))
+    val all = test2DLabeledPointsRDD.distinct.collect.toSet
+
+    result.clustersRDD.flatMap(_.dataPoints).distinct.collect.toSet shouldBe all
 
     printInspections(result, "test2D")
   }
@@ -62,14 +67,15 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
 
   it should "recover the 100 entries circle topology" in {
 
-    val lens = Lens(Filter((p: DataPoint) => p.features(0), 0.10, 0.5))
+    val tdaParams =
+      TDAParams(
+        lens = Lens(Filter((p: DataPoint) => p.features(0), 0.10, 0.5)),
+        clusteringParams = ClusteringParams(
+          clusterIDGenerator = uuidClusterIDGenerator,
+          scaleSelection = histogram(10)
+        ))
 
-    val result =
-      TDA.execute(
-        lens = lens,
-        dataRDD = circle250RDD,
-        scaleSelection = histogram(10),
-        clusterIdentifier = uuidClusterIDGenerator)
+    val result = TDA.execute(circle250RDD, tdaParams)
 
     printInspections(result, "circle250")
   }

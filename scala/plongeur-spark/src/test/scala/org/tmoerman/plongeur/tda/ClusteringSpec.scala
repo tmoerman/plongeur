@@ -2,8 +2,11 @@ package org.tmoerman.plongeur.tda
 
 import java.lang.Math.sqrt
 
+import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
+import org.tmoerman.plongeur.tda.Model.IndexedDataPoint
 import org.tmoerman.plongeur.tda.cluster.Scale._
+import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster._
 import org.tmoerman.plongeur.test.FileResources
 
@@ -64,6 +67,19 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
     println(resolutions)
 
     clustering.labels(histogram(100)).distinct.size shouldBe 11
+  }
+
+  behavior of "toLocalCluster"
+
+  it should "map cluster labels to cluster identifiers correctly" in {
+
+    val dataPoints = (1 to 5).map(i => IndexedDataPoint(i, dense(i)))
+    val labels = Seq(0, 1, 2, 1, 0)
+
+    val local = Clustering.localClusters(null, dataPoints, labels, uuidClusterIDGenerator)
+
+    local.map(_.dataPoints.map(_.index).toSet).toSet shouldBe Set(Set(1, 5), Set(2, 4), Set(3))
+
   }
 
 }
