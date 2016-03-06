@@ -44,23 +44,16 @@ object Clustering extends Serializable {
   case object SINGLE   extends ClusteringMethod
   case object WARD     extends ClusteringMethod
 
-  type ClusterIDGenerator[ID] = () => ID
-
-  def uuidClusterIDGenerator: ClusterIDGenerator[UUID] = () => randomUUID
-
   /**
     * @param distanceFunction Distance function in the hierarchical clustering effort.
     * @param clusteringMethod Single, Complete, etc...
-    * @param clusterIDGenerator The cluster ID generator function.
     * @param collapseDuplicateClusters Eliminates identical clusters.
     * @param scaleSelection The clustering scale selection function.
-    * @tparam ID Cluster ID type parameter
     */
-  case class ClusteringParams[ID](distanceFunction: DistanceFunction = euclidean,
-                                  clusteringMethod: ClusteringMethod = SINGLE,
-                                  clusterIDGenerator: ClusterIDGenerator[ID],
-                                  collapseDuplicateClusters: Boolean = true,
-                                  scaleSelection: ScaleSelection = histogram()) extends Serializable
+  case class ClusteringParams(distanceFunction: DistanceFunction = euclidean,
+                              clusteringMethod: ClusteringMethod = SINGLE,
+                              collapseDuplicateClusters: Boolean = true,
+                              scaleSelection: ScaleSelection = histogram()) extends Serializable
 
   /**
     * Protocol for constructing Clustering instances.
@@ -77,17 +70,14 @@ object Clustering extends Serializable {
     * @param levelSetID ID of the level set to which this cluster belongs.
     * @param dataPoints The data points to assign to clusters.
     * @param clusterLabels The cluster labels, in the same order as the data points.
-    * @param clusterIDGenerator Cluster ID generator function, usually a UUID generator
-    * @tparam ID Cluster ID type parameter
     * @return Returns a List of Cluster instances with global IDs generated in function of the specified local
     *         cluster labels.
     */
-  def localClusters[ID](levelSetID: LevelSetID,
-                        dataPoints: Seq[DataPoint],
-                        clusterLabels: Seq[Any],
-                        clusterIDGenerator: ClusterIDGenerator[ID]): List[Cluster[ID]] = {
+  def localClusters(levelSetID: LevelSetID,
+                    dataPoints: Seq[DataPoint],
+                    clusterLabels: Seq[Any]): List[Cluster] = {
 
-    val clusterID: Any => ID = mutableHashMapMemo(_ => clusterIDGenerator())
+    val clusterID: Any => UUID = mutableHashMapMemo(_ => randomUUID)
 
     clusterLabels
       .zip(dataPoints)

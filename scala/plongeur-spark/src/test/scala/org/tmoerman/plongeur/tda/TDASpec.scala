@@ -19,7 +19,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
 
   implicit val counter = mapToInt
 
-  def printInspections(result: TDAResult[UUID], name: String): Unit = {
+  def printInspections(result: TDAResult, name: String): Unit = {
     println(
       Seq(
         result.levelSetsToClusters.mkString("\n"),
@@ -37,7 +37,6 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
           Filter((p: DataPoint) => p.features(0), 1.0, 0.5),
           Filter((p: DataPoint) => p.features(1), 1.0, 0.5)),
         clusteringParams = ClusteringParams(
-          clusterIDGenerator = uuidClusterIDGenerator,
           scaleSelection = histogram(10)),
         coveringBoundaries = Some(Array((0.0, 12.0), (0.0, 12.0))))
 
@@ -71,7 +70,6 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
       TDAParams(
         lens = Lens(Filter((p: DataPoint) => p.features(0), 0.10, 0.5)),
         clusteringParams = ClusteringParams(
-          clusterIDGenerator = uuidClusterIDGenerator,
           scaleSelection = histogram(10)
         ))
 

@@ -17,14 +17,13 @@ import scala.reflect.ClassTag
   */
 object TDA {
 
-  case class TDAParams[ID](val lens: Lens,
-                           val clusteringParams: ClusteringParams[ID],
-                           val coveringBoundaries: Option[Array[(Double, Double)]] = None) extends Serializable
+  case class TDAParams(val lens: Lens,
+                       val clusteringParams: ClusteringParams,
+                       val coveringBoundaries: Option[Array[(Double, Double)]] = None) extends Serializable
 
-  def execute[ID](dataRDD: RDD[DataPoint],
-                  tdaParams: TDAParams[ID],
-                  clusteringProvider: LocalClusteringProvider = SmileClusteringProvider)
-                 (implicit tag: ClassTag[ID]): TDAResult[ID] = {
+  def execute(dataRDD: RDD[DataPoint],
+              tdaParams: TDAParams,
+              clusteringProvider: LocalClusteringProvider = SmileClusteringProvider): TDAResult = {
 
     import tdaParams._
     import tdaParams.clusteringParams._
@@ -50,16 +49,16 @@ object TDA {
             }))
         .cache
 
-    val partitionedClustersRDD: RDD[List[Cluster[ID]]] =
+    val partitionedClustersRDD: RDD[List[Cluster]] =
       tripletsRDD
         .map{ case (levelSetID, dataPoints, clustering) =>
-          localClusters(levelSetID, dataPoints, clustering.labels(scaleSelection), clusterIDGenerator) }
+          localClusters(levelSetID, dataPoints, clustering.labels(scaleSelection)) }
 
-    lazy val duplicatesAllowed: RDD[Cluster[ID]] =
+    lazy val duplicatesAllowed: RDD[Cluster] =
       partitionedClustersRDD
         .flatMap(identity)
 
-    lazy val duplicatesCollapsed: RDD[Cluster[ID]] =
+    lazy val duplicatesCollapsed: RDD[Cluster] =
       partitionedClustersRDD
         .flatMap(_.map(cluster => (cluster.dataPoints, cluster)))
         .reduceByKey((c1, c2) => c1)
@@ -67,13 +66,13 @@ object TDA {
 
     val clustersRDD = (if (collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed).cache
 
-    val clusterEdgesRDD: RDD[Set[ID]] =
+    val clusterEdgesRDD =
       clustersRDD
         .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id)))   // melt all clusters by points
         .combineByKey(
           (clusterID: ID)                => Set(clusterID),                               // TODO turn into groupByKey?
           (acc: Set[ID], clusterID: ID)  => acc + clusterID,
-          (acc1: Set[ID], acc2: Set[ID]) => acc1 ++ acc2)                                 // create proto-clusters, collapse doubles
+          (acc1: Set[ID], acc2: Set[ID]) => acc1 ++ acc2)
         .values
         .flatMap(_.subsets(2))
         .distinct
@@ -82,9 +81,9 @@ object TDA {
     TDAResult(boundaries, clustersRDD, clusterEdgesRDD)
   }
 
-  case class TDAResult[ID](val bounds: Array[(Double, Double)],
-                           val clustersRDD: RDD[Cluster[ID]],
-                           val edgesRDD: RDD[Set[ID]]) extends Serializable {
+  case class TDAResult(val bounds: Array[(Double, Double)],
+                       val clustersRDD: RDD[Cluster],
+                       val edgesRDD: RDD[Set[ID]]) extends Serializable {
 
     lazy val clusters = clustersRDD.collect
 

@@ -14,7 +14,7 @@ import scalaz.Memo
   */
 object Inspections {
 
-  implicit def pimpTdaResult[ID](result: TDAResult[ID])(implicit counter: (Any => Int), tag: ClassTag[ID]): TDAResultInspections[ID] = new TDAResultInspections[ID](result, counter)(tag)
+  implicit def pimpTdaResult(result: TDAResult)(implicit counter: (Any => Int)): TDAResultInspections = new TDAResultInspections(result, counter)
 
   def mapToInt: (Any => Int) = {
     val source = Stream.iterate(0)(_ + 1).iterator
@@ -23,9 +23,8 @@ object Inspections {
 
 }
 
-class TDAResultInspections[ID](val result: TDAResult[ID],
-                               val clusterCounter: (Any => Int))
-                              (implicit tag: ClassTag[ID]) extends Serializable {
+class TDAResultInspections(val result: TDAResult,
+                           val clusterCounter: (Any => Int)) extends Serializable {
 
   def dotGraph(name: String) =
     Seq(
@@ -38,13 +37,26 @@ class TDAResultInspections[ID](val result: TDAResult[ID],
         .mkString("\n"),
       "}").mkString("\n")
 
+
+  def connectedComponents: Seq[Set[Int]] = Nil // following is wrong -> use edges instead!
+
+//    result
+//      .clusters
+//      .foldLeft(Set[Set[Cluster[ID]]]()) { case (acc, cluster) =>
+//        acc
+//          .find(component => component.exists(_.dataPoints.toSet.intersect(cluster.dataPoints.toSet).nonEmpty))
+//          .map(found => (acc - found) + (found + cluster))
+//          .getOrElse(acc + Set(cluster))
+//      }
+//      .toSeq
+//      .map(component => component.map(cluster => clusterCounter(cluster.id)))
+
+
   def clusterPoints =
     result
       .clusters
       .sortBy(_.id.toString)
       .map(cluster => "[c." + clusterCounter(cluster.id) + "]" + " -> " + cluster.dataPoints.map(_.index).toList.sorted.mkString(", "))
-
-  type C = Cluster[ID]
 
   import IterableFunctions._
 
@@ -53,9 +65,9 @@ class TDAResultInspections[ID](val result: TDAResult[ID],
         .clustersRDD
         .keyBy(_.levelSetID)
         .combineByKey(
-          (cluster: C) => Set(cluster),
-          (acc: Set[C], c: C) => acc + c,
-          (acc1: Set[C], acc2: Set[C]) => acc1 ++ acc2)
+          (cluster: Cluster) => Set(cluster),
+          (acc: Set[Cluster], c: Cluster) => acc + c,
+          (acc1: Set[Cluster], acc2: Set[Cluster]) => acc1 ++ acc2)
         .sortBy(_._1)
         .collect
         .map{ case (levelSetID, clusters) => levelSetID.mkString(" ") + " [" + clusters.flatMap(_.dataPoints).map(_.index).min + ", " + clusters.flatMap(_.dataPoints).map(_.index).max + "]" + "\n" +

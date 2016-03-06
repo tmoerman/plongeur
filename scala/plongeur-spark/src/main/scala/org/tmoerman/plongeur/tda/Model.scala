@@ -1,5 +1,7 @@
 package org.tmoerman.plongeur.tda
 
+import java.util.UUID
+
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 
 /**
@@ -20,15 +22,16 @@ object Model {
 
   type LevelSetInverseFunction = (DataPoint) => Set[LevelSetID]
 
+  type ID = UUID
+
   /**
     * @param id The cluster ID.
     * @param levelSetID The level set ID.
     * @param dataPoints The data points contained by this cluster.
-    * @tparam ID Type parameter for the cluster identifier.
     */
-  case class Cluster[ID](val id: ID,
-                         val levelSetID: LevelSetID,
-                         val dataPoints: Set[DataPoint]) extends Serializable {
+  case class Cluster(val id: ID,
+                     val levelSetID: LevelSetID,
+                     val dataPoints: Set[DataPoint]) extends Serializable {
 
     def size = dataPoints.size
 

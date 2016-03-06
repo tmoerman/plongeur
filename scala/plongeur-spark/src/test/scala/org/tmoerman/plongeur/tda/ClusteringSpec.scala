@@ -76,7 +76,7 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
     val dataPoints = (1 to 5).map(i => IndexedDataPoint(i, dense(i)))
     val labels = Seq(0, 1, 2, 1, 0)
 
-    val local = Clustering.localClusters(null, dataPoints, labels, uuidClusterIDGenerator)
+    val local = Clustering.localClusters(null, dataPoints, labels)
 
     local.map(_.dataPoints.map(_.index).toSet).toSet shouldBe Set(Set(1, 5), Set(2, 4), Set(3))
 
