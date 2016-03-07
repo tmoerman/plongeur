@@ -4,7 +4,6 @@ import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.TDA._
 import org.tmoerman.plongeur.util.IterableFunctions
 
-import scala.reflect.ClassTag
 import scalaz.Memo
 
 /**
