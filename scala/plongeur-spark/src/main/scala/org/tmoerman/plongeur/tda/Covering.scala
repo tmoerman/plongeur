@@ -15,27 +15,29 @@ object Covering {
     * @param coveringBoundaries The boundaries in function of which to define the covering function.
     * @return Returns the CoveringFunction instance.
     */
-  def toLevelSetInverseFunction(lens: Lens,
-                                coveringBoundaries: Array[(Double, Double)]): LevelSetInverseFunction = (p: DataPoint) => {
+  def levelSetInverseFunction(lens: TDALens, coveringBoundaries: Boundaries): LevelSetInverseFunction = (p: DataPoint) => {
+
+    // TODO refactor to make boundaries a private function
+
     val coveringIntervals =
       coveringBoundaries
         .zip(lens.filters)
         .map { case ((min, max), filter) =>
-          toCoveringIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) }
+          uniformCoveringIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) }
 
     combineToLevelSetIDs(coveringIntervals)
   }
 
   /**
     * @param filterFunctions The filter functions.
-    * @param rdd The data RDD.
+    * @param dataPoints The data RDD.
     * @return Returns an Array of Double tuples, representing the (min, max) boundaries of the filter functions applied
     *         on the RDD.
     */
-  def toBoundaries(filterFunctions: Array[FilterFunction],
-                   rdd: RDD[DataPoint]): Array[(Double, Double)] = {
+  def boundaries(filterFunctions: Array[FilterFunction],
+                 dataPoints: RDD[DataPoint]): Array[(Double, Double)] = {
 
-    val filterValues = rdd.map(p => dense(filterFunctions.map(f => f(p))))
+    val filterValues = dataPoints.map(p => dense(filterFunctions.map(f => f(p))))
 
     val stats = colStats(filterValues)
 
@@ -50,11 +52,11 @@ object Covering {
     * @param x A filter function value.
     * @return Returns the lower coordinates of the intervals covering the specified filter value x.
     */
-  def toCoveringIntervals(boundaryMin: BigDecimal,
-                          boundaryMax: BigDecimal,
-                          lengthPct:   Percentage,
-                          overlapPct:  Percentage)
-                         (x: BigDecimal): Seq[BigDecimal] = {
+  def uniformCoveringIntervals(boundaryMin: BigDecimal,
+                               boundaryMax: BigDecimal,
+                               lengthPct:   Percentage,
+                               overlapPct:  Percentage)
+                              (x: BigDecimal): Seq[BigDecimal] = {
 
     val intervalLength = (boundaryMax - boundaryMin) * lengthPct
 
