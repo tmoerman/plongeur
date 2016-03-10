@@ -17,23 +17,20 @@ val sparkVersion  = "1.6.0"
 
 libraryDependencies ++= Seq(
 
-  "org.apache.spark"       % "spark-core_2.10"   % sparkVersion,
-  "org.apache.spark"       % "spark-mllib_2.10"  % sparkVersion,
-
+  "org.apache.spark"       % "spark-core_2.10"   % sparkVersion % "provided",
+  "org.apache.spark"       % "spark-mllib_2.10"  % sparkVersion exclude("com.chuusai", "*"),
   "com.esotericsoftware"   % "kryo"              % "3.0.3",
 
   "com.github.haifengl"    % "smile-core"        % "1.0.4",
   "com.github.haifengl"    % "smile-plot"        % "1.0.4",
+  "org.scalanlp"           %% "breeze-natives"   % "0.12"       exclude("com.chuusai", "*"),
 
-  "org.scalanlp"           %% "breeze-natives"   % "0.12",
-
+  "io.reactivex"           %% "rxscala"          % "0.26.0",
   "org.scalaz"             %% "scalaz-core"      % "7.2.0",
+  "com.chuusai"            %% "shapeless"        % "2.3.0",
 
-  "org.scalatest"          %% "scalatest"        % "2.2.4"  % "test"
+  "org.scalatest"          %% "scalatest"        % "2.2.4"  % "test",
 
-  // "nz.ac.waikato.cms.weka" % "weka-stable"       % "3.6.13",
-
-  // "com.chuusai"        %% "shapeless"                 % "2.2.5",
-  // compilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)
+  compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 
 )
