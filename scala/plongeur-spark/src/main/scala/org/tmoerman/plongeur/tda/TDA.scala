@@ -1,14 +1,14 @@
 package org.tmoerman.plongeur.tda
 
 import org.apache.spark.Partitioner._
+import org.apache.spark.mllib.linalg.{Vector => MLVector}
+import org.apache.spark.mllib.stat.Statistics._
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Model.{DataPoint, _}
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
 import org.tmoerman.plongeur.util.IterableFunctions._
-
-import scala.reflect.ClassTag
 
 /**
   * TODO turn into a part of the reactive machinery with observable input and observable output. Cfr. Cycle.js
@@ -17,25 +17,25 @@ import scala.reflect.ClassTag
   */
 object TDA {
 
-  case class TDAParams(val lens: Lens,
-                       val clusteringParams: ClusteringParams,
-                       val coveringBoundaries: Option[Array[(Double, Double)]] = None) extends Serializable
+  val clusteringProvider = SmileClusteringProvider // TODO injectable
 
-  def execute(dataRDD: RDD[DataPoint],
-              tdaParams: TDAParams,
-              clusteringProvider: LocalClusteringProvider = SmileClusteringProvider): TDAResult = {
+  def apply(tdaParams: TDAParams, tdaContext: TDAContext): TDAResult = {
 
+    import tdaContext._
     import tdaParams._
     import tdaParams.clusteringParams._
 
-    val boundaries = coveringBoundaries.getOrElse(toBoundaries(lens.functions, dataRDD))
-
-    val levelSetInverse = toLevelSetInverseFunction(lens, boundaries)
+    val levelSetInverses =
+      coveringBoundaries
+        .orElse(Some(boundaries(lens.functions, dataPoints)))
+        .map(boundaries => levelSetInverseFunction(lens, boundaries))
+        .get
 
     val tripletsRDD =
-      dataRDD
-        .flatMap(dataPoint => levelSetInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
-        .repartitionAndSortWithinPartitions(defaultPartitioner(dataRDD)) // TODO which partitioner?
+      dataPoints
+        .flatMap(dataPoint => levelSetInverses(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
+        // is this more useful than a groupByKey? - probably not -> turn into reduceByKey when an incremental single linkage clustering algo is available
+        .repartitionAndSortWithinPartitions(defaultPartitioner(dataPoints)) // TODO which partitioner?
         .mapPartitions(
           _
             .view                                                              // TODO view instead of toIterable ?
@@ -51,8 +51,8 @@ object TDA {
 
     val partitionedClustersRDD: RDD[List[Cluster]] =
       tripletsRDD
-        .map{ case (levelSetID, dataPoints, clustering) =>
-          localClusters(levelSetID, dataPoints, clustering.labels(scaleSelection)) }
+        .map{ case (levelSetID, clusterPoints, clustering) =>
+          localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
 
     lazy val duplicatesAllowed: RDD[Cluster] =
       partitionedClustersRDD
@@ -78,17 +78,25 @@ object TDA {
         .distinct
         .cache
 
-    TDAResult(boundaries, clustersRDD, clusterEdgesRDD)
+    TDAResult(clustersRDD, clusterEdgesRDD)
   }
 
-  case class TDAResult(val bounds: Array[(Double, Double)],
-                       val clustersRDD: RDD[Cluster],
-                       val edgesRDD: RDD[Set[ID]]) extends Serializable {
+}
 
-    lazy val clusters = clustersRDD.collect
+case class TDAContext(val dataPoints: RDD[DataPoint]) extends Serializable {
 
-    lazy val edges = edgesRDD.collect
+  lazy val sampleMean: MLVector = colStats(dataPoints.map(_.features)).mean
 
-  }
+}
+
+case class TDAParams(val lens: TDALens,
+                     val clusteringParams: ClusteringParams,
+                     val coveringBoundaries: Option[Boundaries] = None) extends Serializable
+
+case class TDAResult(val clustersRDD: RDD[Cluster], val edgesRDD: RDD[Set[ID]]) extends Serializable {
+
+  lazy val clusters = clustersRDD.collect
+
+  lazy val edges = edgesRDD.collect
 
 }

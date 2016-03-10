@@ -16,14 +16,16 @@ class Test2DSpec extends FlatSpec with TestResources with Matchers {
 
   it should "associate points with the correct HyperCubeCoordinateVectors" in {
 
-    val lens = Lens(Filter(feature(0), 1, 0.5),
-                    Filter(feature(1), 1, 0.5))
+    val lens =
+      TDALens(
+        Filter(feature(0), 1, 0.5),
+        Filter(feature(1), 1, 0.5))
 
     val size = 12.0
 
     val boundaries = Array((0.0, size), (0.0, size))
 
-    val covering = toLevelSetInverseFunction(lens, boundaries)
+    val covering = levelSetInverseFunction(lens, boundaries)
 
     val result = test2DLabeledPointsRDD.flatMap(p => covering(p).map(k => (k, p))).collect
 

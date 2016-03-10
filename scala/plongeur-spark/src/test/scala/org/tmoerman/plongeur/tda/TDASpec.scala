@@ -1,11 +1,8 @@
 package org.tmoerman.plongeur.tda
 
-import java.util.UUID
-
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Inspections._
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.TDA.{TDAParams, TDAResult}
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
@@ -33,14 +30,14 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
 
     val tdaParams =
       TDAParams(
-        lens = Lens(
+        lens = TDALens(
           Filter((p: DataPoint) => p.features(0), 1.0, 0.5),
           Filter((p: DataPoint) => p.features(1), 1.0, 0.5)),
         clusteringParams = ClusteringParams(
           scaleSelection = histogram(10)),
         coveringBoundaries = Some(Array((0.0, 12.0), (0.0, 12.0))))
 
-    val result = TDA.execute(test2DLabeledPointsRDD, tdaParams)
+    val result = TDA.apply(tdaParams, TDAContext(test2DLabeledPointsRDD))
 
     val all = test2DLabeledPointsRDD.distinct.collect.toSet
 
@@ -51,8 +48,8 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
 
 //  it should "work with calculated boundaries" in {
 //
-//    val lens = Lens(Filter((p: DataPoint) => p.features(0), 1.0, 0.5),
-//                    Filter((p: DataPoint) => p.features(1), 1.0, 0.5))
+//    val lens = Lens(FilterParams((p: DataPoint) => p.features(0), 1.0, 0.5),
+//                    FilterParams((p: DataPoint) => p.features(1), 1.0, 0.5))
 //
 //    val result =
 //      Skeleton.execute(
@@ -68,12 +65,12 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
 
     val tdaParams =
       TDAParams(
-        lens = Lens(Filter((p: DataPoint) => p.features(0), 0.10, 0.5)),
+        lens = TDALens(Filter((p: DataPoint) => p.features(0), 0.10, 0.5)),
         clusteringParams = ClusteringParams(
           scaleSelection = histogram(10)
         ))
 
-    val result = TDA.execute(circle250RDD, tdaParams)
+    val result = TDA.apply(tdaParams, TDAContext(circle250RDD))
 
     printInspections(result, "circle250")
   }

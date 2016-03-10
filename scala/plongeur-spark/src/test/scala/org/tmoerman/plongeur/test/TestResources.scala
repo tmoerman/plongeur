@@ -29,7 +29,7 @@ trait TestResources extends SparkContextSpec with FileResources {
     test2DParsed
       ._2
       .zipWithIndex
-      .map{ case ((x, y, _), idx) => IndexedDataPoint(idx, dense(x, y)) }
+      .map{ case ((x, y, _), idx) => dp(idx, dense(x, y)) }
 
   lazy val irisParsed =
     sc
@@ -42,7 +42,7 @@ trait TestResources extends SparkContextSpec with FileResources {
       .textFile(heuristicFile)
       .map(_.split(",").map(trim))
       .zipWithIndex
-      .map{ case (Array(a, b), idx) => IndexedDataPoint(idx, dense(a.toDouble, b.toDouble)) }
+      .map{ case (Array(a, b), idx) => dp(idx, dense(a.toDouble, b.toDouble)) }
 
   def readCircle(file: String): RDD[DataPoint] =
     sc
@@ -50,7 +50,7 @@ trait TestResources extends SparkContextSpec with FileResources {
       .map(_.split(",").map(trim))
       .sortBy{ case Array(x, y) => (x.toDouble,  y.toDouble) }
       .zipWithIndex
-      .map{ case (Array(x, y), idx) => IndexedDataPoint(idx, dense(x.toDouble, y.toDouble))}
+      .map{ case (Array(x, y), idx) => dp(idx, dense(x.toDouble, y.toDouble))}
 
   val circle100RDD = readCircle(circle100)
   val circle250RDD = readCircle(circle250)

@@ -11,6 +11,9 @@ object Model {
 
   def feature(n: Int) = (p: DataPoint) => p.features(n)
 
+  implicit def pimp(in: (Int, MLVector)): DataPoint = dp(in._1, in._2)
+  def dp(in: (Long, MLVector)): DataPoint = IndexedDataPoint(in._1, in._2)
+
   trait DataPoint {
     def features: MLVector
     def index: Long
@@ -41,11 +44,15 @@ object Model {
 
   }
 
-  case class Lens(val filters: Filter*) extends Serializable {
+  case class TDALens(val filters: Filter*) extends Serializable {
+
+    // TODO the lens should accept a filter definition, not yet the filter function as this is computed in function of the data RDD.
 
     def functions =  filters.toArray.map(_.function)
 
   }
+
+  type Boundaries = Array[(Double, Double)]
 
   type FilterFunction = (DataPoint) => Double
 

@@ -37,7 +37,9 @@ object Distance {
 
   type DistanceFunction = (DataPoint, DataPoint) => Double
 
-  val chebyshev = (a: DataPoint, b: DataPoint) => chebyshevDistance(a.features.toBreeze, b.features.toBreeze)
+  // TODO Pearson correlation, closing over TDAContext
+
+  val L_infinity = (a: DataPoint, b: DataPoint) => chebyshevDistance(a.features.toBreeze, b.features.toBreeze)
 
   val cosine    = (a: DataPoint, b: DataPoint) => cosineDistance   (a.features.toBreeze, b.features.toBreeze)
 
@@ -46,5 +48,15 @@ object Distance {
   val manhattan = (a: DataPoint, b: DataPoint) => manhattanDistance(a.features.toBreeze, b.features.toBreeze)
 
   def minkowski(exponent: Double) = (a: DataPoint, b: DataPoint) => minkowskiDistance(a.features.toBreeze, b.features.toBreeze, exponent)
+
+  def from(name: String): (Any) => DistanceFunction = name match {
+    case "L_infinity" => (_) => L_infinity
+    case "cosine"     => (_) => cosine
+    case "euclidean"  => (_) => euclidean
+    case "manhattan"  => (_) => manhattan
+    case "minkowski"  => (e: Any) => minkowski(e.asInstanceOf[Double])
+
+    case _ => throw new IllegalArgumentException(s"unknown distance function $name")
+   }
 
 }
