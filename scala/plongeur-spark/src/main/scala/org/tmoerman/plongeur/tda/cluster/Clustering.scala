@@ -60,7 +60,7 @@ object Clustering extends Serializable {
     */
   trait LocalClusteringProvider {
 
-    def apply(dataPoints: List[DataPoint],
+    def apply(dataPoints: Seq[DataPoint],
               distanceFunction: DistanceFunction = euclidean,
               clusteringMethod: ClusteringMethod = SINGLE): LocalClustering
 

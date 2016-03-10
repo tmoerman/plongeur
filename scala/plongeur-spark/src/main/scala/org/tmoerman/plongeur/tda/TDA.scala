@@ -17,7 +17,7 @@ import org.tmoerman.plongeur.util.IterableFunctions._
   */
 object TDA {
 
-  val clusteringProvider = SmileClusteringProvider // TODO injectable
+  val clusterer = SmileClusteringProvider // TODO injectable
 
   def apply(tdaParams: TDAParams, tdaContext: TDAContext): TDAResult = {
 
@@ -34,19 +34,9 @@ object TDA {
     val tripletsRDD =
       dataPoints
         .flatMap(dataPoint => levelSetInverses(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
-        // is this more useful than a groupByKey? - probably not -> turn into reduceByKey when an incremental single linkage clustering algo is available
-        .repartitionAndSortWithinPartitions(defaultPartitioner(dataPoints)) // TODO which partitioner?
-        .mapPartitions(
-          _
-            .view                                                              // TODO view instead of toIterable ?
-            .groupRepeats(selector = { case (levelSetID, _) => levelSetID })   // TODO a more efficient streaming version with selector and extractor
-            .map(pairs => {
-              val levelSetID = pairs.head._1
-              val dataPoints = pairs.map(_._2)
-              val clustering = clusteringProvider.apply(dataPoints, distanceFunction, clusteringMethod)
-
-              (levelSetID, dataPoints, clustering)
-            }))
+        .groupByKey // TODO turn this into a reduceByKey with an incremental single linkage algorithm
+        .map{ case (levelSetID, levelSetPoints) =>
+          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, distanceFunction, clusteringMethod)) }
         .cache
 
     val partitionedClustersRDD: RDD[List[Cluster]] =
