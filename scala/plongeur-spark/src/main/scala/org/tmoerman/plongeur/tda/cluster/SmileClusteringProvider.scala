@@ -18,7 +18,7 @@ object SmileClusteringProvider extends LocalClusteringProvider with Serializable
   /**
     * @see LocalClusteringProvider
     */
-  def apply(dataPoints: List[DataPoint],
+  def apply(dataPoints: Seq[DataPoint],
             distanceFunction: DistanceFunction = euclidean,
             clusteringMethod: ClusteringMethod = SINGLE) = new LocalClustering {
 
