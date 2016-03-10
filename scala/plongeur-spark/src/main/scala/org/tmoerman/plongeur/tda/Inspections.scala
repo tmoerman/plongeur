@@ -63,10 +63,7 @@ class TDAResultInspections(val result: TDAResult,
     result
         .clustersRDD
         .keyBy(_.levelSetID)
-        .combineByKey(
-          (cluster: Cluster) => Set(cluster),
-          (acc: Set[Cluster], c: Cluster) => acc + c,
-          (acc1: Set[Cluster], acc2: Set[Cluster]) => acc1 ++ acc2)
+        .groupByKey
         .sortBy(_._1)
         .collect
         .map{ case (levelSetID, clusters) => levelSetID.mkString(" ") + " [" + clusters.flatMap(_.dataPoints).map(_.index).min + ", " + clusters.flatMap(_.dataPoints).map(_.index).max + "]" + "\n" +
@@ -81,10 +78,7 @@ class TDAResultInspections(val result: TDAResult,
     result
       .clustersRDD
       .flatMap(cluster => cluster.dataPoints.map(p => (p.index, cluster.id)))
-      .combineByKey(
-        (clusterId: Any) => Set(clusterId),
-        (acc: Set[Any], id: Any) => acc + id,
-        (acc1: Set[Any], acc2: Set[Any]) => acc1 ++ acc2)
+      .groupByKey
       .sortBy(_._1)
       .collect
       .map{ case (point, clusterIds) => point + " -> " + clusterIds.map(clusterCounter).toList.sorted.mkString(", ") }

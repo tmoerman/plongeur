@@ -1,6 +1,5 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.spark.Partitioner._
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.mllib.stat.Statistics._
 import org.apache.spark.rdd.RDD
@@ -59,12 +58,9 @@ object TDA {
     val clusterEdgesRDD =
       clustersRDD
         .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id)))   // melt all clusters by points
-        .combineByKey(
-          (clusterID: ID)                => Set(clusterID),                               // TODO turn into groupByKey?
-          (acc: Set[ID], clusterID: ID)  => acc + clusterID,
-          (acc1: Set[ID], acc2: Set[ID]) => acc1 ++ acc2)
+        .groupByKey
         .values
-        .flatMap(_.subsets(2))
+        .flatMap(_.toSet.subsets(2))
         .distinct
         .cache
 
