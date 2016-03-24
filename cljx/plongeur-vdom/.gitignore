@@ -1,7 +1,11 @@
+# compiled products of Cljs compilation
 /resources/public/js/compiled/**
+/resources/private/js/compiled/**
+
 figwheel_server.log
 pom.xml
 *jar
+*iml
 /lib/
 /classes/
 /out/
@@ -11,4 +15,4 @@ pom.xml
 .lein-plugins/
 .repl
 .nrepl-port
-*.iml
+.cljs_rhino_repl
