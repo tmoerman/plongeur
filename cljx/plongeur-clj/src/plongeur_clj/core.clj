@@ -1,6 +1,5 @@
-(ns plongeur-clj.core)
+(ns plongeur-clj.core
+  (:require [clojure.core.reducers :as r]))
 
-(defn foo
-  "I don't do a whole lot."
-  [x]
-  (println x "Hello, World!"))
+
+
