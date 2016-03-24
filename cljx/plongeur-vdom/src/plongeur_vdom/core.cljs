@@ -1,6 +1,5 @@
 (ns plongeur-vdom.core
   (:require [dominator.core :as d :refer [render]]
-            ;; [plongeur-vdom.dominator-patched :as dp]
             [stch.html :refer [div table tr td input canvas]]
             [cljs.core.async :as async :refer [<!]]
             [dominator.async :as as :refer-macros [forever]]
@@ -11,10 +10,7 @@
 
 (enable-console-print!)
 
-;; (defn plongeur-console [s] (println (str/join ["PLONGEUR >>> " s])))
-;; (plongeur-console "bla")
-
-(def people ["Billy" "Bobby" "Joey" "Dave"])
+(def people ["Billy" "Bobby" "Joey"])
 
 (def action$ (z/write-port :no-op))
 
@@ -42,4 +38,6 @@
 
 (def model$ (z/reductions update-model {} action$))
 
+;; do something with defonce to make this work
 (d/render (z/map view model$) js/document.body)
+
