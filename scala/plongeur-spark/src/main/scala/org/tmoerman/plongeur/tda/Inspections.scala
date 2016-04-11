@@ -37,7 +37,7 @@ class TDAResultInspections(val result: TDAResult,
       "}").mkString("\n")
 
 
-  def connectedComponents: Seq[Set[Int]] = Nil // following is wrong -> use edges instead!
+  def connectedComponents: Seq[Set[Int]] = Nil // following code is wrong -> use edges instead!
 
 //    result
 //      .clusters
