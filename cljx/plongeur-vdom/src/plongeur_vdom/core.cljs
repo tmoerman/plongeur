@@ -10,7 +10,7 @@
 
 (enable-console-print!)
 
-(def people ["Billy" "Bobby" "Joey"])
+(def people ["Billy" "Bobby" "Joey" "Dave"])
 
 (def action$ (z/write-port :no-op))
 
@@ -40,4 +40,23 @@
 
 ;; do something with defonce to make this work
 (d/render (z/map view model$) js/document.body)
+
+
+(defn DOM-driver [vtree-sig]
+  (d/render vtree-sig js/document.body))
+
+(defn CONSOLE-driver [message-sig]
+  (->> message-sig
+       (z/map #(println %))))
+
+(def drivers {:DOM     DOM-driver
+              :CONSOLE CONSOLE-driver})
+
+
+;; where to the sources come from?
+(defn main [source-signals]
+
+  )
+
+
 

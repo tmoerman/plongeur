@@ -2,21 +2,22 @@
 
   :description "Plongeur reactive frontend."
 
-  :min-lein-version "2.5.3"
-  
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.8.34"]
+                 [org.clojure/core.match  "0.2.2"]
                  [org.clojure/core.async "0.2.374" :exclusions [org.clojure/tools.reader]]
 
                  [com.2tothe8th/dominator "0.4.0"]
                  [jamesmacaulay/zelkova   "0.4.0"]
+                 [funcool/beicon          "1.1.1"]
+                 [quiescent               "0.3.1"]
+
                  [stch-library/html       "0.1.2"]
-                 [org.clojure/core.match  "0.2.2"]
 
                  ;[cljsjs/virtual-dom      "2.1.1-0"]
                  ]
 
-  :plugins [[lein-figwheel "0.5.1"]
+  :plugins [[lein-figwheel "0.5.2"]
             [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]]
 
   :source-paths ["src" "script"]
