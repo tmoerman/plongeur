@@ -3,8 +3,7 @@
 
 (def intent-keys
   [:network-calculated ; visualization calculated - server message
-   :nodes-selected ; nodes selected in network visualization
-   :server-requests
+   :nodes-selected     ; nodes selected in network visualization
    ])
 
 (defn intent-chan [] (chan (dropping-buffer 10)))

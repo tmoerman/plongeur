@@ -1,5 +1,6 @@
 (ns plongeur-cljs.core
-  (:require [kierros.core :as cycle]
+  (:require [cljs.core.async :as a :refer [mult tap chan pipe sliding-buffer]]
+            [kierros.core :as cycle]
             [plongeur-cljs.intent :as i]
             [plongeur-cljs.model  :as m]
             [plongeur-cljs.view   :as v]
@@ -13,19 +14,22 @@
 
 (defn plongeur-main
   "Cycle main."
-  [& args] ;; TODO destructure to obtain source channels
-  (let [init-state   (m/init-state)
-        intent-chans (i/intents)
-        states-chan  (m/model init-state intent-chans)
-        views-chan   (v/view intent-chans states-chan)
-        request-chan (:server-requests intent-chans) ;; TODO temporary
-        pickled-chan nil] ;; TODO serialize the states to be submitted to the storage driver
+  [{dom-event-chan       :DOM
+    ;websocket-event-chan :WEB
+    saved-state-chan     :STORAGE}]
+  (let [intent-chans (i/intents)
+        states-chan  (m/model saved-state-chan intent-chans)
+        states-mult  (mult states-chan)
+        view-states-chan   (->> (chan) (tap states-mult))
+        pickle-states-chan (->> (sliding-buffer 1) (chan) (tap states-mult))
+        views-chan   (v/view view-states-chan intent-chans)
+        request-chan (chan)]
     {:DOM     views-chan
-     :WEB     request-chan
-     :STORAGE pickled-chan}))
+     ;:WEB     request-chan
+     :STORAGE pickle-states-chan}))
 
 (cycle/run
   plongeur-main
   {:DOM     (dom/make-dom-driver "plongeur-app")
-   :WEB     (ws/make-websocket-driver "/chsk")
-   :STORAGE st/storage-driver})
+   ;:WEB     (ws/make-websocket-driver "/chsk")
+   :STORAGE (st/make-storage-driver "plongeur_cljs" m/default-state)})

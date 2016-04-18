@@ -1,5 +1,7 @@
 /resources/public/js/compiled/**
 /resources/private/js/compiled/**
+/node_modules
+npm-debug.log
 figwheel_server.log
 pom.xml
 *jar

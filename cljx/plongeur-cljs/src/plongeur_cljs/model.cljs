@@ -1,14 +1,15 @@
 (ns plongeur-cljs.model
   (:require [cljs.core.async :as a :refer [<! chan to-chan pipe]]
-            [kierros.util :refer [scan]]
-            [kierros.async :refer [chain]]))
+            [kierros.model :refer [scan-to-states]]))
 
-(defn init-state
+(def intent-handlers
+  {:network-calculated identity ; visualization calculated - server message
+   :nodes-selected     identity})
+
+(def default-state
   "Returns a new initial application state."
-  []
   {})
 
 (defn model
-  [init-state intent-chans]
-  ;TODO complete me
-  )
+  [init-state-chan intent-chans]
+  (scan-to-states init-state-chan intent-chans intent-handlers))
