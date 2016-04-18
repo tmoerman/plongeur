@@ -4,9 +4,9 @@
             [kierros.async :refer [chain]]))
 
 (defn scan-to-states
-  ; TODO generic enough to factored out to Kierros namespace.
-  "Returns a stream of application states, represented as a core.async channel."
-  [init-state intent-chans intent-handlers]
+  "Accepts a channel with the initial state, possibly loaded from storage
+   and a channel of intents. Returns a channel of application states."
+  [init-state-chan intent-chans intent-handlers]
   (let [buf-or-n      10
         amend-fn-chan (->> intent-chans
                            (map (fn [[key ch]]
@@ -17,9 +17,8 @@
                                          (pipe ch)))))               ; piped
                            (remove nil?) ; only channel with handler
                            (a/merge))
-        initial-chan  (to-chan [init-state])
         states-chan   (->> (fn [state f] (f state)) ; fn
                            (scan)                   ; xf
                            (chan buf-or-n)          ; ch
-                           (pipe (chain [initial-chan amend-fn-chan])))]
+                           (pipe (chain [init-state-chan amend-fn-chan])))]
     states-chan))

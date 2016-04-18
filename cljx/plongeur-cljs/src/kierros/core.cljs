@@ -38,8 +38,4 @@
         source-chans     (call-drivers drivers sink-proxy-chans)
         sink-chans       (main source-chans)
         _                (weld-cycle! sink-chans sink-proxy-chans)]
-    (println "cycle running")
-    ;; could be of use with System/Leaven components.
-    #_{:sources source-chans
-       :sinks   sink-chans}
-    ))
+    (println "cycle running")))
