@@ -1,4 +1,5 @@
 /resources/public/js/compiled/**
+/resources/public/js/node_modules/**
 /resources/private/js/compiled/**
 /node_modules
 npm-debug.log

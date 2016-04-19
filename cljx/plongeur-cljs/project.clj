@@ -16,6 +16,7 @@
   :hooks [leiningen.cljsbuild]
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled"
+                                    "resources/public/js/node_modules"
                                     "resources/private/js/compiled"
                                     "target"]
 
@@ -25,7 +26,10 @@
                                         :asset-path "js/compiled/out"
                                         :output-to "resources/public/js/compiled/plongeur_cljs.js"
                                         :output-dir "resources/public/js/compiled/out"
-                                        :source-map-timestamp true}}
+                                        :source-map-timestamp true
+                                        :foreign-libs [{:file     "resources/public/js/node_modules/sigma/build/sigma.require.js"
+                                                        :file-min "resources/public/js/node_modules/sigma/build/sigma.min.js"
+                                                        :provides ["foreign.sigma"]}]}}
 
                        ;:prod {:source-paths ["src"]
                        ;       :compiler {:output-to "main.js"
@@ -36,13 +40,20 @@
                        :test {:source-paths ["src" "test"]
                               :compiler {:output-to "resources/private/js/compiled/unit-test.js"
                                          :optimizations :whitespace
-                                         :pretty-print true}}}
+                                         :pretty-print true
+                                         :foreign-libs [{:file     "resources/public/js/node_modules/sigma/build/sigma.require.js"
+                                                         :file-min "resources/public/js/node_modules/sigma/build/sigma.min.js"
+                                                         :provides ["foreign.sigma"]
+                                                         :module-type :amd}]
+                                         }}}
 
               :test-commands {"unit" ["phantomjs"
                                       "resources/private/js/compiled/unit-test.js"]}}
 
-  :npm {:dependencies [[sigma "1.1.0"]] ; installed with npm
-        }
+  :npm {:dependencies [[sigma "1.1.0"]
+                       ;[linkurious "1.5.0"]
+                       ]
+        :root "resources/public/js"}
 
   :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
                                   [org.clojure/tools.nrepl "0.2.10"]
