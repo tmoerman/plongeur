@@ -5,14 +5,18 @@
             [foreign.sigma])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(let [bla js/sigma]
-  (println bla))
-
 (defcomponent Sigma
-  ;:on-mount (fn [node state intent-chans]
-  ;            ;(let [s (js/)])
-  ;            :bla
-  ;            )
+  :on-mount (fn [node state intent-chans]
+              (let [s (js/sigma. "container")
+                    g (.-graph s)]
+                (println node)
+                (.addNode g (clj->js {:id "n1"
+                                      :label "hello"
+                                      :x 10
+                                      :y 10
+                                      :size 1
+                                      :color "#FF0"}))
+                (.refresh s)))
   [state intent-chans]
   (html [:div {:id "container"} "<<< sigma placeholder >>>"]))
 
