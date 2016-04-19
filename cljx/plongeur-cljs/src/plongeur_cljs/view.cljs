@@ -5,26 +5,41 @@
             [foreign.sigma])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(defcomponent Sigma
-  :on-mount (fn [node state intent-chans]
-              (let [s (js/sigma. "container")
-                    g (.-graph s)]
-                (println node)
-                (.addNode g (clj->js {:id "n1"
-                                      :label "hello"
-                                      :x 10
-                                      :y 10
-                                      :size 1
-                                      :color "#FF0"}))
-                (.refresh s)))
-  [state intent-chans]
-  (html [:div {:id "container"} "<<< sigma placeholder >>>"]))
+
+(def node-1 {:id "n1"
+             :label "hello"
+             :x 10
+             :y 10
+             :size 1
+             :color "#FF0"})
+
+(def Sigma-2
+  (let [local-state (atom {:id (rand-int 1000)})]
+    (q/component
+      (fn [graph-state intent-chans]
+        (html [:div {:id (str "graph-" (:id graph-state))
+                     :class "graph"} "test"]))
+
+      {:keyfn (fn [graph-state] (:id graph-state))
+       
+       :on-mount (fn [node graph-state intent-chans]
+                   (let [s (js/sigma. (str "graph-" (:id graph-state)))
+                         g (.-graph s)]
+
+                     (.addNode g (clj->js node-1))
+                     (.refresh s)))
+
+       :on-unmount (fn [node graph-state intent-chans]
+
+                     )})))
 
 (defcomponent Root
-  [state {:keys [toggle-all] :as intent-chans}]
+  [state {:keys [bus] :as intent-chans}]
   (html [:div {:id "plongeur-main"}
          [:h1 {} "Bonjour, ici Plongeur"]
-         (Sigma state intent-chans)]))
+         (for [graph-state (:graphs state)]
+           (Sigma-2 graph-state intent-chans))
+         [:button {:on-click (fn [_] (go (>! bus :click)))} "add Click"]]))
 
 (defn view
   "Returns a stream of view trees, represented as a core.async channel."
@@ -33,3 +48,26 @@
        (map)                                  ; xf
        (chan 10)                              ; ch
        (pipe states-chan)))
+
+;; obsolete code
+
+#_(defcomponent Sigma
+                :on-mount (fn [node graph-state intent-chans]
+                            (let [s (js/sigma. "container")
+                                  g (.-graph s)]
+                              (println "on-mount")
+                              ;; listen to graph events here? move this to render probably!, then we will have access
+                              ;; clean up resources here? HOW?
+                              (.addNode g (clj->js {:id "n1"
+                                                    :label "hello"
+                                                    :x 10
+                                                    :y 10
+                                                    :size 1
+                                                    :color "#FF0"}))
+                              (.refresh s)))
+                [graph-state intent-chans]
+                (prn "state: " graph-state)
+                (html [:div {:id    "container"
+                             :class "graph"} " test "]))
+
+;)

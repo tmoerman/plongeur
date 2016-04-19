@@ -3,12 +3,18 @@
             [kierros.model :refer [scan-to-states]]))
 
 (def intent-handlers
-  {:network-calculated identity ; visualization calculated - server message
-   :nodes-selected     identity})
+  {:network-calculated (fn [_ state] state)
+   :nodes-selected     (fn [_ state] state)
+   :bus                (fn [msg state]
+                         (let [nr-clicks (:clicks state)]
+                           (-> state
+                               (update-in [:clicks] inc)
+                               (update-in [:graphs] (fn [graphs] (conj graphs {:id nr-clicks}))))))})
 
 (def default-state
   "Returns a new initial application state."
-  {})
+  {:clicks 2
+   :graphs [{:id 1}]})
 
 (defn model
   [init-state-chan intent-chans]
