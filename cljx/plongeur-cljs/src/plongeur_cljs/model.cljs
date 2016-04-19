@@ -2,18 +2,27 @@
   (:require [cljs.core.async :as a :refer [<! chan to-chan pipe]]
             [kierros.model :refer [scan-to-states]]))
 
+(defn add-graph
+  [_ state]
+  (let [next-id (:seq state)]
+    (-> state
+        (update-in [:seq] inc)
+        (update-in [:graphs] (fn [graphs] (conj graphs {:id next-id}))))))
+
+(defn drop-graph
+  [id state]
+  (update-in state [:graphs] (fn [graphs] (->> graphs
+                                               (remove #(= id (:id %)))))))
+
 (def intent-handlers
   {:network-calculated (fn [_ state] state)
    :nodes-selected     (fn [_ state] state)
-   :bus                (fn [msg state]
-                         (let [nr-clicks (:clicks state)]
-                           (-> state
-                               (update-in [:clicks] inc)
-                               (update-in [:graphs] (fn [graphs] (conj graphs {:id nr-clicks}))))))})
+   :add-graph          add-graph
+   :drop-graph         drop-graph})
 
 (def default-state
   "Returns a new initial application state."
-  {:clicks 2
+  {:seq    2
    :graphs [{:id 1}]})
 
 (defn model

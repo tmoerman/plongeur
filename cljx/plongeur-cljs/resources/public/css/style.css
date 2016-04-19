@@ -1,2 +1,8 @@
 /* some style */
 
+.graph {
+    width: 500px;
+    height: 100px;
+    background-color: gainsboro;
+    margin: 2px;
+}

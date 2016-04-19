@@ -5,7 +5,6 @@
             [foreign.sigma])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-
 (def node-1 {:id "n1"
              :label "hello"
              :x 10
@@ -13,17 +12,21 @@
              :size 1
              :color "#FF0"})
 
+(defn graph-id [graph-state] (str "graph-" (:id graph-state)))
+
 (def Sigma-2
   (let [local-state (atom {:id (rand-int 1000)})]
     (q/component
-      (fn [graph-state intent-chans]
-        (html [:div {:id (str "graph-" (:id graph-state))
-                     :class "graph"} "test"]))
+      (fn [graph-state {:keys [drop-graph] :as intent-chans}]
+        (html [:section {:class "graph-section"}
+               [:button {:on-click (fn [_] (go (>! drop-graph (:id graph-state))))} "delete"]
+               [:div {:id    (graph-id graph-state)
+                      :class "graph"}]]))
 
       {:keyfn (fn [graph-state] (:id graph-state))
-       
+
        :on-mount (fn [node graph-state intent-chans]
-                   (let [s (js/sigma. (str "graph-" (:id graph-state)))
+                   (let [s (js/sigma. (graph-id graph-state))
                          g (.-graph s)]
 
                      (.addNode g (clj->js node-1))
@@ -34,12 +37,12 @@
                      )})))
 
 (defcomponent Root
-  [state {:keys [bus] :as intent-chans}]
+  [state {:keys [add-graph] :as intent-chans}]
   (html [:div {:id "plongeur-main"}
          [:h1 {} "Bonjour, ici Plongeur"]
          (for [graph-state (:graphs state)]
            (Sigma-2 graph-state intent-chans))
-         [:button {:on-click (fn [_] (go (>! bus :click)))} "add Click"]]))
+         [:button {:on-click (fn [_] (go (>! add-graph :click)))} "add graph"]]))
 
 (defn view
   "Returns a stream of view trees, represented as a core.async channel."

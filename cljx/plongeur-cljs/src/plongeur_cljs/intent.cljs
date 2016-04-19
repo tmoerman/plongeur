@@ -1,16 +1,12 @@
 (ns plongeur-cljs.intent
-  (:require [cljs.core.async :as a :refer [<! chan dropping-buffer]]))
-
-(def intent-keys
-  [:network-calculated ; visualization calculated - server message
-   :nodes-selected     ; nodes selected in network visualization
-   :bus])
+  (:require [cljs.core.async :as a :refer [<! chan dropping-buffer]]
+            [plongeur-cljs.model :refer [intent-handlers]]))
 
 (defn intent-chan [] (chan (dropping-buffer 10)))
 
 (defn intents
   "Returns a map of event channels."
   []
-  (->> intent-keys
+  (->> (keys intent-handlers)
        (map (fn [key] [key (intent-chan)]))
        (into {})))
