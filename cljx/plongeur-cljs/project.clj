@@ -39,7 +39,6 @@
 
                        :test {:source-paths ["src" "test"]
                               :compiler {:output-to "resources/private/js/compiled/unit-test.js"
-                                         :optimizations :whitespace
                                          :pretty-print true
                                          :foreign-libs [{:file     "resources/public/js/node_modules/sigma/build/sigma.require.js"
                                                          :file-min "resources/public/js/node_modules/sigma/build/sigma.min.js"

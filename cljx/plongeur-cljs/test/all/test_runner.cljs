@@ -5,7 +5,11 @@
             [kierros.util-test]
             [cljs.test :refer-macros [run-tests]]))
 
-(run-tests ;'kierros.core-test
+; Run both builds simultaneously!
+; rlwrap lein figwheel dev test
+
+(run-tests 'kierros.core-test
            'kierros.async-test
            'kierros.model-test
-           'kierros.util-test)
+           'kierros.util-test
+           )
