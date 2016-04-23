@@ -1,9 +1,9 @@
-(ns plongeur-cljs.core
+(ns plongeur.core
   (:require [cljs.core.async :as a :refer [mult tap chan pipe sliding-buffer]]
             [kierros.core :as cycle]
-            [plongeur-cljs.intent :as i]
-            [plongeur-cljs.model  :as m]
-            [plongeur-cljs.view   :as v]
+            [plongeur.intent :as i]
+            [plongeur.model  :as m]
+            [plongeur.view   :as v]
             [kierros.quiescent-dom-driver   :as dom]
             [kierros.sente-websocket-driver :as ws]
             [kierros.local-storage-driver   :as st]))
@@ -32,4 +32,4 @@
   plongeur-main
   {:DOM     (dom/make-dom-driver "plongeur-app")
    ;:WEB     (ws/make-websocket-driver "/chsk")
-   :STORAGE (st/make-storage-driver "plongeur_cljs" m/default-state)})
+   :STORAGE (st/make-storage-driver "plongeur" m/default-state)})

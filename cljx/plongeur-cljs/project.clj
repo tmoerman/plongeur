@@ -21,10 +21,10 @@
                                     "target"]
 
   :cljsbuild {:builds {:dev {:source-paths ["src" "test"]
-                             :figwheel {:on-jsload "plongeur-cljs.core/on-js-reload"}
-                             :compiler {:main plongeur-cljs.core
+                             :figwheel {:on-jsload "plongeur.core/on-js-reload"}
+                             :compiler {:main plongeur.core
                                         :asset-path "js/compiled/out"
-                                        :output-to "resources/public/js/compiled/plongeur_cljs.js"
+                                        :output-to "resources/public/js/compiled/plongeur.js"
                                         :output-dir "resources/public/js/compiled/out"
                                         :source-map-timestamp true
                                         :foreign-libs [{:file     "resources/public/js/node_modules/sigma/build/sigma.require.js"
@@ -56,7 +56,8 @@
 
   :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
                                   [org.clojure/tools.nrepl "0.2.10"]
-                                  [figwheel-sidecar        "0.5.1"]]
+                                  [figwheel-sidecar        "0.5.1"]
+                                  [prismatic/dommy         "1.1.0"]]
                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}}
 
   :figwheel {:css-dirs ["resources/public/css"] ;; watch and update CSS

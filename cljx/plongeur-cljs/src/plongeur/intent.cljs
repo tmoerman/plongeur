@@ -1,6 +1,6 @@
-(ns plongeur-cljs.intent
+(ns plongeur.intent
   (:require [cljs.core.async :as a :refer [<! chan dropping-buffer]]
-            [plongeur-cljs.model :refer [intent-handlers]]))
+            [plongeur.model :refer [intent-handlers]]))
 
 (defn intent-chan [] (chan (dropping-buffer 10)))
 

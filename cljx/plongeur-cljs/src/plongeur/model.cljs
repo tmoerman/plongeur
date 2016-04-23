@@ -1,4 +1,4 @@
-(ns plongeur-cljs.model
+(ns plongeur.model
   (:require [cljs.core.async :as a :refer [<! chan to-chan pipe]]
             [kierros.model :refer [scan-to-states]]))
 

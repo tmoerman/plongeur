@@ -3,13 +3,19 @@
             [kierros.core-test]
             [kierros.model-test]
             [kierros.util-test]
+            [plongeur.model-test]
+            [plongeur.sigma-driver-test]
             [cljs.test :refer-macros [run-tests]]))
 
 ; Run both builds simultaneously!
 ; rlwrap lein figwheel dev test
 
-(run-tests 'kierros.core-test
-           'kierros.async-test
-           'kierros.model-test
-           'kierros.util-test
+(run-tests
+           ;'kierros.core-test
+           ;'kierros.async-test
+           ;'kierros.model-test
+           ;'kierros.util-test
+           ;'plongeur.model-test
+
+           'plongeur.sigma-driver-test
            )
