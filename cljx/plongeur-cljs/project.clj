@@ -7,7 +7,8 @@
                  [org.clojure/core.async "0.2.374" :exclusions [org.clojure/tools.reader]]
                  [com.taoensso/sente "1.8.1"]
                  [quiescent "0.3.1"]
-                 [sablono "0.6.3"]]
+                 [sablono "0.6.3"]
+                 [prismatic/dommy "1.1.0"]]
   
   :plugins [[lein-figwheel "0.5.2"]
             [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]
@@ -56,8 +57,7 @@
 
   :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
                                   [org.clojure/tools.nrepl "0.2.10"]
-                                  [figwheel-sidecar        "0.5.1"]
-                                  [prismatic/dommy         "1.1.0"]]
+                                  [figwheel-sidecar        "0.5.1"]]
                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}}
 
   :figwheel {:css-dirs ["resources/public/css"] ;; watch and update CSS
