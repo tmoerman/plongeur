@@ -10,36 +10,37 @@
 (def default-options
   {:sigma-settings {:verbose true}})
 
-(defn new-sigma-renderer
+(defn new-sigma
   "Accepts an id and sigma settings in js format.
-  Returns a new sigma renderer."
+  Returns a new sigma instance or nil if the container div does not exist."
   [id settings-js]
-  (let [renderer (js/sigma. (container-id id))]
-    (when settings-js (.settings renderer settings-js))
-    (.refresh renderer)))
+  (try
+    (let [sigma-inst (js/sigma. (container-id id))]
+      (when settings-js (.settings sigma-inst settings-js))
+      (.refresh sigma-inst))
+    (catch :default _ nil)))
 
-(defmulti apply-evt! (fn [_ evt] (:type evt))) ;; multimethod that translates events into renderer actions.
+(defmulti apply-evt! (fn [_ evt] (:type evt))) ;; translate events into renderer actions.
 (defmethod apply-evt! :add-node [sigma evt]
   (let [graph   (-> sigma :renderer .-graph)
         node-js (-> evt :node clj->js)]
     (.addNode graph node-js)))
-
 ; etc ...
 
-(defn make-renderer-context
+
+(defn make-sigma-context
   "Accepts a graph id, the out channel and options.
-  Return a map containing the renderer and a channel representing
-  the go-loop listening to inbound events for this graph."
+  Return a map containing the sigma instance and a listener async go-loop channel."
   [in-mult out-chan options id]
-  (let [settings  (some-> options :sigma-settings clj->js)
-        renderer  (new-sigma-renderer id settings)
-        select-xf (filter #(-> % :graph (= id)))
-        in-tap    (->> (sliding-buffer 10) (chan select-xf) (tap in-mult))
-        in-loop   (go-loop []
-                           (when-let [evt (<! in-tap)]
-                             (apply-evt! renderer evt)))]
-    {:renderer renderer
-     :listener in-loop}))
+  (when-let [sigma-inst (->> (some-> options :sigma-settings clj->js)
+                             (new-sigma id))]
+    (let [select-xf (filter #(-> % :graph (= id)))
+          in-tap    (->> (sliding-buffer 10) (chan select-xf) (tap in-mult))
+          in-loop   (go-loop []
+                             (when-let [evt (<! in-tap)]
+                               (apply-evt! sigma-inst evt)))]
+      {:sigma    sigma-inst
+       :listener in-loop})))
 
 (defn dispose
   [m]
@@ -58,7 +59,7 @@
   (update-in sigma-state-map [id]
              (fn [old-renderer]
                (dispose old-renderer)
-               (make-renderer-context in-mult out-chan options id))))
+               (make-sigma-context in-mult out-chan options id))))
 
 (defn update-renderers
   [sigma-state-atom in-mult out-chan options & ids]
