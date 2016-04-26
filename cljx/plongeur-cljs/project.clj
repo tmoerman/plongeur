@@ -8,6 +8,7 @@
                  [com.taoensso/sente "1.8.1"]
                  [quiescent "0.3.1"]
                  [sablono "0.6.3"]
+                 [com.rpl/specter "0.9.3"]
                  [prismatic/dommy "1.1.0"]]
   
   :plugins [[lein-figwheel "0.5.2"]
