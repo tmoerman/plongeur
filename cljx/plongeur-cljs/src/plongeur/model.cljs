@@ -36,10 +36,11 @@
 ;; model machinery
 
 (def intent-handlers
-  {:network-calculated (fn [_ state] state)
-   :nodes-selected     (fn [_ state] state)
+  {;:network-calculated (fn [_ state] state)
+   ;:nodes-selected     (fn [_ state] state)
    :add-graph          add-graph
-   :drop-graph         drop-graph})
+   :drop-graph         drop-graph
+   :debug              (fn [_ state] (prn state) state)})
 
 (def default-state
   "Returns a new initial application state."
