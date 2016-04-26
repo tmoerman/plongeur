@@ -44,10 +44,11 @@
   (when-let [sigma-inst (->> (some-> options :sigma-settings clj->js)
                              (new-sigma id))]
     (let [select-xf (filter #(-> % :graph (= id)))
-          in-tap    (tap in-mult (-> (sliding-buffer 10) (chan select-xf)))
+          in-tap    (->> select-xf (chan 10) (tap in-mult))
           in-loop   (go-loop []
                              (when-let [evt (<! in-tap)]
-                               (apply-evt! sigma-inst evt)))]
+                               (apply-evt! sigma-inst evt))
+                             (recur))]
       {:sigma    sigma-inst
        :listener in-loop})))
 
@@ -83,34 +84,51 @@
            (reduce #(update-renderer %1 in-mult out-chan options %2) sigma-state ids))))
 
 (defn sync-renderers
-  "Synchronizes the sigma-state with respect to the current graph ids."
+  "Synchronizes the sigma-state with respect to the current graph ids.
+
+  TODO probably unnecessary - refactor later"
   [sigma-state-atom in-mult out-chan options ids]
   (let [sigma-ctx-ids (-> @sigma-state-atom sigma-ids set)
         ids-to-remove (difference sigma-ctx-ids ids)]
     (remove-renderers sigma-state-atom ids-to-remove)
     (update-renderers sigma-state-atom in-mult out-chan options ids)))
 
-(defmulti process (fn [_ msg _ _ _] (:type msg)))
-(defmethod process :sync   [sigma-state-atom ids in-mult out-chan options] (sync-renderers   sigma-state-atom in-mult out-chan options ids))
-(defmethod process :update [sigma-state-atom ids in-mult out-chan options] (update-renderers sigma-state-atom in-mult out-chan options ids))
-(defmethod process :remove [sigma-state-atom ids _       _        _      ] (remove-renderers sigma-state-atom ids))
+(defmulti process (fn [_ msg _ _ _] (:ctrl msg)))
+(defmethod process :sync   [sigma-state-atom msg in-mult out-chan options] (sync-renderers   sigma-state-atom in-mult out-chan options (:data msg)))
+(defmethod process :update [sigma-state-atom msg in-mult out-chan options] (update-renderers sigma-state-atom in-mult out-chan options (:data msg)))
+(defmethod process :remove [sigma-state-atom msg _       _        _      ] (remove-renderers sigma-state-atom (:data msg)))
+
+;; options
 
 (def default-options
   {:graph-lib      :sigma          ;; or :linkurious
-   :sigma-settings {:verbose true} ;; gets turned into json and passed to the sigma constructor.
-   })
+   :sigma-settings {:verbose true  ;; gets turned into json and passed to the sigma constructor.
+                    }})
+
+;; messages
+
+(defn ctrl-update [id] {:ctrl :update :data [id]})
+(defn ctrl-remove [id] {:ctrl :remove :data [id]})
+(defn ctrl-msg?  [msg] (-> msg :ctrl some?))
+
+
+(defn graph-msg? [msg] (-> msg :graph some?))
+
+;; driver
 
 (defn make-sigma-driver
   "Accepts a sigma inbound channel.
   Returns a Sigma/Linkurious driver."
   [& options]
-  (fn [in-chan]
-    (let [in-mult     (mult in-chan)
-          out-chan    (chan)
+  (fn [sigma-in-chan]
+    (let [in-mult     (mult sigma-in-chan)
+          ctrl-chan   (->> (filter ctrl-msg?) (chan 10) (tap in-mult))
+          graph-mult  (->> (filter graph-msg?) (chan 10) (tap in-mult) (mult))
+          out-chan    (chan 10)
           sigma-state (atom {})
           options     (or options default-options)]
       (go-loop []
-               (when-let [msg (<! in-chan)]
-                 (process sigma-state msg in-mult out-chan options))
+               (when-let [msg (<! ctrl-chan)]
+                 (process sigma-state msg graph-mult out-chan options))
                (recur))
       out-chan)))

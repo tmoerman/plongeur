@@ -144,11 +144,19 @@
   (clean-test-section!)
   (let [ids         [101 102 103]
         _           (append-graph-containers! ids)
-        state-atom  (atom {})
-        options     s/default-options]
-    (s/sync-renderers state-atom (mult (chan)) (chan) options ids)
+        state-atom  (atom {})]
+    (s/sync-renderers state-atom (mult (chan)) (chan) s/default-options ids)
     (is (= ids (s/sigma-ids @state-atom)))
     (s/dispose-all! @state-atom)))
+
+#_(deftest sync-renderers-delta-state
+  (clean-test-section!)
+  (let [ids        [101 102 103]
+        _          (append-graph-containers! ids)
+        state-atom (atom {})
+        _          (s/sync-renderers state-atom (mult (chan)) (chan) s/default-options ids)
+        ])
+  )
 
 ;; sigma driver
 
