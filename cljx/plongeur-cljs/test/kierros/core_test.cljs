@@ -4,7 +4,4 @@
 
 (enable-console-print!)
 
-(deftest make-sink-proxies-test
-  (is (= 2 3)))
-
 (run-tests)

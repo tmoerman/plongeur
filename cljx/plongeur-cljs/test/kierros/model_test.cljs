@@ -1,15 +1,15 @@
 (ns kierros.model-test
   (:require [kierros.model :refer [scan-to-states]]
-            [cljs.core.async :as a :refer [<! >! close! chan to-chan dropping-buffer]]
+            [cljs.core.async :as a :refer [<! >! close! chan to-chan]]
             [cljs.test :refer-macros [deftest is testing run-tests async]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (deftest scan-to-states-async
   (async done
     (let [init-chan (a/to-chan [{}])
-          intent-chans {:foo (chan (dropping-buffer 10))
-                        :gee (chan (dropping-buffer 10))
-                        :bar (chan (dropping-buffer 10))}
+          intent-chans {:foo (chan 10)
+                        :gee (chan 10)
+                        :bar (chan 10)}
           intent-handlers {:foo (fn [e state] (update-in state [:foo] #(conj % e)))
                            :bar (fn [e state] (update-in state [:bar] #(conj % e)))}
           states-chan (scan-to-states init-chan intent-chans intent-handlers)

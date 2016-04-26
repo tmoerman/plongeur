@@ -11,11 +11,12 @@
 ; rlwrap lein figwheel dev test
 
 (run-tests
-           ;'kierros.core-test
-           ;'kierros.async-test
-           ;'kierros.model-test
-           ;'kierros.util-test
-           ;'plongeur.model-test
+           'kierros.core-test
+           'kierros.async-test
+           'kierros.model-test
+           'kierros.util-test
 
+           'plongeur.model-test
            'plongeur.sigma-driver-test
+
            )
