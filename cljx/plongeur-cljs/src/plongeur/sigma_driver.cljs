@@ -1,14 +1,13 @@
 (ns plongeur.sigma-driver
   "See: https://github.com/Linkurious/linkurious.js/wiki"
-  (:require [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]]
-            [foreign.sigma]
-            [clojure.set :refer [difference]])
+  (:require [foreign.sigma]
+            [plongeur.model :refer [graph-ids]]
+            [clojure.set :refer [difference]]
+            [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]]
+            )
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 (defn container-id [id] (str "graph-" id))
-
-(def default-options
-  {:sigma-settings {:verbose true}})
 
 (defn new-sigma
   "Accepts an id and sigma settings in js format.
@@ -18,15 +17,25 @@
     (let [sigma-inst (js/sigma. (container-id id))]
       (when settings-js (.settings sigma-inst settings-js))
       (.refresh sigma-inst))
-    (catch :default _ nil)))
+    (catch :default e
+      (prn (str e " " (container-id id))))))
 
 (defmulti apply-evt! (fn [_ evt] (:type evt))) ;; translate events into renderer actions.
 (defmethod apply-evt! :add-node [sigma evt]
   (let [graph   (-> sigma :renderer .-graph)
         node-js (-> evt :node clj->js)]
-    (.addNode graph node-js)))
-; etc ...
+    (.addNode graph node-js)
+    ;; (.refresh ) here?
+    ))
 
+(defmethod apply-evt! :init-graph [sigma evt]
+  ;; draw the entire TDA-graph
+  :TODO
+  )
+;; etc ...
+
+(defn sigma-ids  [sigma-state] (keys sigma-state))
+(defn sigma-ctxs [sigma-state] (vals sigma-state))
 
 (defn make-sigma-context
   "Accepts a graph id, the out channel and options.
@@ -35,61 +44,65 @@
   (when-let [sigma-inst (->> (some-> options :sigma-settings clj->js)
                              (new-sigma id))]
     (let [select-xf (filter #(-> % :graph (= id)))
-          in-tap    (->> (sliding-buffer 10) (chan select-xf) (tap in-mult))
+          in-tap    (tap in-mult (-> (sliding-buffer 10) (chan select-xf)))
           in-loop   (go-loop []
                              (when-let [evt (<! in-tap)]
                                (apply-evt! sigma-inst evt)))]
       {:sigma    sigma-inst
        :listener in-loop})))
 
-(defn dispose
-  [m]
-  (some-> m :sigma .kill)
-  (some-> m :loop close!))
+(defn dispose!
+  [{:keys [sigma listener]}]
+  (some-> sigma    .kill)
+  (some-> listener close!))
+
+(defn dispose-all!
+  [sigma-state]
+  (doseq [sigma-ctx (sigma-ctxs sigma-state)] (dispose! sigma-ctx)))
 
 (defn remove-renderers
-  [sigma-state-atom & ids]
+  "Dispose and remove renderers with specified graph ids."
+  [sigma-state-atom ids]
   (swap! sigma-state-atom
-         (fn [m]
-           (for [id ids] (some-> m id dispose))
-           (dissoc m ids))))
+         (fn [sigma-state]
+           (doseq [id ids] (some-> id sigma-state dispose!))
+           (apply dissoc sigma-state ids))))
 
 (defn update-renderer
-  [sigma-state-map in-mult out-chan options id]
-  (update-in sigma-state-map [id]
-             (fn [old-renderer]
-               (dispose old-renderer)
-               (make-sigma-context in-mult out-chan options id))))
+  "Update the sigma-state with a new renderer, if instantiation of the renderer was successful."
+  [sigma-state in-mult out-chan options id]
+  (if-let [sigma-ctx (make-sigma-context in-mult out-chan options id)]
+    (update-in sigma-state [id]
+               (fn [old-sigma-ctx] (dispose! old-sigma-ctx) sigma-ctx))
+    sigma-state))
 
 (defn update-renderers
-  [sigma-state-atom in-mult out-chan options & ids]
+  [sigma-state-atom in-mult out-chan options ids]
   (swap! sigma-state-atom
-         (fn [m]
-           (reduce #(update-renderer %1 in-mult out-chan options %2) m ids))))
-
+         (fn [sigma-state]
+           (reduce #(update-renderer %1 in-mult out-chan options %2) sigma-state ids))))
 
 (defn sync-renderers
-  "Accepts the current sigma state, a graphs-state which is the
-  content of the :graphs key in the app state and an options map.
-
-  app-state
-    {:graphs ({:id 5} {:id 4} {:id 3}), :seq 6}"
-  [sigma-state in-mult out-chan options app-state]
-  (let [sigma-ids     (-> @sigma-state keys set)
-        graph-ids     (-> app-state :graphs vals set)
-        ids-to-remove (difference sigma-ids graph-ids)]
-    (remove-renderers sigma-state ids-to-remove)
-    (update-renderers sigma-state in-mult out-chan options graph-ids)))
-
+  "Synchronizes the sigma-state with respect to the current graph ids."
+  [sigma-state-atom in-mult out-chan options ids]
+  (let [sigma-ctx-ids (-> @sigma-state-atom sigma-ids set)
+        ids-to-remove (difference sigma-ctx-ids ids)]
+    (remove-renderers sigma-state-atom ids-to-remove)
+    (update-renderers sigma-state-atom in-mult out-chan options ids)))
 
 (defmulti process (fn [_ msg _ _ _] (:type msg)))
-(defmethod process :sync   [sigma-state app-state in-mult out-chan options] (sync-renderers   sigma-state in-mult out-chan options app-state))
-(defmethod process :update [sigma-state id        in-mult out-chan options] (update-renderers sigma-state in-mult out-chan options id))
-(defmethod process :remove [sigma-state id        _       _        _      ] (remove-renderers sigma-state id))
+(defmethod process :sync   [sigma-state-atom ids in-mult out-chan options] (sync-renderers   sigma-state-atom in-mult out-chan options ids))
+(defmethod process :update [sigma-state-atom ids in-mult out-chan options] (update-renderers sigma-state-atom in-mult out-chan options ids))
+(defmethod process :remove [sigma-state-atom ids _       _        _      ] (remove-renderers sigma-state-atom ids))
+
+(def default-options
+  {:graph-lib      :sigma          ;; or :linkurious
+   :sigma-settings {:verbose true} ;; gets turned into json and passed to the sigma constructor.
+   })
 
 (defn make-sigma-driver
   "Accepts a sigma inbound channel.
-  Returns a Sigma.js driver."
+  Returns a Sigma/Linkurious driver."
   [& options]
   (fn [in-chan]
     (let [in-mult     (mult in-chan)
