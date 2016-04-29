@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.mllib.stat.Statistics._
 import org.apache.spark.rdd.RDD
@@ -70,8 +71,6 @@ object TDA {
 }
 
 case class TDAContext(val dataPoints: RDD[DataPoint]) extends Serializable {
-
-  // lazy val sampleMean: MLVector = colStats(dataPoints.map(_.features)).mean
 
 }
 

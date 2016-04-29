@@ -33,15 +33,15 @@ object Distance {
     result
   }
 
-  def max(distanceMatrix: DistanceMatrix): Double = distanceMatrix.flatten.max
-
   type DistanceFunction = (DataPoint, DataPoint) => Double
 
-  // TODO Pearson correlation, closing over TDAContext
+  // TODO Pearson correlation, closing over ~~TDAContext~~ / over broadcast variable
+
+  // TODO Spearman
 
   val L_infinity = (a: DataPoint, b: DataPoint) => chebyshevDistance(a.features.toBreeze, b.features.toBreeze)
 
-  val cosine    = (a: DataPoint, b: DataPoint) => cosineDistance   (a.features.toBreeze, b.features.toBreeze)
+  val cosine    = (a: DataPoint, b: DataPoint) => cosineDistance(a.features.toBreeze, b.features.toBreeze)
 
   val euclidean = (a: DataPoint, b: DataPoint) => euclideanDistance(a.features.toBreeze, b.features.toBreeze)
 
@@ -49,6 +49,10 @@ object Distance {
 
   def minkowski(exponent: Double) = (a: DataPoint, b: DataPoint) => minkowskiDistance(a.features.toBreeze, b.features.toBreeze, exponent)
 
+  /**
+    * @param name
+    * @return Returns the DistanceFunction associated with specified name.
+    */
   def from(name: String): (Any) => DistanceFunction = name match {
     case "L_infinity" => (_) => L_infinity
     case "cosine"     => (_) => cosine
