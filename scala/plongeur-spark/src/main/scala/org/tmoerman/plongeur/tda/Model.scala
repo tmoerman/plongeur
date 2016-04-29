@@ -14,9 +14,11 @@ object Model {
   implicit def pimp(in: (Int, MLVector)): DataPoint = dp(in._1, in._2)
   def dp(in: (Long, MLVector)): DataPoint = IndexedDataPoint(in._1, in._2)
 
+  type Index = Long
+
   trait DataPoint {
     def features: MLVector
-    def index: Long
+    def index: Index
   }
 
   case class IndexedDataPoint(val index: Long, val features: MLVector) extends DataPoint with Serializable

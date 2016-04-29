@@ -71,7 +71,7 @@ object TDA {
 
 case class TDAContext(val dataPoints: RDD[DataPoint]) extends Serializable {
 
-  lazy val sampleMean: MLVector = colStats(dataPoints.map(_.features)).mean
+  // lazy val sampleMean: MLVector = colStats(dataPoints.map(_.features)).mean
 
 }
 
