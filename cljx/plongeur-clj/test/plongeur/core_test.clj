@@ -1,4 +1,4 @@
-(ns plongeur-clj.core-test
+(ns plongeur.core-test
   (:require [clojure.test :refer :all]
             [plongeur-clj.core :refer :all]))
 

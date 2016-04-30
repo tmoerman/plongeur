@@ -1,4 +1,4 @@
-(ns plongeur-clj.core
+(ns plongeur.core
   (:require [clojure.core.reducers :as r]))
 
 

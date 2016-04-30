@@ -1,4 +1,4 @@
-(ns plongeur-clj.covering)
+(ns plongeur.covering)
 
 ;; scala> Stream.continually(5).scanLeft(1)(_ + _).take(10).force
 ;; res2: scala.collection.immutable.Stream[Int] = Stream(1, 6, 11, 16, 21, 26, 31, 36, 41, 46)
