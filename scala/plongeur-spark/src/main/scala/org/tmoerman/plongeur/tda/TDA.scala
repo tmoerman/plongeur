@@ -1,8 +1,11 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.spark.SparkContext
+import org.apache.spark.mllib.feature.PCA
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
+import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model.{DataPoint, _}
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
@@ -17,16 +20,18 @@ object TDA {
 
   val clusterer = SmileClusteringProvider // TODO injectable
 
-  def apply(tdaParams: TDAParams, tdaContext: TDAContext): TDAResult = {
+  def apply(tdaParams: TDAParams, tdaContext: TDAContext)
+           (implicit sc: SparkContext): TDAResult = {
+
     import tdaContext._
     import tdaParams._
     import tdaParams.clusteringParams._
 
-    val levelSetsInverse =
-      coveringBoundaries
-        .orElse(Some(boundaries(lens.functions, dataPoints)))
-        .map(boundaries => levelSetsInverseFunction(lens, boundaries))
-        .get
+    val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, tdaContext))
+
+    val boundaries = coveringBoundaries.getOrElse(calculateBoundaries(filterFunctions, dataPoints))
+
+    val levelSetsInverse = levelSetsInverseFunction(boundaries, lens, filterFunctions)
 
     val tripletsRDD =
       dataPoints
@@ -72,6 +77,8 @@ object TDA {
 case class TDAContext(val dataPoints: RDD[DataPoint]) extends Serializable {
 
   lazy val N = dataPoints.count
+
+  lazy val pca = new PCA(10).fit(dataPoints.map(_.features))
 
 }
 

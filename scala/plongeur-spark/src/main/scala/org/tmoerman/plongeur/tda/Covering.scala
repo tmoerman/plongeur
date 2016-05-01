@@ -11,19 +11,20 @@ import org.tmoerman.plongeur.tda.Model._
 object Covering {
 
   /**
-    * @param lens The TDA Lens specification.
     * @param coveringBoundaries The boundaries in function of which to define the covering function.
+    * @param lens The TDA Lens specification.
+    * @param filterFunctions The reified filter functions.
     * @return Returns the CoveringFunction instance.
     */
-  def levelSetsInverseFunction(lens: TDALens, coveringBoundaries: Boundaries): LevelSetsInverseFunction = (p: DataPoint) => {
-
-    // TODO refactor to make boundaries a private function -> WHY?
+  def levelSetsInverseFunction(coveringBoundaries: Boundaries,
+                               lens: TDALens,
+                               filterFunctions: Seq[FilterFunction]): LevelSetsInverseFunction = (p: DataPoint) => {
 
     val coveringIntervals =
       coveringBoundaries
         .zip(lens.filters)
-        .map { case ((min, max), filter) =>
-          uniformCoveringIntervals(min, max, filter.length, filter.overlap)(filter.function(p)) }
+        .zip(filterFunctions)
+        .map { case (((min, max), filter), fn) => uniformCoveringIntervals(min, max, filter.length, filter.overlap)(fn(p)) }
 
     combineToLevelSetIDs(coveringIntervals)
   }
@@ -34,10 +35,10 @@ object Covering {
     * @return Returns an Array of Double tuples, representing the (min, max) boundaries of the filter functions applied
     *         on the RDD.
     */
-  def boundaries(filterFunctions: Array[FilterFunction],
-                 dataPoints: RDD[DataPoint]): Array[(Double, Double)] = {
+  def calculateBoundaries(filterFunctions: Seq[FilterFunction],
+                          dataPoints: RDD[DataPoint]): Array[(Double, Double)] = {
 
-    val filterValues = dataPoints.map(p => dense(filterFunctions.map(f => f(p))))
+    val filterValues = dataPoints.map(p => dense(filterFunctions.toArray.map(f => f(p))))
 
     val stats = colStats(filterValues)
 

@@ -3,6 +3,7 @@ package org.tmoerman.plongeur.tda
 import java.util.UUID
 
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
+import shapeless.HList
 
 /**
   * @author Thomas Moerman
@@ -46,25 +47,18 @@ object Model {
 
   }
 
-  case class TDALens(val filters: Filter*) extends Serializable {
-
-    // TODO the lens should accept a filter definition, not yet the filter function as this is computed in function of the data RDD.
-
-    def functions =  filters.toArray.map(_.function)
-
-  }
-
   type Boundaries = Array[(Double, Double)]
 
   type FilterFunction = (DataPoint) => Double
 
   type Percentage = BigDecimal
 
-  case class Filter(val function: FilterFunction,
+  case class TDALens(val filters: Filter*) extends Serializable
+
+  case class Filter(val spec:     HList,
                     val length:   Percentage,
                     val overlap:  Percentage,
-                    val balanced: Boolean = false // vs. uniform
-                   ) extends Serializable {
+                    val balanced: Boolean = false) extends Serializable {
 
     require(length >= 0 && length <= 1, "length must be a percentage.")
     require(overlap >= 0,               "overlap cannot be negative")

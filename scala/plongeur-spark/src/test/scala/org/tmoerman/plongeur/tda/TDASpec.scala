@@ -6,6 +6,7 @@ import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
+import shapeless.HNil
 
 /**
   * @author Thomas Moerman
@@ -31,8 +32,8 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
     val tdaParams =
       TDAParams(
         lens = TDALens(
-          Filter((p: DataPoint) => p.features(0), 1.0, 0.5),
-          Filter((p: DataPoint) => p.features(1), 1.0, 0.5)),
+          Filter("feature" :: 0 :: HNil, 1.0, 0.5),
+          Filter("feature" :: 1 :: HNil, 1.0, 0.5)),
         clusteringParams = ClusteringParams(
           scaleSelection = histogram(10)),
         coveringBoundaries = Some(Array((0.0, 12.0), (0.0, 12.0))))
@@ -62,10 +63,9 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
 //  }
 
   it should "recover the 100 entries circle topology" in {
-
     val tdaParams =
       TDAParams(
-        lens = TDALens(Filter((p: DataPoint) => p.features(0), 0.10, 0.5)),
+        lens = TDALens(Filter("feature" :: 0 :: HNil, 0.10, 0.5)),
         clusteringParams = ClusteringParams(
           scaleSelection = histogram(10)
         ))
@@ -75,5 +75,15 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
     printInspections(result, "circle250")
   }
 
+  it should "pass smoke test with eccentricity filter" in {
+    val tdaParams =
+      TDAParams(
+        lens = TDALens(Filter("eccentricity" :: 1 :: HNil, 0.10, 0.5)),
+        clusteringParams = ClusteringParams(
+          scaleSelection = histogram(10)
+        ))
+
+    val result = TDA.apply(tdaParams, TDAContext(circle250RDD))
+  }
 
 }

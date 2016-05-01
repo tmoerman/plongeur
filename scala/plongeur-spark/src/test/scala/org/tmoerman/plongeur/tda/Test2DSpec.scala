@@ -6,6 +6,7 @@ import org.tmoerman.plongeur.test.TestResources
 import Covering._
 import Model._
 import TDA._
+import shapeless.HNil
 
 /**
   * @author Thomas Moerman
@@ -15,17 +16,18 @@ class Test2DSpec extends FlatSpec with TestResources with Matchers {
   behavior of "Covering the points"
 
   it should "associate points with the correct HyperCubeCoordinateVectors" in {
-
     val lens =
       TDALens(
-        Filter(feature(0), 1, 0.5),
-        Filter(feature(1), 1, 0.5))
+        Filter("feature" :: 0 :: HNil, 1, 0.5),
+        Filter("feature" :: 1 :: HNil, 1, 0.5))
 
     val size = 12.0
 
     val boundaries = Array((0.0, size), (0.0, size))
 
-    val covering = levelSetsInverseFunction(lens, boundaries)
+    val filterFunctions = lens.filters.map(f => Filters.toFilterFunction(f.spec, test2DLabeledPointsRDD))
+
+    val covering = levelSetsInverseFunction(boundaries, lens, filterFunctions)
 
     val result = test2DLabeledPointsRDD.flatMap(p => covering(p).map(k => (k, p))).collect
 
@@ -41,9 +43,7 @@ class Test2DSpec extends FlatSpec with TestResources with Matchers {
 
         testCoveringContainsPoint(0)
         testCoveringContainsPoint(1)
-
       }
-
   }
 
 }

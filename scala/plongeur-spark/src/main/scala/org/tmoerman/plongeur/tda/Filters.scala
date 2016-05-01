@@ -2,7 +2,7 @@ package org.tmoerman.plongeur.tda
 
 import breeze.linalg.{Vector => MLVector}
 import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
+import org.apache.spark.broadcast.Broadcast
 import org.tmoerman.plongeur.tda.Distance.DistanceFunction
 import org.tmoerman.plongeur.tda.Model._
 import shapeless._
@@ -25,20 +25,26 @@ object Filters extends Serializable {
   def toFilterFunction(spec: HList, tdaContext: TDAContext)
                       (implicit sc: SparkContext): FilterFunction = spec match {
 
-    case "feature" :: n :: HNil =>
-      (d: DataPoint) => d.features(n.asInstanceOf[Int])
+    case ("feature" | "features") :: n :: HNil => (d: DataPoint) => d.features(n.asInstanceOf[Int])
 
-    case "PCA" :: n :: HNil => ???
+    case ("PCA" | "PC") :: n :: HNil =>
+//      (d: DataPoint) => tdaContext.pca.transform(d.features).
+//      val projected = data.map(p => p.copy(features = pca.transform(p.features)))
+//      (d: DataPoint) => new LabeledPoint(d.features).copy()
 
-    case "SVD" :: n :: HNil => ???
+      ???
+
+    case ("SVD" | "SV") :: n :: HNil => ???
 
     case "eccentricity" :: n :: distanceSpec =>
       val broadcastFnMemo = eccentricityMap(tdaContext, n, toDistanceFunction(distanceSpec))
 
-      (d: DataPoint) => sc.broadcast(broadcastFnMemo).value.apply(d.index)
+      makeFn(sc.broadcast(broadcastFnMemo))
 
     case _ => throw new IllegalArgumentException(s"could not materialize spec: $spec")
   }
+
+  def makeFn(bc: Broadcast[Map[Index, Double]]) = (d: DataPoint) => bc.value.apply(d.index)
 
   def toDistanceFunction(distanceSpec: HList): DistanceFunction = distanceSpec match {
     case (name: String) :: HNil               => Distance.from(name)(Nil)
