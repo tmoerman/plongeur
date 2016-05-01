@@ -4,7 +4,7 @@ import java.lang.Math.sqrt
 
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Filters.reify
+import org.tmoerman.plongeur.tda.Filters.toFilterFunction
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.test.SparkContextSpec
 import shapeless._
@@ -19,7 +19,7 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   it should "materialize a feature by index" in {
     val spec = "feature" :: 1 :: HNil
 
-    val f: FilterFunction = reify(spec, null)
+    val f: FilterFunction = toFilterFunction(spec, null)
 
     val dataPoint = (0, dense(1, 2, 3))
 
@@ -36,19 +36,19 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   val rdd = sc.parallelize(dataPoints)
 
   it should "materialize L_inf centrality in function of default distance" in {
-    val spec: HList = "centrality" :: "L_infinity" :: HNil
+    val spec: HList = "centrality" :: "infinity" :: HNil
 
-    val f = reify(spec, rdd)
+    val ff = toFilterFunction(spec, rdd)
 
-    dataPoints.map(f).toSet shouldBe Set(sqrt(8))
+    dataPoints.map(ff).toSet shouldBe Set(sqrt(8))
   }
 
   it should "materialize L_inf centrality in function of specified no-args distance" in {
-    val spec: HList = "centrality" :: "L_infinity" :: "euclidean" :: HNil
+    val spec: HList = "centrality" :: "infinity" :: "euclidean" :: HNil
 
-    val f = reify(spec, rdd)
+    val ff = toFilterFunction(spec, rdd)
 
-    dataPoints.map(f).toSet shouldBe Set(sqrt(8))
+    dataPoints.map(ff).toSet shouldBe Set(sqrt(8))
   }
 
 }
