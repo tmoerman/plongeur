@@ -65,9 +65,13 @@ object TDA {
     TDAResult(clustersRDD, clusterEdgesRDD)
   }
 
+  implicit def toTDAContext(rdd: RDD[DataPoint]): TDAContext = new TDAContext(rdd)
+
 }
 
 case class TDAContext(val dataPoints: RDD[DataPoint]) extends Serializable {
+
+  lazy val N = dataPoints.count
 
 }
 

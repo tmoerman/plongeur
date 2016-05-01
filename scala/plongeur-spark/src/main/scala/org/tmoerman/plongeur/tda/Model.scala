@@ -62,7 +62,9 @@ object Model {
 
   case class Filter(val function: FilterFunction,
                     val length:   Percentage,
-                    val overlap:  Percentage) extends Serializable {
+                    val overlap:  Percentage,
+                    val balanced: Boolean = false // vs. uniform
+                   ) extends Serializable {
 
     require(length >= 0 && length <= 1, "length must be a percentage.")
     require(overlap >= 0,               "overlap cannot be negative")

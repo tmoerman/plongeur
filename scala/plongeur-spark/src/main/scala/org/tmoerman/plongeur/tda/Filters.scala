@@ -18,18 +18,22 @@ object Filters extends Serializable {
 
   /**
     * @param spec
-    * @param dataPoints
+    * @param tdaContext
     * @return Returns a FilterFunction for the specified filter specification.
     *         Closes over TDAContext for references to SparkContext and DataPoints.
     */
-  def toFilterFunction(spec: HList, dataPoints: RDD[DataPoint])
+  def toFilterFunction(spec: HList, tdaContext: TDAContext)
                       (implicit sc: SparkContext): FilterFunction = spec match {
 
     case "feature" :: n :: HNil =>
       (d: DataPoint) => d.features(n.asInstanceOf[Int])
 
-    case "centrality" :: n :: distanceSpec =>
-      val broadcastFnMemo = centralityMap(dataPoints, n, toDistanceFunction(distanceSpec))
+    case "PCA" :: n :: HNil => ???
+
+    case "SVD" :: n :: HNil => ???
+
+    case "eccentricity" :: n :: distanceSpec =>
+      val broadcastFnMemo = eccentricityMap(tdaContext, n, toDistanceFunction(distanceSpec))
 
       (d: DataPoint) => sc.broadcast(broadcastFnMemo).value.apply(d.index)
 
@@ -43,21 +47,21 @@ object Filters extends Serializable {
   }
 
   /**
-    * @param dataPoints
+    * @param tdaContext
     * @param n The exponent
     * @param distance
-    * @return Returns a Map by Index to the L_n centrality of that point.
-    *         L_n centrality assigns to each point the distance to the point most distant from it.
+    * @return Returns a Map by Index to the L_n eccentricity of that point.
+    *         L_n eccentricity assigns to each point the distance to the point most distant from it.
     *
     *         See: Extracting insights from the shape of complex data using topology
     *              -- P. Y. Lum, G. Singh, [...], and G. Carlsson
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  def centralityMap(dataPoints: RDD[DataPoint], n: Any, distance: DistanceFunction): Map[Index, Double] = {
-    val EMPTY = Map[Index, Double]()
+  def eccentricityMap(tdaContext: TDAContext, n: Any, distance: DistanceFunction): Map[Index, Double] = {
+    import tdaContext._
 
-    val N = dataPoints.take(1).length
+    val EMPTY = Map[Index, Double]()
 
     val combinations =
       dataPoints
@@ -65,7 +69,7 @@ object Filters extends Serializable {
         .filter { case (p1, p2) => p1.index < p2.index } // combinations only
 
     n match {
-      case "infinity" =>
+      case "infinity" | "infty" | "_8"  =>
         combinations
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
@@ -89,7 +93,7 @@ object Filters extends Serializable {
             { case (acc1, acc2) => acc1.merge(_ + _)(acc2) })
           .mapValues(sum => pow(sum, 1. / n) / N)
 
-      case _ => throw new IllegalArgumentException(s"invalid value for centrality argument: '$n'")
+      case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$n'")
     }}
 
 }

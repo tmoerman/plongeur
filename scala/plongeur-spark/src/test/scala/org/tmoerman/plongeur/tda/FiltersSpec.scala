@@ -7,6 +7,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Filters.toFilterFunction
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.test.SparkContextSpec
+import TDA._
 import shapeless._
 
 /**
@@ -14,9 +15,9 @@ import shapeless._
   */
 class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
-  behavior of "materializing filter specs"
+  behavior of "reifying filter specs"
 
-  it should "materialize a feature by index" in {
+  it should "reify a feature by index" in {
     val spec = "feature" :: 1 :: HNil
 
     val f: FilterFunction = toFilterFunction(spec, null)
@@ -35,20 +36,30 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   val rdd = sc.parallelize(dataPoints)
 
-  it should "materialize L_inf centrality in function of default distance" in {
-    val spec: HList = "centrality" :: "infinity" :: HNil
+  it should "reify L_1 eccentricity" in {
+    val spec: HList = "eccentricity" :: 1 :: HNil
+
+    val ff = toFilterFunction(spec, rdd)
+
+    dataPoints.map(ff).toSet shouldBe Set((2 + 2 + sqrt(8)) / 4)
+  }
+
+  it should "reify L_inf eccentricity in function of default distance" in {
+    val spec: HList = "eccentricity" :: "infinity" :: HNil
 
     val ff = toFilterFunction(spec, rdd)
 
     dataPoints.map(ff).toSet shouldBe Set(sqrt(8))
   }
 
-  it should "materialize L_inf centrality in function of specified no-args distance" in {
-    val spec: HList = "centrality" :: "infinity" :: "euclidean" :: HNil
+  it should "reify L_inf eccentricity in function of specified no-args distance" in {
+    val spec: HList = "eccentricity" :: "_8" :: "euclidean" :: HNil
 
     val ff = toFilterFunction(spec, rdd)
 
     dataPoints.map(ff).toSet shouldBe Set(sqrt(8))
   }
+
+
 
 }
