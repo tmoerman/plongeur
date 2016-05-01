@@ -25,7 +25,7 @@ object Model {
 
   type LevelSetID = Vector[BigDecimal]
 
-  type LevelSetInverseFunction = (DataPoint) => Set[LevelSetID]
+  type LevelSetsInverseFunction = (DataPoint) => Set[LevelSetID]
 
   type ID = UUID
 

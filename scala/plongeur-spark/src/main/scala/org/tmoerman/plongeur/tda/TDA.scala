@@ -1,8 +1,6 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
-import org.apache.spark.mllib.stat.Statistics._
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Model.{DataPoint, _}
@@ -20,21 +18,20 @@ object TDA {
   val clusterer = SmileClusteringProvider // TODO injectable
 
   def apply(tdaParams: TDAParams, tdaContext: TDAContext): TDAResult = {
-
     import tdaContext._
     import tdaParams._
     import tdaParams.clusteringParams._
 
-    val levelSetInverses =
+    val levelSetsInverse =
       coveringBoundaries
         .orElse(Some(boundaries(lens.functions, dataPoints)))
-        .map(boundaries => levelSetInverseFunction(lens, boundaries))
+        .map(boundaries => levelSetsInverseFunction(lens, boundaries))
         .get
 
     val tripletsRDD =
       dataPoints
-        .flatMap(dataPoint => levelSetInverses(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
-        .groupByKey // TODO turn this into a reduceByKey with an incremental single linkage algorithm
+        .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
+        .groupByKey // TODO turn this into a reduceByKey with an incremental single linkage algorithm? -> probably pointless
         .map{ case (levelSetID, levelSetPoints) =>
           (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, distanceFunction, clusteringMethod)) }
         .cache

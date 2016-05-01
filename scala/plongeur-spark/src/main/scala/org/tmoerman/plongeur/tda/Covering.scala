@@ -15,9 +15,9 @@ object Covering {
     * @param coveringBoundaries The boundaries in function of which to define the covering function.
     * @return Returns the CoveringFunction instance.
     */
-  def levelSetInverseFunction(lens: TDALens, coveringBoundaries: Boundaries): LevelSetInverseFunction = (p: DataPoint) => {
+  def levelSetsInverseFunction(lens: TDALens, coveringBoundaries: Boundaries): LevelSetsInverseFunction = (p: DataPoint) => {
 
-    // TODO refactor to make boundaries a private function
+    // TODO refactor to make boundaries a private function -> WHY?
 
     val coveringIntervals =
       coveringBoundaries
