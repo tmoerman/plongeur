@@ -42,6 +42,6 @@
 (defn launch-plongeur []
   (cycle/run plongeur-main
              {:DOM     (dom/make-dom-driver "plongeur-app")
-              ;:WEB    (ws/make-websocket-driver "/chsk")
+              :WEB     (ws/make-sente-client-driver "/chsk")
               :SIGMA   (sig/make-sigma-driver)
               :STORAGE (st/make-storage-driver "plongeur" m/default-state)}))
