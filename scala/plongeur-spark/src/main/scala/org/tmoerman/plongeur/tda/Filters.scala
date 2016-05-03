@@ -37,7 +37,7 @@ object Filters extends Serializable {
     case ("SVD" | "SV") :: n :: HNil => ???
 
     case "eccentricity" :: n :: distanceSpec =>
-      val broadcastFnMemo = eccentricityMap(tdaContext, n, toDistanceFunction(distanceSpec))
+      val broadcastFnMemo = eccentricityMap(n, tdaContext, toDistanceFunction(distanceSpec))
 
       makeFn(sc.broadcast(broadcastFnMemo))
 
@@ -53,8 +53,8 @@ object Filters extends Serializable {
   }
 
   /**
-    * @param tdaContext
     * @param n The exponent
+    * @param tdaContext
     * @param distance
     * @return Returns a Map by Index to the L_n eccentricity of that point.
     *         L_n eccentricity assigns to each point the distance to the point most distant from it.
@@ -64,7 +64,7 @@ object Filters extends Serializable {
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  def eccentricityMap(tdaContext: TDAContext, n: Any, distance: DistanceFunction): Map[Index, Double] = {
+  def eccentricityMap(n: Any, tdaContext: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
     import tdaContext._
 
     val EMPTY = Map[Index, Double]()
