@@ -1,10 +1,14 @@
 (ns plongeur.view
   (:require [cljs.core.async :as a :refer [>! chan pipe]]
             [quiescent.core :as q :include-macros true :refer-macros [defcomponent]]
+            [cljsjs.material-ui]
             [sablono.core :refer-macros [html]]
             [plongeur.model :as m]
             [plongeur.sigma-driver :as s])
   (:require-macros [cljs.core.async.macros :refer [go]]))
+
+#_(def ^:dynamic *mui-theme*
+  (.getMuiTheme js/MaterialUI.Styles.ThemeManager))
 
 (def node-1 {:id "n1"
              :label "hello"
@@ -29,8 +33,8 @@
   [state {:keys [add-graph debug] :as intent-chans}]
   (html [:div {:id "plongeur-main"}
          [:h1 {} "Bonjour, ici Plongeur"]
-         [:button {:on-click (fn [_] (go (>! debug :click)))} "print state"]
-         [:button {:on-click (fn [_] (go (>! add-graph :click)))} "add graph"]
+         [:button {:on-click #(go (>! debug :click))} "print state"]
+         [:button {:on-click #(go (>! add-graph :click))} "add graph"]
          (for [graph-state (m/graphs state)]
            (Sigma graph-state intent-chans))]))
 
