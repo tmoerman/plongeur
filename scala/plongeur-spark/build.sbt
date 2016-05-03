@@ -15,6 +15,8 @@ resolvers ++= Seq(
 
 val sparkVersion  = "1.6.0"
 
+publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath + "/.m2/repository")))
+
 libraryDependencies ++= Seq(
 
   "org.apache.spark"       % "spark-core_2.10"   % sparkVersion % "provided",
