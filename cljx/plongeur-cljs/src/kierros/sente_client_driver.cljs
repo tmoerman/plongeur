@@ -1,10 +1,10 @@
-(ns kierros.sente-websocket-driver
-  "Sente websocket driver. See https://github.com/ptaoussanis/sente"
+(ns kierros.sente-client-driver
+  "Sente websocket client driver. See https://github.com/ptaoussanis/sente"
   (:require [cljs.core.async :as a :refer [<! >! put! close! chan pipe]]
             [taoensso.sente  :as s :refer [make-channel-socket! cb-success?]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(defn make-websocket-driver
+(defn make-sente-client-driver
   "Accepts a path and options.
   Returns a websocket driver powered by Sente."
   [path & options]
