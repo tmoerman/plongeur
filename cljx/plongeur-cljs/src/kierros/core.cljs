@@ -39,6 +39,6 @@
         source-chans     (call-drivers drivers sink-proxy-chans)
         sink-chans       (main source-chans)
         _                (weld-cycle! sink-chans sink-proxy-chans)
-        close-all!       (fn [] (doseq [ch sink-proxy-chans] (close! ch)))]
+        close-all!       (fn [] (doseq [ch (vals sink-proxy-chans)] (close! ch)))]
     (println "cycle running")
     close-all!))

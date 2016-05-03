@@ -17,7 +17,6 @@
   "Add a graph"
   (let [graph-id    (seq-val state)
         graph-props {}]
-    (prn "adding graph " graph-id)
     (->> state
          (transform [:seq] inc)
          (transform [:graphs] #(assoc % graph-id graph-props)))))
