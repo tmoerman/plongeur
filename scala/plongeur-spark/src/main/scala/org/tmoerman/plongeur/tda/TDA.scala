@@ -10,6 +10,7 @@ import org.tmoerman.plongeur.tda.Model.{DataPoint, _}
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
 import org.tmoerman.plongeur.util.IterableFunctions._
+import rx.lang.scala.Observable
 
 /**
   * TODO turn into a part of the reactive machinery with observable input and observable output. Cfr. Cycle.js
@@ -19,6 +20,13 @@ import org.tmoerman.plongeur.util.IterableFunctions._
 object TDA {
 
   val clusterer = SmileClusteringProvider // TODO injectable
+
+  def doMain(in: Observable[String]) = {
+    val out: Observable[Int] = in.map(_.length)
+    out
+  }
+
+  def echo(call: String) = s"$call $call"
 
   def apply(tdaParams: TDAParams, tdaContext: TDAContext)
            (implicit sc: SparkContext): TDAResult = {
@@ -33,10 +41,13 @@ object TDA {
 
     val levelSetsInverse = levelSetsInverseFunction(boundaries, lens, filterFunctions)
 
-    val tripletsRDD =
+    val byLevelSet =
       dataPoints
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
         .groupByKey // TODO turn this into a reduceByKey with an incremental single linkage algorithm? -> probably pointless
+
+    val tripletsRDD =
+      byLevelSet
         .map{ case (levelSetID, levelSetPoints) =>
           (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, distanceFunction, clusteringMethod)) }
         .cache
