@@ -23,6 +23,7 @@
                 [name source])))
        (into {})))
 
+
 (defn weld-cycle!
   "Closes the cycle between the sinks and sink-proxies."
   [sink-chans sink-proxy-chans]
@@ -30,22 +31,14 @@
     (when sink-chan
       (a/pipe sink-chan (key sink-proxy-chans)))))
 
-(defn shutdown-channel
-  "Accepts a colletion of channels. Returns the shutdown channel.
-  When a signal is taken from the shutdown channel, all specified channels are closed."
-  [chans]
-  (let [shutdown-chan (chan 1)]
-    (go
-      (<! shutdown-chan)              ;; wait for the shutdown signal
-      (doseq [ch chans] (close! ch))) ;; close all driver channels
-    shutdown-chan))
-
 (defn run
-  "Cycle.run equivalent. Accepts a main function and a map of drivers."
+  "Cycle.run equivalent. Accepts a main function and a map of drivers.
+  Returns a shutdown function that closes the sink proxy channels."
   [main drivers]
   (let [sink-proxy-chans (sink-proxies drivers)
         source-chans     (call-drivers drivers sink-proxy-chans)
         sink-chans       (main source-chans)
-        _                (weld-cycle! sink-chans sink-proxy-chans)]
+        _                (weld-cycle! sink-chans sink-proxy-chans)
+        close-all!       (fn [] (doseq [ch sink-proxy-chans] (close! ch)))]
     (println "cycle running")
-    (->> sink-proxy-chans vals shutdown-channel)))
+    close-all!))

@@ -3,13 +3,6 @@
             [kierros.model :refer [scan-to-states]]
             [com.rpl.specter :as s :refer [select transform ALL FIRST]]))
 
-; state map
-;      {:seq
-;       :graphs {}
-;       }
-
-;; Nothing else but the functions in this namespace touch (or query) the app state directly.
-
 ;; queries
 
 (defn graphs [state] (:graphs state))

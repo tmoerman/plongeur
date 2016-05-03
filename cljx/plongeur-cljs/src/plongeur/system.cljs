@@ -8,6 +8,4 @@
 
 (defn on-js-reload []
   (prn "reloading")
-  (swap! sys-atom (fn [shutdown-chan]
-                    (some-> shutdown-chan close!)
-                    (run-app))))
+  (swap! sys-atom (fn [shutdown-fn] (shutdown-fn) (run-app))))
