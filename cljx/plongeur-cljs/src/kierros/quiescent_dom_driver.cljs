@@ -10,9 +10,9 @@
   [container & options]
   (fn [views-chan]
     (go-loop []
-             (when-let [view (<! views-chan)]
-               (.requestAnimationFrame
-                 js/window
-                 (fn [] (q/render view (.getElementById js/document container)))))
-             (recur))
+             (if-let [view (<! views-chan)]
+               (do (.requestAnimationFrame js/window #(q/render view (.getElementById js/document container)))
+                   (recur))
+               (prn "dom driver stopped")))
     (chan))) ; For now not much is going on here. Dom event should be put on this chan.
+

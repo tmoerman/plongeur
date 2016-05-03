@@ -19,9 +19,11 @@
   a channel with the previously stored or specified initial state."
   [storage-key init-state]
   (fn [state-chan]
-    (let [return-state (or (load storage-key) init-state)]
+    (let [return-state (-> (or (load storage-key) init-state)
+                           (assoc :transient {:launched (js/Date.)}))]
       (go-loop []
-               (when-let [state (<! state-chan)]
-                 (store! storage-key state))
-               (recur))
+               (if-let [state (<! state-chan)]
+                 (do (store! storage-key state)
+                     (recur))
+                 (prn "local storage driver stopped")))
       (a/to-chan [return-state]))))

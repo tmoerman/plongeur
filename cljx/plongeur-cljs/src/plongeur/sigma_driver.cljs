@@ -3,8 +3,7 @@
   (:require [foreign.sigma]
             [plongeur.model :refer [graph-ids]]
             [clojure.set :refer [difference]]
-            [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]]
-            )
+            [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 (defn container-id [id] (str "graph-" id))
@@ -47,8 +46,9 @@
           in-tap    (->> select-xf (chan 10) (tap in-mult))
           in-loop   (go-loop []
                              (when-let [evt (<! in-tap)]
-                               (apply-evt! sigma-inst evt))
-                             (recur))]
+                               (do
+                                 (apply-evt! sigma-inst evt)
+                                 (recur))))]
       {:sigma    sigma-inst
        :listener in-loop})))
 
@@ -59,7 +59,8 @@
 
 (defn dispose-all!
   [sigma-state]
-  (doseq [sigma-ctx (sigma-ctxs sigma-state)] (dispose! sigma-ctx)))
+  (doseq [sigma-ctx (sigma-ctxs sigma-state)]
+    (dispose! sigma-ctx)))
 
 (defn remove-renderers
   "Dispose and remove renderers with specified graph ids."
@@ -119,16 +120,21 @@
 (defn make-sigma-driver
   "Accepts a sigma inbound channel.
   Returns a Sigma/Linkurious driver."
+
+  ;; TODO might be better to model this as intent-channel operating on global state with :transient key
+
   [& options]
   (fn [sigma-in-chan]
     (let [in-mult     (mult sigma-in-chan)
           ctrl-chan   (->> (filter ctrl-msg?) (chan 10) (tap in-mult))
           graph-mult  (->> (filter graph-msg?) (chan 10) (tap in-mult) (mult))
           out-chan    (chan 10)
-          sigma-state (atom {})
+          sigma-state (atom {}) ;; TODO what about a scan-to-states approach? (must have been asleep while I was doing this)
           options     (or options default-options)]
       (go-loop []
-               (when-let [msg (<! ctrl-chan)]
-                 (process sigma-state msg graph-mult out-chan options))
-               (recur))
+               (if-let [msg (<! ctrl-chan)]
+                 (do (process sigma-state msg graph-mult out-chan options)
+                     (recur))
+                 (do (prn "sigma driver stopped")
+                     (-> sigma-state deref dispose-all!))))
       out-chan)))

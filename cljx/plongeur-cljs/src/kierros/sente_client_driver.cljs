@@ -11,11 +11,13 @@
   (fn [request-chan]
     (let [default-options   {:type :auto}
           {:keys [ch-recv
+                  ;; shutdown function
                   send-fn]} (make-channel-socket! path (or options default-options))
           websocket-send!   send-fn
           response-chan     ch-recv]
       (go-loop []
                (when-let [request (<! request-chan)]
-                 (websocket-send! request))
-               (recur))
+                 (do
+                   (websocket-send! request)
+                   (recur))))
       response-chan)))
