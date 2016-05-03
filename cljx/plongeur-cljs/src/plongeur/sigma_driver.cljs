@@ -135,6 +135,6 @@
                (if-let [msg (<! ctrl-chan)]
                  (do (process sigma-state msg graph-mult out-chan options)
                      (recur))
-                 (do (prn "sigma driver stopped")
-                     (-> sigma-state deref dispose-all!))))
+                 (do (-> sigma-state deref dispose-all!)
+                     (prn "sigma driver stopped"))))
       out-chan)))

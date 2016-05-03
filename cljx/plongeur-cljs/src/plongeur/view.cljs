@@ -34,7 +34,8 @@
   (html [:div {:id "plongeur-main"}
          [:h1 {} "Bonjour, ici Plongeur"]
          [:button {:on-click #(go (>! debug :click))} "print state"]
-         [:button {:on-click #(go (>! add-graph :click))} "add graph"]
+         [:button {:on-click #(go (>! add-graph :click))
+                   :hidden   (>= (-> state :graphs count) 4) } "add graph"]
          (for [graph-state (m/graphs state)]
            (Sigma graph-state intent-chans))]))
 

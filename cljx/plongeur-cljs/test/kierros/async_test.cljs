@@ -35,4 +35,17 @@
         (is (= (<! c$) [:a1 :a2 :a3 :b1])))
       (done))))
 
+(deftest close-chan
+  (async done
+    (let [c (chan)
+          a (atom)
+          r (go
+              (<! c)
+              (swap! a (fn [_] :token)))]
+      (go
+        (close! c)
+        (<! r)
+        (is (= :token @a)))
+      (done))))
+
 (run-tests)

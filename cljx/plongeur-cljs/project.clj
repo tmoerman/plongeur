@@ -24,7 +24,6 @@
                                     "target"]
 
   :cljsbuild {:builds {:dev {:source-paths ["src" "test"]
-                             ;; TODO check whether to put test in :test-paths
                              :figwheel {:on-jsload "plongeur.system/on-js-reload"}
                              :compiler {:main plongeur.core
                                         :asset-path "js/compiled/out"
