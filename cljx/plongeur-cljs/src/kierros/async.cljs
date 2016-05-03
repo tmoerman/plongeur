@@ -13,11 +13,9 @@
    (let [out (chan buf-or-n)]
      (go-loop [[ch & rest] chs]
         (if ch
-          (let [val (<! ch)]
-            (if (nil? val) ;; current channel exhausted
-              (recur rest)
-              (do
-                (>! out val)
-                (recur chs))))
+          (if-let [v (<! ch)]
+            (do (>! out v)
+                (recur chs))
+            (recur rest))
           (close! out))) ;; close out channel when all input channels are consumed
      out)))
