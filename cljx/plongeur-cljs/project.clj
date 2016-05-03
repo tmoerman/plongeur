@@ -7,6 +7,7 @@
                  [org.clojure/core.async "0.2.374" :exclusions [org.clojure/tools.reader]]
                  [com.taoensso/sente "1.8.1"]
                  [quiescent "0.3.1"]
+                 [cljsjs/material-ui "0.14.4-11" :exclusions [cljsjs/react]]
                  [sablono "0.6.3"]
                  [com.rpl/specter "0.9.3"]
                  [prismatic/dommy "1.1.0"]]
@@ -23,7 +24,8 @@
                                     "target"]
 
   :cljsbuild {:builds {:dev {:source-paths ["src" "test"]
-                             :figwheel {:on-jsload "plongeur.core/on-js-reload"}
+                             ;; TODO check whether to put test in :test-paths
+                             :figwheel {:on-jsload "plongeur.system/on-js-reload"}
                              :compiler {:main plongeur.core
                                         :asset-path "js/compiled/out"
                                         :output-to "resources/public/js/compiled/plongeur.js"
