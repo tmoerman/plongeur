@@ -1,6 +1,6 @@
 (ns dev
   (:require [clojure.tools.namespace.repl :refer [refresh set-refresh-dirs]]
-            [plongeur.system :as plongeur]))
+            [plongeur.core :as plongeur]))
 
 (def system nil)
 

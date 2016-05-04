@@ -21,7 +21,7 @@
                  [ring "1.4.0"]
                  [compojure "1.5.0"]
                  [clojurewerkz/route-one "1.2.0"]
-                 ;[http-kit "2.1.18"]
+                 [http-kit "2.1.18"]
                  [com.taoensso/sente "1.8.1"]
                  [com.taoensso/timbre "4.3.1"]
 
@@ -36,7 +36,6 @@
   :plugins [[lein-environ "1.0.2"]]
 
   :profiles {:uberjar {:aot :all}
-
              :dev     {:source-paths ["dev"]
                        :repl-options {:port 8666}
                        :dependencies [[org.clojure/tools.namespace "0.2.11"]
@@ -48,7 +47,5 @@
                        :plugins [[lein-midje "3.2"]
                                  [lein-kibit "0.1.2"]]
                        :main user }}
-
-
 
   )
