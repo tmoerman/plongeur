@@ -21,7 +21,7 @@
                  [ring "1.4.0"]
                  [compojure "1.5.0"]
                  [clojurewerkz/route-one "1.2.0"]
-                 [http-kit "2.1.18"]
+                 ;[http-kit "2.1.18"]
                  [com.taoensso/sente "1.8.1"]
                  [com.taoensso/timbre "4.3.1"]
 
