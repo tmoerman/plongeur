@@ -1,6 +1,6 @@
 (ns kierros.core
   "Cycle-flavoured core functions."
-  (:require [clojure.core.async :as a :refer [<! chan]]
+  (:require [clojure.core.async :as a :refer [<! chan close!]]
             [taoensso.timbre :refer [info]]))
 
 (defn sink-proxies
@@ -9,7 +9,7 @@
   [drivers]
   (->> drivers
        keys
-       (map (fn [name] [name (chan)]))
+       (map (fn [name] [name (chan 10)]))
        (into {})))
 
 (defn call-drivers
@@ -26,17 +26,18 @@
 (defn weld-cycle!
   "Closes the cycle between the sinks and sink-proxies."
   [sink-chans sink-proxy-chans]
-  (->> sink-chans
-       (map (fn [[key sink-chan]]
-              (when sink-chan
-                (a/pipe sink-chan (key sink-proxy-chans)))))
-       (dorun)))
+  (doseq [[key sink-chan] sink-chans]
+    (when sink-chan
+      (a/pipe sink-chan (key sink-proxy-chans)))))
 
 (defn run
-  "Cycle.run equivalent. Accepts a main function and a map of drivers."
+  "Cycle.run equivalent. Accepts a main function and a map of drivers.
+  Returns a shutdown function that closes the sink proxy channels."
   [main drivers]
   (let [sink-proxy-chans (sink-proxies drivers)
         source-chans     (call-drivers drivers sink-proxy-chans)
         sink-chans       (main source-chans)
-        _                (weld-cycle! sink-chans sink-proxy-chans)]
-    (info "cycle running")))
+        _                (weld-cycle! sink-chans sink-proxy-chans)
+        close-all!       (fn [] (doseq [ch (vals sink-proxy-chans)] (close! ch)))]
+    (info "cycle running")
+    close-all!))
