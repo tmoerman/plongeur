@@ -48,4 +48,6 @@
                                  [lein-kibit "0.1.2"]]
                        :main user }}
 
+  :aliases {"dive" ["with-profile" "+dev" "repl"]}
+
   )
