@@ -1,9 +1,9 @@
 (ns plongeur.system
   (:require [cljs.core.async :refer [close!]]
-            [plongeur.core :refer [launch-plongeur]]))
+            [plongeur.core :as plongeur]))
 
-(defonce app (-> (launch-plongeur) (atom)))
+(defonce app (-> (plongeur/launch-client) (atom)))
 
 (defn on-js-reload []
   (prn "reloading app")
-  (swap! app (fn [shutdown-fn] (shutdown-fn) (launch-plongeur))))
+  (swap! app (fn [shutdown-fn] (shutdown-fn) (plongeur/launch-client))))

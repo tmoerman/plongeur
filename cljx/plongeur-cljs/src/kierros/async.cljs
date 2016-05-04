@@ -1,6 +1,6 @@
 (ns kierros.async
-  (:require [cljs.core.async :as a :refer [<! >! close! chan]])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+  (:require [cljs.core.async :as a :refer [<! >! chan close!]])
+  (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 (defn chain
   "Core.async equivalent of Rx.concat(observables).

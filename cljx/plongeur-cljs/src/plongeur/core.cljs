@@ -11,12 +11,12 @@
 
 (enable-console-print!)
 
-(defn plongeur-main
-  "Cycle main."
+(defn plongeur-client-main
+  "Main function cfr. Cycle.js architecture."
   [{dom-event-chan       :DOM
     sigma-event-chan     :SIGMA
     saved-state-chan     :STORAGE
-    websocket-event-chan :WEB}]
+    server-response-chan :WEB}]
   (let [sigma-chan         (chan 10)
         intent-chans       (-> (i/intents)
                                (assoc :sigma-ctrl sigma-chan))
@@ -39,8 +39,8 @@
      :STORAGE pickle-states-chan
      :WEB     request-chan}))
 
-(defn launch-plongeur []
-  (cycle/run plongeur-main
+(defn launch-client []
+  (cycle/run plongeur-client-main
              {:DOM     (dom/make-dom-driver "plongeur-app")
               :WEB     (ws/make-sente-client-driver "/chsk")
               :SIGMA   (sig/make-sigma-driver)
