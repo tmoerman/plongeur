@@ -5,12 +5,12 @@
             [compojure.core :refer [routes GET POST]]
             [taoensso.sente :as s]
             [taoensso.sente.server-adapters.http-kit :refer [sente-web-server-adapter]]
-            [taoensso.timbre :refer [info]]))
+            [taoensso.timbre :refer [warn]]))
 
 (defn make-sente-server-driver
   "Accepts an optional options map.
   Returns a websocket server driver powered by Sente."
-  [& options]
+  [options]
   (fn [push-chan]
     (let [{:keys [ch-recv send-fn]} (s/make-channel-socket-server! sente-web-server-adapter options)
           client-request-chan       (chan 10)
@@ -20,5 +20,5 @@
                  (do (send-fn push->client)
                      (recur))
                  (do (router-shutdown-fn)
-                     (info "sente server driver stopped"))))
+                     (warn "sente server driver stopped"))))
       client-request-chan)))
