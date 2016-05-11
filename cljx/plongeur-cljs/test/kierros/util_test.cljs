@@ -5,7 +5,7 @@
             [cljs.test :refer-macros [deftest is testing run-tests async]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-(def amend-state (fn [state f] (f state)))
+(defn amend-state [state f] (f state))
 
 (deftest sequence-scan-empty
   (let [s (->> []
