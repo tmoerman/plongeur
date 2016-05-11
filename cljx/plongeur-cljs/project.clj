@@ -12,7 +12,7 @@
                  [com.rpl/specter "0.9.3"]
                  [prismatic/dommy "1.1.0"]]
   
-  :plugins [[lein-figwheel "0.5.2"]
+  :plugins [[lein-figwheel "0.5.3-1"]
             [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]
             [lein-npm "0.6.2"]]
 
@@ -63,4 +63,6 @@
                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}}
 
   :figwheel {:css-dirs ["resources/public/css"] ;; watch and update CSS
-             :nrepl-port 7888})
+             :nrepl-port 7888}
+
+  )
