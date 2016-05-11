@@ -40,8 +40,8 @@
         sink-chans       (main source-chans)
         _                (weld-cycle! sink-chans sink-proxy-chans)
         close-all!       (fn []
-                           (warn (u/deco "cycle stopping"))
+                           (warn (u/frame "cycle stopping"))
                            (doseq [ch (vals sink-proxy-chans)] (close! ch)))]
-    (info (u/deco "cycle running"))
+    (info (u/frame "cycle running"))
     {:CYCLE sink-chans
      :SHUTDOWN close-all!}))
