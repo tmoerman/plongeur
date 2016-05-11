@@ -16,3 +16,9 @@
            (vreset! state next)
            (xf result next)))))))
 
+(defn deco [s]
+  "Decorate the specified string."
+  (let [length (-> s count inc inc)
+        bar    (str "+" (->> "-" (repeat length) (apply str)) "+")
+        ]
+    (str "\n\n" bar "\n| " s " |\n" bar "\n")))
