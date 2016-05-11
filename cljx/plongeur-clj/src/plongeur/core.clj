@@ -18,6 +18,7 @@
 
 (defn launch-server []
   (cycle/run plongeur-server-main
-             {:WEB  (ws/make-sente-server-driver {})
+             {:WEB  (ws/make-sente-server-driver {:sente    {}
+                                                  :http-kit {:port 3000}})
               :REPL (fn [_] (chan 10)) ;; a REPL message channel
               }))
