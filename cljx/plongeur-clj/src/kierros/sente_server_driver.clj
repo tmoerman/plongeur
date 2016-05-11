@@ -17,8 +17,12 @@
 
 (defn connections-page
   [connected-uids]
-  (warn connected-uids)
-  (html [:h1 "Connected UIDs:" (str connected-uids)]))
+  (html [:h1 "Connected UIDs:"
+         (for [[key id-set] connected-uids]
+           (list [:h2 key]
+                 [:ul]
+                 (for [id id-set]
+                   [:li id])))]))
 
 (defn make-sente-server-driver
   "Accepts an options map.
