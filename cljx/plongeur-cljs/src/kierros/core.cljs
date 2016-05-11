@@ -19,12 +19,9 @@
   (->> drivers
        (map (fn [[name driver]]
               (let [sink-proxy (sink-proxy-chans name)
-                    ;source     (driver sink-proxy name)
-                    source     (driver sink-proxy)
-                    ]
+                    source     (driver sink-proxy)]
                 [name source])))
        (into {})))
-
 
 (defn weld-cycle!
   "Closes the cycle between the sinks and sink-proxies."
