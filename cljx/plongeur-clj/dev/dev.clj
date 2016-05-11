@@ -9,9 +9,10 @@
 
 (defn shutdown [system] (when-let [stop-fn (some-> system :SHUTDOWN)] (stop-fn)))
 
-(defn cycle-off-on []
+(defn stop-start []
   (alter-var-root #'system (fn [system]
                              (shutdown system)
+                             (Thread/sleep 2000) ; TODO fix BindException issue
                              (plongeur/launch-server))))
 
 (defn stop []
@@ -19,4 +20,4 @@
                              (shutdown system)))
   :stopped)
 
-(defn reset [] (refresh :after 'dev/cycle-off-on))
+(defn reset [] (refresh :after 'dev/stop-start))
