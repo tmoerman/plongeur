@@ -27,7 +27,8 @@
 (defn make-sente-server-driver
   "Accepts an options map.
   Returns a websocket server driver powered by Sente and http-kit."
-  [{sente-options :sente http-kit-options :http-kit}]
+  [& [{sente-options    :sente
+       http-kit-options :http-kit}]]
   (fn [push-chan]
     (let [{:keys [ch-recv
                   send-fn
