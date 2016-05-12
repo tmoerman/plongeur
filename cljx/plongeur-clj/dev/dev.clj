@@ -7,6 +7,6 @@
 
 (def system nil)
 
-(defn stop  [] (alter-var-root #'system #(plongeur/shutdown %)))
-(defn start [] (alter-var-root #'system (constantly (plongeur/launch))))
+(defn stop  [] (alter-var-root #'system (fn [sys] (plongeur/shutdown sys))))
+(defn start [] (alter-var-root #'system (fn [ _ ] (plongeur/launch))))
 (defn reset [] (stop) (refresh :after 'dev/start))

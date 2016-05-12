@@ -43,5 +43,5 @@
                            (warn (u/frame "cycle stopping"))
                            (doseq [ch (vals sink-proxy-chans)] (close! ch)))]
     (info (u/frame "cycle running"))
-    {:CYCLE sink-chans
+    {:CYCLE    sink-chans
      :SHUTDOWN close-all!}))

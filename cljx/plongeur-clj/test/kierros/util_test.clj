@@ -32,7 +32,7 @@
         r (a/into [] c)]
     (<!! r)) => expected-states
 
-)
+  )
 
 (facts
 
