@@ -21,9 +21,8 @@
      out)))
 
 (defn pipe-to-atom
-  "Arity 1: accepts a channel. For every value taken from the channel, resets an atom
-            to the new value. Returns the atom.
-   Arity 2: accepts an atom and a channel. Same behaviour. Returns the atom."
+  "Accepts a channel and optionally the target atom. For every value taken from the
+  channel, resets the atom to the new value. Returns the atom."
   ([ch] (pipe-to-atom (atom nil) ch))
   ([a ch]
    (go-loop []
@@ -35,10 +34,11 @@
    a))
 
 (defn combine-latest
-  "Accepts a collection of channels, an optional selector function f and an option output
-  channel. Returns a channel with the latest values of the input values combined by the
+  "Accepts a collection of channels, an optional selector function f and an optional output
+  channel. Returns a channel with the latest values of the input values combined with the
   selector function. If no selector function is specified, a vector will be returned.
-  The output channel closes when any of the input channels closes.
+  The output channel only yields results when at least one value has been offered to each of
+  the input channels. The output channel closes when any of the input channels closes.
   Inspired by http://rxmarbles.com/#combineLatest"
   ([chs]   (combine-latest (chan) vector chs))
   ([f chs] (combine-latest (chan) f chs))
