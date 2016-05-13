@@ -1,7 +1,8 @@
 (ns kierros.spark-driver-test
   (use midje.sweet)
-  (:require [plongeur.spark-driver :refer :all]
+  (:require [clojure.core.async :as a :refer [<! <!! >! chan close! go]]
             [clojure.string :as str]
+            [plongeur.spark-driver :refer :all]
             [sparkling.conf :as c]
             [sparkling.core :as s]))
 
@@ -56,5 +57,29 @@
       sc => truthy)
 
     )
+
+  )
+
+(facts
+
+  "about the spark driver"
+
+  (let [cfg-ch (chan)
+        driver (make-spark-context-driver)
+        sc-ch  (driver cfg-ch)
+        res    (a/into [] sc-ch)]
+    (go
+      (>! cfg-ch {:app-name "app 1"})
+      (>! cfg-ch {:app-name "app 2"})
+      (>! cfg-ch {:app-name "app 3"})
+      (close! cfg-ch))
+
+    (let [scs       (<!! res)
+          app-names (map #(.appName %) scs)]
+
+      app-names => ["app 1" "app 2" "app 3"]
+
+      (doseq [sc scs] (stop?! sc))))
+
 
   )

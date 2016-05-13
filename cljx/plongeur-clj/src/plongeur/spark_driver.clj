@@ -3,7 +3,8 @@
   (:require [clojure.core.async :as a :refer [<! >! chan go-loop close!]]
             [clojure.string :as str]
             [sparkling.conf :as c]
-            [sparkling.core :as s]))
+            [sparkling.core :as s]
+            [taoensso.timbre :refer [warn]]))
 
 (defn prop-str
   "Accepts a string or keyword. Turns the input into a spark property key string."
@@ -30,6 +31,12 @@
         (c/app-name c (or app-name "Plongeur"))
         (c/set c (str-str-map properties))))
 
+(defn stop?!
+  "Stops the specified SparkContext if not nil."
+  [sc]
+  (if sc (warn "stopping SparkContext " sc))
+  (some-> sc s/stop))
+
 (defn make-spark-context-driver
   "Makes a Spark driver.
   The driver accepts a channel of edn configuration data structures and
@@ -41,9 +48,11 @@
       (go-loop [sc nil]
         (if-let [cfg-edn (<! cfg-chan)]
           (do
-            (some-> sc s/stop)
+            (stop?! sc)
             (let [new-sc (-> cfg-edn spark-conf s/spark-context)]
               (>! spark-ctx-chan new-sc)
               (recur new-sc)))
-          (close! spark-ctx-chan)))
+          (do
+            (stop?! sc)
+            (close! spark-ctx-chan))))
       spark-ctx-chan)))
