@@ -35,11 +35,14 @@
    a))
 
 (defn combine-latest
-  "Accepts channels. Returns a channel that emits vectors of the latest value of
-  the input channels. The output channel closes when any of the input channels closes.
-  See http://rxmarbles.com/#combineLatest."
-  ([chs] (combine-latest (chan) chs))
-  ([out chs]
+  "Accepts a collection of channels, an optional selector function f and an option output
+  channel. Returns a channel with the latest values of the input values combined by the
+  selector function. If no selector function is specified, a vector will be returned.
+  The output channel closes when any of the input channels closes.
+  Inspired by http://rxmarbles.com/#combineLatest"
+  ([chs]   (combine-latest (chan) vector chs))
+  ([f chs] (combine-latest (chan) f chs))
+  ([out f chs]
    (assert some? chs)
    (let [ch->idx (->> chs
                       (map-indexed (fn [i x] [x i]))
@@ -51,7 +54,7 @@
            (let [idx       (ch->idx ch)
                  new-state (assoc state idx v)]
              (when (every? some? new-state) ; emit when a value is present for every index
-               (>! out new-state))
+               (>! out (apply f new-state)))
              (recur new-state))
            (close! out)))) ; close out when one of the input channels is closed
      out)))

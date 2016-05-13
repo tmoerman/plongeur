@@ -95,6 +95,25 @@
 
   (fact
 
+    "with selector function (+)"
+
+    (let [a (chan)
+          b (chan)
+          combo (combine-latest + [a b])
+          res (a/into [] combo)]
+      (go
+        (>! a 1)
+        (>! a 2)
+        (>! b 1000)
+        (>! a 3)
+        (>! b 2000)
+        (close! b))
+      (<!! res)) => [1002 1003 2003]
+
+    )
+
+  (fact
+
     "input channel closes before all input channels
     have been offered a value"
 
