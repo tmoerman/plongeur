@@ -19,7 +19,7 @@
                  [com.rpl/specter "0.10.0"]
 
                  [ring "1.4.0"]
-                 [ring/ring-defaults "0.2.0"]
+                 [ring/ring-defaults "0.2.0" :exclusions [[javax.servlet/*]]]
                  [compojure "1.5.0"]
                  [clojurewerkz/route-one "1.2.0"]
                  [http-kit "2.1.18"]
@@ -28,6 +28,8 @@
                  [com.taoensso/timbre "4.3.1"]
 
                  [environ "1.0.2"]
+
+                 [gorillalabs/sparkling "1.2.5"]
 
                  ;[t6/from-scala "0.2.1"]
                  ;[org.scala-lang/scala-library "2.11.6"]
@@ -38,6 +40,9 @@
   :plugins [[lein-environ "1.0.2"]]
 
   :profiles {:uberjar {:aot :all}
+
+             :provided {:dependencies [[org.apache.spark/spark-core_2.10 "1.6.1"]]}
+
              :dev     {:source-paths ["dev"]
                        :repl-options {:port 8666}
                        :dependencies [[org.clojure/tools.namespace "0.2.11"]
