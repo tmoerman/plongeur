@@ -18,3 +18,16 @@
            (recur rest))
          (close! out))) ;; close out channel when all input channels are consumed
      out)))
+
+(defn pipe-to-atom
+  "Arity 1: accepts a channel. For every value taken from the channel, resets an atom
+            to the new value. Returns the atom.
+   Arity 2: accepts an atom and a channel. Same behaviour. Returns the atom."
+  ([ch] (pipe-to-atom (atom nil) ch))
+  ([a ch]
+   (go-loop []
+     (when-let [v (<! ch)]
+       (do
+         (reset! a v)
+         (recur))))
+   a))
