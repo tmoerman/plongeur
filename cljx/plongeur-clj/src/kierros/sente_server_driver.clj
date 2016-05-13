@@ -26,10 +26,11 @@
 
 (defn make-sente-server-driver
   "Accepts an options map.
-  Returns a websocket server driver powered by Sente and http-kit."
+  Returns a websocket server driver powered by Sente and http-kit.
+  The driver accepts a channel of client bound push messages and returns a channel of client requests."
   [& [{sente-options    :sente
        http-kit-options :http-kit}]]
-  (fn [push-chan]
+  (fn [client-bound-chan]
     (let [{:keys [ch-recv
                   send-fn
                   connected-uids
@@ -42,11 +43,11 @@
                                (route/not-found  (page-not-found)))
           ring-handler (wrap-defaults sente-routes site-defaults)
           http-shutdown-fn    (h/run-server ring-handler http-kit-options)
-          client-request-chan (chan 10)
+          client-request-chan (chan)
           router-shutdown-fn  (s/start-chsk-router! ch-recv #(go (>! client-request-chan %)))]
       (go-loop []
-               (if-let [push->client (<! push-chan)]
-                 (do (send-fn push->client)
+               (if-let [client-bound-msg (<! client-bound-chan)]
+                 (do (send-fn client-bound-msg)
                      (recur))
                  (do (http-shutdown-fn)
                      (router-shutdown-fn)
