@@ -7,9 +7,12 @@
             [plongeur.sigma-driver :as sig]
             [kierros.quiescent-dom-driver :as dom]
             [kierros.sente-client-driver :as ws]
-            [kierros.local-storage-driver :as st]))
+            [kierros.local-storage-driver :as st]
+            [cljsjs.material]))
 
 (enable-console-print!)
+
+(v/upgrade-mdl-components)
 
 (defn plongeur-client-main
   "Main function cfr. Cycle.js architecture."
@@ -42,6 +45,6 @@
 (defn launch-client []
   (cycle/run plongeur-client-main
              {:DOM     (dom/make-dom-driver "plongeur-app")
-              :WEB     (ws/make-sente-client-driver "/chsk")
+              ;; :WEB     (ws/make-sente-client-driver "/chsk" {:host "localhost:8090"})
               :SIGMA   (sig/make-sigma-driver)
               :STORAGE (st/make-storage-driver "plongeur" m/default-state)}))
