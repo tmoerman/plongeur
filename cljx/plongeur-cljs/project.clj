@@ -7,7 +7,6 @@
                  [org.clojure/core.async "0.2.374" :exclusions [org.clojure/tools.reader]]
                  [com.taoensso/sente "1.8.1"]
                  [quiescent "0.3.1"]
-                 [cljsjs/material-ui "0.14.4-11" :exclusions [cljsjs/react]]
                  [sablono "0.6.3"]
                  [com.rpl/specter "0.9.3"]
                  [prismatic/dommy "1.1.0"]]

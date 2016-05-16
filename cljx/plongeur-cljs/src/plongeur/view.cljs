@@ -1,7 +1,6 @@
 (ns plongeur.view
   (:require [cljs.core.async :as a :refer [>! chan pipe]]
             [quiescent.core :as q :include-macros true :refer-macros [defcomponent]]
-            [cljsjs.material-ui]
             [sablono.core :refer-macros [html]]
             [plongeur.model :as m]
             [plongeur.sigma-driver :as s])
@@ -25,7 +24,8 @@
   :on-unmount (fn [_ [id _] {:keys [sigma-ctrl]}] (go (>! sigma-ctrl (s/ctrl-remove id))))
   [[id props] {:keys [drop-graph] :as intent-chans}]
   (html [:section {:class "graph-section"}
-         [:button {:on-click #(go (>! drop-graph id))} "delete " id]
+         [:button {:on-click #(go (>! drop-graph id))
+                   :className "mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent"} "delete " id]
          [:div {:id    (graph-id id)
                 :class "graph"}]]))
 
