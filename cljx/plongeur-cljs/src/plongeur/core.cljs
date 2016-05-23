@@ -4,7 +4,6 @@
             [plongeur.intent :as i]
             [plongeur.model  :as m]
             [plongeur.view   :as v]
-            [plongeur.sigma-driver :as sig]
             [kierros.quiescent-dom-driver :as dom]
             [kierros.sente-client-driver :as ws]
             [kierros.local-storage-driver :as st]
@@ -16,36 +15,37 @@
 
 (defn plongeur-client-main
   "Main function cfr. Cycle.js architecture."
-  [{dom-event-chan       :DOM
-    sigma-event-chan     :SIGMA
-    saved-state-chan     :STORAGE
-    server-response-chan :WEB}]
-  (let [sigma-chan         (chan 10)
+  [{dom-event-chan    :DOM
+    saved-state-chan  :STORAGE
+    web-response-chan :WEB}]
+  (let [intent-chans           (i/intents)
 
-        intent-chans       (-> (i/intents)
-                               (assoc :sigma-ctrl sigma-chan)) ;; a sign that sigma operation are intents as well...
+        _ (pipe web-response-chan (:handle-response intent-chans))
+        _ (pipe dom-event-chan    (:handle-dom-event intent-chans))
 
-        states-chan        (m/model saved-state-chan intent-chans)
-        states-mult        (mult states-chan)
+        states-chan            (m/model saved-state-chan intent-chans)
+        states-mult            (mult states-chan)
 
-        pickle-states-chan (->> (map #(dissoc % :transient))
-                                (chan 10)
-                                (tap states-mult))
+        pickle-states-chan     (->> (chan 10)
+                                    (tap states-mult))
 
-        view-states-chan   (->> (chan 10)
-                                (tap states-mult))
+        view-states-chan       (->> (chan 10)
+                                    (tap states-mult))
 
-        request-chan       (chan 10)
+        post-request-chan      (chan 10)
 
-        views-chan         (v/view view-states-chan intent-chans)]
+        cmd-chans              (assoc intent-chans
+                                 :post-request post-request-chan
+                                 :update-graph )
+
+        views-chan             (v/view view-states-chan cmd-chans)]
     {:DOM     views-chan
-     :SIGMA   sigma-chan
      :STORAGE pickle-states-chan
-     :WEB     request-chan}))
+     :WEB     post-request-chan}))
 
 (defn launch-client []
   (cycle/run plongeur-client-main
              {:DOM     (dom/make-dom-driver "plongeur-app")
-              ;; :WEB     (ws/make-sente-client-driver "/chsk" {:host "localhost:8090"})
-              :SIGMA   (sig/make-sigma-driver)
+              :WEB     (ws/make-sente-client-driver {:path "/chsk"
+                                                     :host "localhost:8090"} :dummy)
               :STORAGE (st/make-storage-driver "plongeur" m/default-state)}))
