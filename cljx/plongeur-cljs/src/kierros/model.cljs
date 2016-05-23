@@ -4,8 +4,15 @@
             [kierros.async :refer [chain]]))
 
 (defn scan-to-states
-  "Accepts a channel with the initial state, possibly loaded from storage
-   and a channel of intents. Returns a channel of application states."
+  "Accepts a channel with the initial state, a map of intent channels and a map
+  of intent handler functions. Intent channels contain a value that contains the
+  intent handler parameter. Intent channels are piped through new channels with
+  a transducer that transforms the intent parameters into a functions of shape
+
+  `(param -> state) -> state`.
+
+  These function-channels are merged and scanned over, starting from an initial state,
+  to produce a channel of application states. Returns the channel of application states."
   [init-state-chan intent-chans intent-handlers]
   (let [amend-fn-chan (->> intent-chans
                            (map (fn [[key ch]]

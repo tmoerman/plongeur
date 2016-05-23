@@ -3,7 +3,8 @@
             [kierros.model :refer [scan-to-states]]
             [com.rpl.specter :as s :refer [select transform ALL FIRST]]))
 
-;; queries
+;; Queries on the application state. Refrain from implementing queries in another namespace
+;; or in inline functions elsewhere.
 
 (defn graphs [state] (:graphs state))
 
@@ -11,7 +12,9 @@
 
 (defn seq-val [state] (:seq state))
 
-;; updates
+
+;; Intent handler functions have signature [param state], where param is a data structure that captures
+;; all necessary data for handling the intent, and state is the entire application state.
 
 (defn add-graph [_ state]
   "Add a graph"
@@ -25,14 +28,15 @@
   "Drop a graph to the app state."
   (transform [:graphs] #(dissoc % id) state))
 
-;; model machinery
-
 (def intent-handlers
   {;:network-calculated (fn [_ state] state)
    ;:nodes-selected     (fn [_ state] state)
    :add-graph          add-graph
    :drop-graph         drop-graph
    :debug              (fn [_ state] (prn state) state)})
+
+
+;; The model is a channel of application states.
 
 (def default-state
   "Returns a new initial application state."
