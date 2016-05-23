@@ -31,34 +31,34 @@
     (d/append! test-section node)))
 
 (defn append-graph-container! [id]
-  (-> id s/container-id make-div append-test-section!))
+  (-> id s/container-dom-id make-div append-test-section!))
 
 (defn append-graph-containers! [ids]
   (doseq [id ids] (append-graph-container! id)))
 
-;; new-sigma tests
+;; make-sigma-instance tests
 
-(deftest new-sigma-no-container
+(deftest make-sigma-instance-no-container
   (clean-test-section!)
-  (let [sigma-inst (s/new-sigma 100 nil)]
+  (let [sigma-inst (s/make-sigma-instance 100 nil)]
     (is (nil? sigma-inst))
     (some-> sigma-inst .kill)))
 
-(deftest new-sigma-nil-settings
+(deftest make-sigma-instance-nil-settings
   (clean-test-section!)
   (let [id         100
         _          (append-graph-container! id)
-        sigma-inst (s/new-sigma id nil)]
+        sigma-inst (s/make-sigma-instance id nil)]
     (is (some? sigma-inst))
     (is (some? (select-1 :body :#test :#graph-100)))
     (some-> sigma-inst .kill)))
 
-(deftest new-sigma-blue-skies
+(deftest make-sigma-instance-blue-skies
   (clean-test-section!)
   (let [id         100
         _          (append-graph-container! id)
         settings   (clj->js {:edgeColor "default"})
-        sigma-inst (s/new-sigma id settings)]
+        sigma-inst (s/make-sigma-instance id settings)]
     (is (some? sigma-inst))
     (some-> sigma-inst .kill)))
 

@@ -6,21 +6,28 @@
             [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
-(defn container-id [id] (str "graph-" id))
+;; Sigma instance creation
 
-(defn new-sigma
-  "Accepts an id and sigma settings in js format.
+(defn container-dom-id [id] (str "graph-" id))
+
+(defn make-sigma-instance
+  "Accepts an id and sigma settings in JSON format.
   Returns a new sigma instance or nil if the container div does not exist."
-  [id settings-js]
+  [id settings-json]
   (try
-    (let [sigma-inst (js/sigma. (container-id id))]
-      (when settings-js (.settings sigma-inst settings-js))
+    (let [sigma-inst (js/sigma. (container-dom-id id))]
+      (when settings-json
+        (.settings sigma-inst settings-json))
       (.refresh sigma-inst))
     (catch :default e
-      (prn (str e " " (container-id id))))))
+      (prn (str e " " (container-dom-id id))))))
+
+;; Dispatch events to Sigma instanes
 
 (defmulti apply-evt! (fn [_ evt] (:type evt))) ;; translate events into renderer actions.
-(defmethod apply-evt! :add-node [sigma evt]
+
+(defmethod apply-evt! :add-node
+  [sigma evt]
   (let [graph   (-> sigma :renderer .-graph)
         node-js (-> evt :node clj->js)]
     (.addNode graph node-js)
@@ -31,7 +38,8 @@
   ;; draw the entire TDA-graph
   :TODO
   )
-;; etc ...
+
+;; Sigma context
 
 (defn sigma-ids  [sigma-state] (keys sigma-state))
 (defn sigma-ctxs [sigma-state] (vals sigma-state))
@@ -41,7 +49,7 @@
   Return a map containing the sigma instance and a listener async go-loop channel."
   [in-mult out-chan options id]
   (when-let [sigma-inst (->> (some-> options :sigma-settings clj->js)
-                             (new-sigma id))]
+                             (make-sigma-instance id))]
     (let [select-xf (filter #(-> % :graph (= id)))
           in-tap    (->> select-xf (chan 10) (tap in-mult))
           in-loop   (go-loop []
@@ -110,9 +118,8 @@
 
 (defn ctrl-update [id] {:ctrl :update :data [id]})
 (defn ctrl-remove [id] {:ctrl :remove :data [id]})
+
 (defn ctrl-msg?  [msg] (-> msg :ctrl some?))
-
-
 (defn graph-msg? [msg] (-> msg :graph some?))
 
 ;; driver

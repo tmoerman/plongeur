@@ -21,8 +21,9 @@
     saved-state-chan     :STORAGE
     server-response-chan :WEB}]
   (let [sigma-chan         (chan 10)
+
         intent-chans       (-> (i/intents)
-                               (assoc :sigma-ctrl sigma-chan))
+                               (assoc :sigma-ctrl sigma-chan)) ;; a sign that sigma operation are intents as well...
 
         states-chan        (m/model saved-state-chan intent-chans)
         states-mult        (mult states-chan)

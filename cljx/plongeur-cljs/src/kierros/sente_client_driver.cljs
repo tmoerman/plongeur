@@ -9,8 +9,9 @@
   "Accepts a path and options.
   Returns a websocket client driver powered by Sente."
   [path & options]
+  (prn options)
   (fn [request-chan]
-    (let [{:keys [chsk ch-recv send-fn]} (s/make-channel-socket-client! path options)
+    (let [{:keys [chsk ch-recv send-fn]} (s/make-channel-socket-client! path {:host "localhost:3000"})
           server-response-chan           (chan 10)
           router-shutdown-fn             (s/start-chsk-router! ch-recv #(go (>! server-response-chan %)))]
       (go-loop []
