@@ -21,7 +21,7 @@
 
                          }
               :t-sne    ;; defaults for TSNA visualizations
-                        {:preplexity 1
+                        {:perplexity 1
 
                          }
               }
