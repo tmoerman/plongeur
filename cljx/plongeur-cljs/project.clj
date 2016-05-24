@@ -12,7 +12,7 @@
                  [com.rpl/specter "0.9.3"]
                  [prismatic/dommy "1.1.0"]]
   
-  :plugins [[lein-figwheel "0.5.3-1"]
+  :plugins [[lein-figwheel "0.5.3-2"]
             [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]
             [lein-npm "0.6.2"]]
 
@@ -30,8 +30,8 @@
                                         :output-to "resources/public/js/compiled/plongeur.js"
                                         :output-dir "resources/public/js/compiled/out"
                                         :source-map-timestamp true
-                                        :foreign-libs [{:file     "resources/public/js/node_modules/sigma/build/sigma.require.js"
-                                                        :file-min "resources/public/js/node_modules/sigma/build/sigma.min.js"
+                                        :foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.require.js"
+                                                        :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
                                                         :provides ["foreign.sigma"]}]}}
 
                        ;:prod {:source-paths ["src"]
@@ -43,8 +43,8 @@
                        :test {:source-paths ["src" "test"]
                               :compiler {:output-to "resources/private/js/compiled/unit-test.js"
                                          :pretty-print true
-                                         :foreign-libs [{:file     "resources/public/js/node_modules/sigma/build/sigma.require.js"
-                                                         :file-min "resources/public/js/node_modules/sigma/build/sigma.min.js"
+                                         :foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.require.js"
+                                                         :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
                                                          :provides ["foreign.sigma"]
                                                          :module-type :amd}]
                                          }}}
@@ -52,8 +52,11 @@
               :test-commands {"unit" ["phantomjs"
                                       "resources/private/js/compiled/unit-test.js"]}}
 
-  :npm {:dependencies [[sigma "1.1.0"]
-                       ;[linkurious "1.5.0"]
+  ;; lein clean
+  ;; lein npm install
+  :npm {:dependencies [
+                       ;[sigma "1.1.0"]
+                       [linkurious "1.5.1"]
                        ]
         :root "resources/public/js"}
 
