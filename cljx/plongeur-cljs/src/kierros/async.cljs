@@ -19,3 +19,17 @@
             (recur rest))
           (close! out))) ;; close out channel when all input channels are consumed
      out)))
+
+(defn debounce
+  "!!! UNTESTED !!!
+  See: https://gist.github.com/scttnlsn/9744501"
+  [in ms]
+  (let [out (chan)]
+    (go-loop [last-val nil]
+      (let [val          (if (nil? last-val) (<! in) last-val)
+            timer        (timeout ms)
+            [new-val ch] (alts! [in timer])]
+        (condp = ch
+          timer (do (>! out val) (recur nil))
+          in    (recur new-val))))
+    out))
