@@ -5,46 +5,17 @@
             [dommy.core :as d :refer-macros [sel sel1]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-;; dommy helpers
-
-(defn make-el [tag id]
-  (-> (d/create-element tag)
-      (d/set-attr! "id" id)))
-
-(defn make-div     [id] (make-el "div" id))
-(defn make-section [id] (make-el "section" id))
-
-(defn select-1 [& args] (sel1 js/document args))
-
-(defn append-body! [node]
-  (-> (select-1 :body)
-      (d/append! node)))
-
-(defn clean-test-section! []
-  (if-let [test-section (select-1 :body :#test)]
-    (-> test-section d/clear!)
-    (-> "test" make-section append-body!)))
-
-(defn append-test-section!
-  [node]
-  (let [test-section (select-1 :body :#test)]
-    (d/append! test-section node)))
-
-(defn append-graph-container! [id]
-  (-> id s/container-dom-id make-div append-test-section!))
-
-(defn append-graph-containers! [ids]
-  (doseq [id ids] (append-graph-container! id)))
+;; TODO OBSOLETE -> Migrate this to the sigma-test namespace.
 
 ;; make-sigma-instance tests
 
-(deftest make-sigma-instance-no-container
+#_(deftest make-sigma-instance-no-container
   (clean-test-section!)
   (let [sigma-inst (s/make-sigma-instance 100 nil)]
     (is (nil? sigma-inst))
     (some-> sigma-inst .kill)))
 
-(deftest make-sigma-instance-nil-settings
+#_(deftest make-sigma-instance-nil-settings
   (clean-test-section!)
   (let [id         100
         _          (append-graph-container! id)
@@ -53,7 +24,7 @@
     (is (some? (select-1 :body :#test :#graph-100)))
     (some-> sigma-inst .kill)))
 
-(deftest make-sigma-instance-blue-skies
+#_(deftest make-sigma-instance-blue-skies
   (clean-test-section!)
   (let [id         100
         _          (append-graph-container! id)
@@ -64,14 +35,14 @@
 
 ;; make-sigma-context
 
-(deftest make-sigma-context-no-container
+#_(deftest make-sigma-context-no-container
   (clean-test-section!)
   (let [id        100
         sigma-ctx (s/make-sigma-context (mult (chan)) (chan) {} id)]
     (is (nil? sigma-ctx))
     (s/dispose! sigma-ctx)))
 
-(deftest make-sigma-context-nil-options
+#_(deftest make-sigma-context-nil-options
   (clean-test-section!)
   (let [id        100
         _         (append-graph-container! id)
@@ -79,7 +50,7 @@
     (is (some? sigma-ctx))
     (s/dispose! sigma-ctx)))
 
-(deftest make-sigma-context-blue-skies
+#_(deftest make-sigma-context-blue-skies
   (clean-test-section!)
   (let [id        100
         _         (append-graph-container! id)
@@ -90,7 +61,7 @@
 
 ;; remove renderers
 
-(deftest remove-renderers-blue-skies
+#_(deftest remove-renderers-blue-skies
   (clean-test-section!)
   (let [ids        [101 102 103]
         _          (doseq [id ids] (append-graph-container! id))
@@ -101,14 +72,14 @@
 
 ;; update renderer
 
-(deftest update-renderer-no-container
+#_(deftest update-renderer-no-container
   (clean-test-section!)
   (let [id        100
         old-state {}
         new-state (s/update-renderer old-state (mult (chan)) (chan) s/default-options id)]
     (is (-  old-state new-state))))
 
-(deftest update-renderer-blue-skies
+#_(deftest update-renderer-blue-skies
   (clean-test-section!)
   (let [id        100
         _         (append-graph-container! id)
@@ -119,7 +90,7 @@
 
 ;; update renderers
 
-(deftest update-renderers-missing-container
+#_(deftest update-renderers-missing-container
   (clean-test-section!)
   (let [ids        [101 103]
         _          (append-graph-containers! ids)
@@ -129,7 +100,7 @@
     (is (= ids (s/sigma-ids @state-atom)))
     (s/dispose-all! @state-atom)))
 
-(deftest update-renderers-blue-skies
+#_(deftest update-renderers-blue-skies
   (clean-test-section!)
   (let [ids        [1 2 3]
         _          (append-graph-containers! ids)
@@ -140,7 +111,7 @@
 
 ;; sync renderers
 
-(deftest sync-renderers-empty-state
+#_(deftest sync-renderers-empty-state
   (clean-test-section!)
   (let [ids         [101 102 103]
         _           (append-graph-containers! ids)
