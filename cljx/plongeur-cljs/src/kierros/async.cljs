@@ -1,5 +1,5 @@
 (ns kierros.async
-  (:require [cljs.core.async :as a :refer [<! >! chan close!]])
+  (:require [cljs.core.async :as a :refer [<! >! chan close! timeout alts!]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 (defn chain
