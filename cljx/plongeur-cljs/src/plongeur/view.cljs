@@ -1,10 +1,26 @@
 (ns plongeur.view
-  (:require [cljs.core.async :as a :refer [>! chan pipe close!]]
+  (:require [cljs.core.async :as a :refer [<! >! tap chan pipe close!]]
             [quiescent.core :as q :include-macros true :refer-macros [defcomponent]]
             [sablono.core :refer-macros [html]]
             [plongeur.model :as m]
             [plongeur.sigma :as s])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+
+
+(defn rand-node [id]
+  (let [node-id (str (rand-int 10))]
+    {:id    node-id
+     :label node-id
+     :x (rand-int 20)
+     :y (rand-int 20)
+     :size 0.5
+     :color "#FF0"}))
+
+(defn add-node
+  [sigma-inst node]
+  (try
+    (-> sigma-inst .-graph (.addNode node))
+    (catch :default _ nil)))
 
 ;; MDL machinery
 
@@ -17,38 +33,49 @@
 
 (let [sigma-state (atom {})]
   (defcomponent Sigma
-    :keyfn (fn [[id _]] id)
+    "Component on which the Sigma canvas is mounted."
+    :on-mount (fn [node [state id props] {:keys [web-response-mult] :as cmd-chans}]
+                (let [sigma-instance   (s/make-sigma-instance-with-events id (m/sigma-settings state) cmd-chans)
+                      web-response-tap (->> (chan 10)
+                                            (tap web-response-mult))]
+                  #_(prn (str "on-mount " id))
+                  (go-loop []
+                           (when-let [v (<! web-response-tap)]
+                             (do
+                               #_(prn (str "captured in Sigma " id ": " v))
+                               (->> (rand-node id)
+                                    (clj->js)
+                                    (add-node sigma-instance))
+                               (.refresh sigma-instance)
+                               (recur))))
 
-    :on-mount (fn [node [id _] {:keys [sigma-ctx]}]
-                (prn "on-mount" @sigma-state)
+                  (swap! sigma-state assoc id
+                         {:sigma sigma-instance
+                          :ch    web-response-tap})))
 
-                (swap! sigma-state assoc id {:ch (chan 10)})
-
-                ;(go (>! update-sigma [id cmd-chans]))
-                )
-
-    :on-unmount (fn [_ [id _] {:keys [sigma-ctx]}]
-                  (prn "on-unmount" @sigma-state)
-
+    :on-unmount (fn [node [state id props] {:keys [web-response-mult] :as cmd-chans}]
+                  #_(prn (str "on-unmount " id))
                   (swap! sigma-state
                          (fn [m]
-                           (-> id m :ch close!)
-                           (dissoc m id)))
-
-                  ;(go (>! remove-sigma id))
-                  )
-    [[id props] cmd-chans]
+                           (->> id m :ch (a/untap web-response-mult))
+                           (->> id m :ch close!)
+                           (->> id m :sigma s/kill)
+                           (dissoc m id))))
+    [[state id props] cmd-chans]
     (html [:div {:id         (s/graph-id id)
-                 :class-name "graph"}])))
+                 :class-name "mdl-card__supporting-text sigma-graph"}])))
 
 (defcomponent Card
   "Component surrounding the visualization containers."
-  [[id props] {:keys [drop-graph] :as cmd-chans}]
+  :keyfn (fn [[state id props]] id)
+  [[state id props] {:keys [drop-graph] :as cmd-chans}]
   (html [:div {:class-name "mdl-cell mdl-cell--6-col-desktop mdl-cell--6-col-tablet mdl-cell--6-col-phone"}
          [:div {:class-name "mdl-card mdl-shadow--2dp"}
 
-          [:div {:class-name "mdl-card__supporting-text"}
-           (Sigma [id props] cmd-chans)]
+          #_[:div {:class-name "mdl-card__supporting-text"}
+           (Sigma [state id props] cmd-chans)]
+
+          (Sigma [state id props] cmd-chans)
 
           [:div {:class-name "mdl-card__title"}
            [:button {:on-click   #(go (>! drop-graph id))
@@ -99,8 +126,8 @@
   (html [:main {:class-name "mdl-layout__content"}
          [:div {:class-name "mdl-grid mdl-grid--no-spacing"}
           [:div {:class-name "mdl-grid mdl-cell mdl-cell--9-col-desktop mdl-cell--12-col-tablet mdl-cell--4-col-phone mdl-cell--top"}
-           (for [graph-state (m/graphs state)]
-             (Card graph-state cmd-chans))]]]))
+           (for [[id props] (m/graphs state)]
+             (Card [state id props] cmd-chans))]]]))
 
 (defcomponent Root
   [state cmd-chans]
@@ -118,11 +145,3 @@
        (map)                               ; xf
        (chan 10)                           ; ch
        (pipe states-chan)))
-
-
-#_(def node-1 {:id "n1"
-               :label "hello"
-               :x 10
-               :y 10
-               :size 1
-               :color "#FF0"})

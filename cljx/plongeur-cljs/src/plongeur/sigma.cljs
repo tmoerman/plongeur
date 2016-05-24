@@ -21,19 +21,16 @@
     (catch :default e
       (prn (str e " " (graph-id id))))))
 
-
-;; Sigma context
-
 (defn bind-event-listeners
   "Bind event handlers to the sigma instance, dispatch events through the intent handlers.
   See: https://github.com/jacomyal/sigma.js/wiki/Events-API"
-  [intent-chans sigma-inst]
+  [cmd-chans sigma-inst]
   (do
     ;; TODO implement event binding system
     )
   sigma-inst)
 
-(defn make-sigma-context
+(defn make-sigma-instance-with-events
   "Accepts a graph id, the out channel and options.
   Return a map containing the sigma instance and a listener async go-loop channel."
   [id sigma-settings cmd-chans]

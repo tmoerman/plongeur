@@ -25,24 +25,28 @@
 
 (defn sigma-instance [id state] (get-in state [:transient id]))
 
+
 ;; Event handlers
 
 (defn handle-response
-  "Apply some operation"
+  "Handle a websocket response."
   [response state]
-  (prn (str "received websocket response: " response))
-  state
-  )
+  #_(prn (str "received websocket response: " response))
+
+  state)
 
 (defn handle-dom-event
-  ""
-  [event] state
-  (prn (str "received DOM event: " response))
+  "Handle a DOM event."
+  [event state]
+  #_(prn (str "received DOM event: " event))
+
   state)
+
 
 ;; State update
 
-(defn add-screen [type])
+(defn add-screen [type] ;TODO generalization of graphs
+  )
 
 (defn add-graph [_ state]
   "Add a graph visualization."

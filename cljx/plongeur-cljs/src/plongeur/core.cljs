@@ -1,5 +1,5 @@
 (ns plongeur.core
-  (:require [cljs.core.async :as a :refer [mult tap chan pipe sliding-buffer]]
+  (:require [cljs.core.async :as a :refer [<! >! timeout mult tap chan pipe sliding-buffer]]
             [kierros.core :as cycle]
             [plongeur.intent :as i]
             [plongeur.model  :as m]
@@ -7,7 +7,8 @@
             [kierros.quiescent-dom-driver :as dom]
             [kierros.sente-client-driver :as ws]
             [kierros.local-storage-driver :as st]
-            [cljsjs.material]))
+            [cljsjs.material])
+  (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 (enable-console-print!)
 
@@ -18,10 +19,20 @@
   [{dom-event-chan    :DOM
     saved-state-chan  :STORAGE
     web-response-chan :WEB}]
-  (let [intent-chans           (i/intents)
+  (let [intent-chans              (i/intents)
 
-        _ (pipe web-response-chan (:handle-response intent-chans))
-        _ (pipe dom-event-chan    (:handle-dom-event intent-chans))
+        _ (go-loop []
+                   (<! (timeout 1000))
+                   (>! web-response-chan :ping)
+                   (recur))
+
+        web-response-mult         (mult web-response-chan)
+
+        web-response-intent-chan  (->> (chan 10)
+                                       (tap web-response-mult))
+
+        _ (pipe web-response-intent-chan (:handle-response intent-chans))
+        _ (pipe dom-event-chan           (:handle-dom-event intent-chans))
 
         states-chan            (m/model saved-state-chan intent-chans)
         states-mult            (mult states-chan)
@@ -35,8 +46,8 @@
         post-request-chan      (chan 10)
 
         cmd-chans              (assoc intent-chans
-                                 :post-request post-request-chan
-                                 :update-graph )
+                                 :post-request      post-request-chan
+                                 :web-response-mult web-response-mult)
 
         views-chan             (v/view view-states-chan cmd-chans)]
     {:DOM     views-chan
