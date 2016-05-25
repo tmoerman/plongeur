@@ -8,19 +8,6 @@
 
 ;; Sigma instance creation
 
-(defn graph-id [id] (str "graph-" id))
-
-(defn make-sigma-instance
-  "Accepts an id and sigma settings in JSON format.
-  Returns a new sigma instance or nil if the container div does not exist."
-  [id sigma-settings]
-  (try
-    (let [sigma-inst (js/sigma. (graph-id id))]
-      (some->> sigma-settings clj->js (.settings sigma-inst))
-      (.refresh sigma-inst))
-    (catch :default e
-      (prn (str e " " (graph-id id))))))
-
 (defn bind-event-listeners
   "Bind event handlers to the sigma instance, dispatch events through the intent handlers.
   See: https://github.com/jacomyal/sigma.js/wiki/Events-API"
@@ -30,12 +17,22 @@
     )
   sigma-inst)
 
-(defn make-sigma-instance-with-events
-  "Accepts a graph id, the out channel and options.
-  Return a map containing the sigma instance and a listener async go-loop channel."
-  [id sigma-settings cmd-chans]
-  (some->> (make-sigma-instance id sigma-settings)
-           (bind-event-listeners cmd-chans)))
+(defn make-sigma-instance
+  "Sigma instance contructor function."
+
+  ([dom-container-id sigma-settings]
+   (try
+     (let [sigma-inst (js/sigma. dom-container-id)]
+       (some->> sigma-settings clj->js (.settings sigma-inst))
+       (.refresh sigma-inst))
+     (catch :default e
+       (prn (str e " " dom-container-id)))))
+
+  ([dom-container-id sigma-settings cmd-chans]
+   (some->> (make-sigma-instance dom-container-id sigma-settings)
+            (bind-event-listeners cmd-chans))))
+
+
 
 (defn kill
   "Kill the specified sigma instance, if present. Returns nil"

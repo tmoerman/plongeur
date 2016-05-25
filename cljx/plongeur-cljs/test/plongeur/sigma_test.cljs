@@ -2,7 +2,8 @@
   (:require [cljs.core.async :as a :refer [<! chan mult put! close!]]
             [cljs.test :as t :refer-macros [deftest is testing run-tests async]]
             [dommy.core :as d :refer-macros [sel sel1]]
-            [plongeur.sigma :as s])
+            [plongeur.sigma :as s]
+            [plongeur.view :as v])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 ;; dommy helpers
@@ -31,12 +32,13 @@
     (d/append! test-section node)))
 
 (defn append-graph-container! [id]
-  (-> id s/graph-id make-div append-test-section!))
+  (-> id v/graph-id make-div append-test-section!))
 
 (defn append-graph-containers! [ids]
   (doseq [id ids] (append-graph-container! id)))
 
 
+;;
 
 
 
