@@ -31,13 +31,14 @@
         web-response-intent-chan  (->> (chan 10)
                                        (tap web-response-mult))
 
-        _ (pipe web-response-intent-chan (:handle-response intent-chans))
+        _ (pipe web-response-intent-chan (:handle-web-response intent-chans))
         _ (pipe dom-event-chan           (:handle-dom-event intent-chans))
 
         states-chan            (m/model saved-state-chan intent-chans)
         states-mult            (mult states-chan)
 
-        pickle-states-chan     (->> (chan 10)
+        pickle-states-chan     (->> (map #(dissoc % :transient))
+                                    (chan 10)
                                     (tap states-mult))
 
         view-states-chan       (->> (chan 10)

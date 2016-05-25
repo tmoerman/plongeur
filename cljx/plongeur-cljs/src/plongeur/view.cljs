@@ -31,11 +31,15 @@
 
 ;; React components
 
+(defn graph-id [id] (str "graph-" id))
+
 (let [sigma-state (atom {})]
   (defcomponent Sigma
     "Component on which the Sigma canvas is mounted."
     :on-mount (fn [node [state id props] {:keys [web-response-mult] :as cmd-chans}]
-                (let [sigma-instance   (s/make-sigma-instance-with-events id (m/sigma-settings state) cmd-chans)
+                (let [sigma-instance   (s/make-sigma-instance (graph-id id)
+                                                              (m/sigma-settings state)
+                                                              cmd-chans)
                       web-response-tap (->> (chan 10)
                                             (tap web-response-mult))]
                   #_(prn (str "on-mount " id))
@@ -62,13 +66,13 @@
                            (->> id m :sigma s/kill)
                            (dissoc m id))))
     [[state id props] cmd-chans]
-    (html [:div {:id         (s/graph-id id)
+    (html [:div {:id         (graph-id id)
                  :class-name "mdl-card__supporting-text sigma-graph"}])))
 
 (defcomponent Card
   "Component surrounding the visualization containers."
   :keyfn (fn [[state id props]] id)
-  [[state id props] {:keys [drop-graph] :as cmd-chans}]
+  [[state id props] {:keys [drop-plot] :as cmd-chans}]
   (html [:div {:class-name "mdl-cell mdl-cell--6-col-desktop mdl-cell--6-col-tablet mdl-cell--6-col-phone"}
          [:div {:class-name "mdl-card mdl-shadow--2dp"}
 
@@ -78,7 +82,7 @@
           (Sigma [state id props] cmd-chans)
 
           [:div {:class-name "mdl-card__title"}
-           [:button {:on-click   #(go (>! drop-graph id))
+           [:button {:on-click   #(go (>! drop-plot id))
                      :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"} "delete " id]]]]))
 
 (defcomponent Header
@@ -90,7 +94,7 @@
           ]]))
 
 (defcomponent Drawer
-  [state {:keys [add-graph] :as cmd-chans}]
+  [state {:keys [add-plot debug] :as cmd-chans}]
   (html [:div {:class-name "mdl-layout__drawer"}
          [:header {} "Plongeur"]
          [:nav {:class-name "mdl-navigation"}
@@ -106,12 +110,17 @@
                :href "config.html"}
            [:i {:class-name "material-icons"
                 :role       "presentation"} "reorder"] "Logs"]
-          [:button {:on-click   #(go (>! add-graph :click))
-                    :hidden     (>= (m/graph-count state) 4)
+
+          [:button {:on-click   #(go (>! add-plot :tda))
+                    :hidden     (>= (m/plot-count state) 4)
                     :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--colored"}
            [:i {:class-name "material-icons"} "add"]]
 
           [:div {:class-name "mdl-layout-spacer"}]
+
+          [:button {:on-click #(go (>! debug :click))
+                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--colored"}
+           [:i {:class-name "material-icons"} "print"]]
 
           [:a {:class-name "mdl-navigation__link"
                :href "https://github.com/tmoerman/plongeur"
@@ -126,7 +135,7 @@
   (html [:main {:class-name "mdl-layout__content"}
          [:div {:class-name "mdl-grid mdl-grid--no-spacing"}
           [:div {:class-name "mdl-grid mdl-cell mdl-cell--9-col-desktop mdl-cell--12-col-tablet mdl-cell--4-col-phone mdl-cell--top"}
-           (for [[id props] (m/graphs state)]
+           (for [[id props] (m/plots state)]
              (Card [state id props] cmd-chans))]]]))
 
 (defcomponent Root

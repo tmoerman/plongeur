@@ -1,5 +1,6 @@
 (ns plongeur.model
   (:require [cljs.core.async :as a :refer [<! chan to-chan pipe]]
+            [cljs.pprint :as pp]
             [com.rpl.specter :as sp :refer [select select-one transform keypath ALL VAL FIRST]]
             [kierros.model :refer [scan-to-states]]
             [plongeur.config :as c]))
@@ -8,28 +9,29 @@
 ;; The developer should never navigate the state map in another namespace.
 ;; All navigation should be done by means of the state queries specified here.
 
-(defn graphs [state] (select-one [:graphs] state))
+(defn plots [state] (select-one [:plots] state))
 
-(defn graph-ids [state] (select [:graphs ALL FIRST] state))
+(defn plot-ids [state] (select [:plots ALL FIRST] state))
 
-(defn graph-count [state] (-> state graphs count))
+(defn plot-count [state] (-> state plots count))
 
 (defn seq-val [state] (select-one [:seq] state))
 
-(defn screen-defaults [type state] (select-one [:config :defaults type] state))
+(defn defaults [key state] (select-one [:config :defaults key] state))
 
 (defn sigma-settings [state] (select-one [:config :sigma :settings] state))
-
-(defn sigma-instance [id state] (get-in state [:transient id]))
 
 
 ;; Intent handler functions have signature [param state], where param is a data structure that captures
 ;; all necessary data for handling the intent, and state is the entire application state.
 
-(defn handle-response
+(defn handle-web-response
   "Handle a websocket response."
   [response state]
   #_(prn (str "received websocket response: " response))
+
+  ;; TODO merge the received data into the state's plots map.
+
   state)
 
 (defn handle-dom-event
@@ -38,42 +40,42 @@
   #_(prn (str "received DOM event: " event))
   state)
 
-;; State update
+(defn add-plot [plot-type state]
+  "Add an empty graph visualization."
 
-(defn add-graph [_ state]
-  "Add a graph visualization."
-  (let [graph-id    (seq-val state)
-        graph-props (screen-defaults :tda state)]
+  (let [plot-id    (seq-val state)
+        plot-entry {plot-type (defaults plot-type state)
+                    :data     nil}]
     (->> state
          (transform [:seq] inc)
-         (transform [:graphs] #(assoc % graph-id graph-props)))))
+         (transform [:plots] #(assoc % plot-id plot-entry)))))
 
-(defn drop-graph [id state]
+(defn drop-plot [id state]
   "Drop a graph to the app state."
-  (transform [:graphs] #(dissoc % id) state))
+  (transform [:plots] #(dissoc % id) state))
 
-;; Other intents
 
-(defn prn-state [_ state] (prn state) state)
+(defn prn-state [_ state]
+  (prn state)
+
+  state)
 
 ;; Model machinery
 
 (def intent-handlers
-  {:handle-response  handle-response
-   :handle-dom-event handle-dom-event
-
-   :add-graph        add-graph  ;; TODO generalize to add-viz
-   :drop-graph       drop-graph
-
-   :debug            prn-state})
+  {:handle-web-response handle-web-response
+   :handle-dom-event    handle-dom-event
+   :add-plot            add-plot
+   :drop-plot           drop-plot
+   :debug               prn-state})
 
 ;; The model is a channel of application states.
 
 (def default-state
   "Returns a new initial application state."
-  {:seq       2                 ;; database sequence-like
-   :graphs    {1 {}}            ;; contains the visualization properties TODO generalise
-   :config    c/default-config  ;; the default config
+  {:seq    2                 ;; database sequence-like
+   :plots  {1 {}}            ;; contains the visualization properties
+   :config c/default-config  ;; the default config
    })
 
 (defn model
