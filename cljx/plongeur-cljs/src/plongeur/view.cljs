@@ -67,7 +67,7 @@
                            (dissoc m id))))
     [[state id props] cmd-chans]
     (html [:div {:id         (graph-id id)
-                 :class-name "mdl-card__supporting-text sigma-graph"}])))
+                 :class-name "sigma-graph"}])))
 
 (defcomponent Card
   "Component surrounding the visualization containers."
@@ -76,14 +76,16 @@
   (html [:div {:class-name "mdl-cell mdl-cell--6-col-desktop mdl-cell--6-col-tablet mdl-cell--6-col-phone"}
          [:div {:class-name "mdl-card mdl-shadow--2dp"}
 
-          #_[:div {:class-name "mdl-card__supporting-text"}
-           (Sigma [state id props] cmd-chans)]
-
           (Sigma [state id props] cmd-chans)
 
           [:div {:class-name "mdl-card__title"}
+           id
+           [:div {:class-name "mdl-layout-spacer"}]
            [:button {:on-click   #(go (>! drop-plot id))
-                     :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"} "delete " id]]]]))
+                     :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect"}
+            [:i {:class-name "material-icons"} "delete"]
+
+            ]]]]))
 
 (defcomponent Header
   [state cmd-chans]
