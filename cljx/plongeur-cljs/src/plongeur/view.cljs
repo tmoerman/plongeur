@@ -67,7 +67,7 @@
                            (dissoc m id))))
     [[state id props] cmd-chans]
     (html [:div {:id         (graph-id id)
-                 :class-name "sigma-graph"}])))
+                 :class-name "sigma-dark"}])))
 
 (defcomponent Card
   "Component surrounding the visualization containers."
