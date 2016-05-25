@@ -4,7 +4,8 @@
             [kierros.model-test]
             [kierros.util-test]
             [plongeur.model-test]
-            [plongeur.sigma-driver-test]
+            [plongeur.sigma-test]
+            [plongeur.view-test]
             [cljs.test :refer-macros [run-tests]]))
 
 ; Run both builds simultaneously!
@@ -17,6 +18,6 @@
            'kierros.util-test
 
            'plongeur.model-test
-           'plongeur.sigma-driver-test
-
+           'plongeur.sigma-test
+           'plongeur.view-test
            )
