@@ -3,36 +3,24 @@
 (def default-config
   "Default configuration map. Configuration is a part of the application state."
 
-  {:sigma    {:lib      ;; specifies which sigma variant is used.
-
-              :sigma ; [:sigma, :linkurious]
-
-              :settings ;; gets turned into json and passed to the sigma constructor.
-
-              {:verbose true}
+  {:sigma    {:settings {:verbose true ;; gets turned into json and passed to the sigma constructor.
+                         }
 
               }
 
-   :defaults {:viz      :tda ; [:tda :t-sne],
+   :defaults {:plot     :tda ; [:tda :t-sne],
 
-              :tda      ;; defaults for TDA visualizations
-
-                        {:force-layout :force-atlas2 ; [:force-atlas2, :fruchterman-reingold, ...]
-
+              :tda      {:force-layout :force-atlas2 ; [:force-atlas2, :fruchterman-reingold, ...]
                          }
-              :t-sne    ;; defaults for TSNA visualizations
-                        {:perplexity 1
 
+              :t-sne    {:perplexity 1 ;; defaults for TSNA visualizations
                          }
               }
 
-   :ui       {:theme    ;; specifies the dark or light theme
-
-              :dark  ; [:dark, :light]
+   :ui       {:theme    :dark  ; [:dark, :light]
               }
-   }
 
-  )
+   })
 
 
 (defn validate-config
