@@ -16,11 +16,11 @@
      :size 0.5
      :color "#FF0"}))
 
-(defn add-node
+;; Sigma-api
+
+#_(defn add-node
   [sigma-inst node]
-  (try
-    (-> sigma-inst .-graph (.addNode node))
-    (catch :default _ nil)))
+  (silently-apply sigma-inst sigma/addNode node))
 
 ;; MDL machinery
 
@@ -42,15 +42,14 @@
                                                               cmd-chans)
                       web-response-tap (->> (chan 10)
                                             (tap web-response-mult))]
-                  #_(prn (str "on-mount " id))
+
                   (go-loop []
                            (when-let [v (<! web-response-tap)]
                              (do
                                #_(prn (str "captured in Sigma " id ": " v))
                                (->> (rand-node id)
-                                    (clj->js)
-                                    (add-node sigma-instance))
-                               (.refresh sigma-instance)
+                                    (s/add-node sigma-instance)
+                                    (s/refresh))
                                (recur))))
 
                   (swap! sigma-state assoc id
@@ -58,12 +57,12 @@
                           :ch    web-response-tap})))
 
     :on-unmount (fn [node [state id props] {:keys [web-response-mult] :as cmd-chans}]
-                  #_(prn (str "on-unmount " id))
+
                   (swap! sigma-state
                          (fn [m]
-                           (->> id m :ch (a/untap web-response-mult))
-                           (->> id m :ch close!)
-                           (->> id m :sigma s/kill)
+                           (some->> id m :ch (a/untap web-response-mult))
+                           (some->> id m :ch close!)
+                           (some->> id m :sigma s/kill)
                            (dissoc m id))))
     [[state id props] cmd-chans]
     (html [:div {:id         (graph-id id)
@@ -88,15 +87,22 @@
             ]]]]))
 
 (defcomponent Header
-  [state cmd-chans]
+  [state {:keys [debug add-plot] :as cmd-chans}]
   (html [:header {:class-name "mdl-layout__header"}
          [:div {:class-name "mdl-layout__header-row"}
           [:div {:class-name "mdl-layout-spacer"}]
-
+          [:button {:on-click   #(go (>! add-plot :tda))
+                    :hidden     (>= (m/plot-count state) 4)
+                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored"}
+           [:i {:class-name "material-icons"} "add"]]
+          [:div {:class-name "mdl-layout-spacer"}]
+          [:button {:on-click #(go (>! debug :click))
+                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored"}
+           [:i {:class-name "material-icons"} "print"]]
           ]]))
 
 (defcomponent Drawer
-  [state {:keys [add-plot debug] :as cmd-chans}]
+  [state cmd-chans]
   (html [:div {:class-name "mdl-layout__drawer"}
          [:header {} "Plongeur"]
          [:nav {:class-name "mdl-navigation"}
@@ -113,16 +119,7 @@
            [:i {:class-name "material-icons"
                 :role       "presentation"} "reorder"] "Logs"]
 
-          [:button {:on-click   #(go (>! add-plot :tda))
-                    :hidden     (>= (m/plot-count state) 4)
-                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--colored"}
-           [:i {:class-name "material-icons"} "add"]]
-
           [:div {:class-name "mdl-layout-spacer"}]
-
-          [:button {:on-click #(go (>! debug :click))
-                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--colored"}
-           [:i {:class-name "material-icons"} "print"]]
 
           [:a {:class-name "mdl-navigation__link"
                :href "https://github.com/tmoerman/plongeur"

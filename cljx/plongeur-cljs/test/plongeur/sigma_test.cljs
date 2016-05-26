@@ -32,15 +32,140 @@
     (d/append! test-section node)))
 
 (defn append-graph-container! [id]
-  (-> id v/graph-id make-div append-test-section!))
+  (-> id make-div append-test-section!))
 
 (defn append-graph-containers! [ids]
   (doseq [id ids] (append-graph-container! id)))
 
+;; Sigma creation tests
 
-;;
+(deftest make-sigma-instance-no-container
+  (clean-test-section!)
+  (let [sigma-inst (s/make-sigma-instance "graph-100" nil)]
+    (is (nil? sigma-inst))
+    (some-> sigma-inst s/kill)))
+
+(deftest make-sigma-instance-nil-settings
+  (clean-test-section!)
+  (let [id         "graph-100"
+        _          (append-graph-container! id)
+        sigma-inst (s/make-sigma-instance id nil)]
+    (is (some? sigma-inst))
+    (is (some? (select-1 :body :#test :#graph-100)))
+    (some-> sigma-inst s/kill)))
+
+(deftest make-sigma-instance-blue-skies
+  (clean-test-section!)
+  (let [id           "graph-100"
+        _            (append-graph-container! id)
+        settings-clj {:verbose   true
+                      :immutable true}
+        sigma-inst (s/make-sigma-instance id settings-clj)]
+    (is (some? sigma-inst))
+    (is (some? (select-1 :body :#test :#graph-100)))
+    (some-> sigma-inst s/kill)))
+
+;; Sigma API tests
+
+(defn ->node [id]
+  {:id id})
+
+(defn ->edge [id from to]
+  {:id id
+   :source from
+   :target to})
 
 
+;; nodes
 
+(deftest get-nodes-none
+  (clean-test-section!)
+  (let [id         "graph-100"
+        _          (append-graph-container! id)
+        sigma-inst (s/make-sigma-instance id nil)
+        nodes      (s/nodes sigma-inst)]
+    (is (= [] nodes))))
+
+(deftest get-nodes-one
+  (clean-test-section!)
+  (let [id         "graph-100"
+        _          (append-graph-container! id)
+        sigma-inst (s/make-sigma-instance id nil)
+        _          (-> sigma-inst
+                       (s/add-node {:id 1}))
+        nodes      (s/nodes sigma-inst)]
+    (is (= 1 (count nodes)))))
+
+(deftest get-nodes-many
+  (clean-test-section!)
+  (let [id         "graph-100"
+        _          (append-graph-container! id)
+        sigma-inst (s/make-sigma-instance id nil)
+        _          (-> sigma-inst
+                       (s/add-node {:id 1})
+                       (s/add-node {:id 2})
+                       (s/add-node {:id 3}))
+        nodes      (s/nodes sigma-inst)]
+    (is (= 3 (count nodes)))))
+
+;; edges
+
+(deftest get-edges-none
+  (clean-test-section!)
+  (let [id         "graph-100"
+        _          (append-graph-container! id)
+        sigma-inst (s/make-sigma-instance id nil)
+        edges      (s/edges sigma-inst)]
+    (is (= [] edges))))
+
+(deftest get-edges-many
+  (clean-test-section!)
+  (let [id         "graph-100"
+        _          (append-graph-container! id)
+        sigma-inst (-> (s/make-sigma-instance id nil)
+                       (s/add-node {:id 1})
+                       (s/add-node {:id 2})
+                       (s/add-node {:id 3})
+                       (s/add-edge {:id 1 :source 1 :target 2})
+                       (s/add-edge {:id 2 :source 1 :target 3})
+                       (s/add-edge {:id 3 :source 2 :target 2}))
+        edges      (s/edges sigma-inst)]
+    (is (= 3 (count edges)))))
+
+;; read network
+
+(deftest read-network
+  (clean-test-section!)
+  (let [id         "graph-100"
+        _          (append-graph-container! id)
+        network    {:nodes [{:id 1}
+                            {:id 2}
+                            {:id 3}]
+                    :edges [{:id 1 :source 1 :target 2}
+                            {:id 2 :source 1 :target 3}
+                            {:id 3 :source 2 :target 2}]}
+        sigma-inst (-> (s/make-sigma-instance id nil)
+                       (s/read network))]
+    (.log js/console (clj->js network))
+    (is (= 3 (-> sigma-inst s/nodes count)))
+    (is (= 3 (-> sigma-inst s/edges count)))))
+
+;; clear
+
+(deftest clear
+  (clean-test-section!)
+  (let [id         "graph-100"
+        _          (append-graph-container! id)
+        sigma-inst (s/make-sigma-instance id nil)
+        _          (-> sigma-inst
+                       (s/add-node {:id 1})
+                       (s/add-node {:id 2})
+                       (s/add-node {:id 3})
+                       (s/add-edge {:id 1 :source 1 :target 2})
+                       (s/add-edge {:id 2 :source 1 :target 3})
+                       (s/add-edge {:id 3 :source 2 :target 2})
+                       (s/clear))]
+    (is (= 0 (-> sigma-inst s/nodes count)))
+    (is (= 0 (-> sigma-inst s/edges count)))))
 
 (run-tests)
