@@ -1,6 +1,5 @@
 (ns plongeur.model
   (:require [cljs.core.async :as a :refer [<! chan to-chan pipe]]
-            [cljs.pprint :as pp]
             [com.rpl.specter :as sp :refer [select select-one transform keypath ALL VAL FIRST]]
             [kierros.model :refer [scan-to-states]]
             [plongeur.config :as c]))
@@ -30,7 +29,9 @@
   [response state]
   #_(prn (str "received websocket response: " response))
 
+  ;;
   ;; TODO merge the received data into the state's plots map.
+  ;; OR: perhaps allow the Sigma graphs to periodically (while running the force algorithm)
 
   state)
 

@@ -5,16 +5,16 @@
 
 (deftest plot-ids-test
   (let [state {:plots {1  {:k :v}
-                        2 {:k :v}
-                        3 {:k :v}}}]
+                       2 {:k :v}
+                       3 {:k :v}}}]
     (is (= (m/plot-ids state)
            [1 2 3]))))
 
 
 (deftest plot-count-test
   (let [state {:plots {1  {:k :v}
-                        2 {:k :v}
-                        3 {:k :v}}}]
+                       2 {:k :v}
+                       3 {:k :v}}}]
     (is (= (m/plot-count state)
            3))))
 
@@ -35,10 +35,11 @@
   (let [old-state {:seq    1
                    :plots  {}
                    :config c/default-config}
-        new-state (m/add-plot nil old-state)]
+        new-state (m/add-plot :tda old-state)]
     (is (= new-state
            {:seq    2
-            :plots  {1 {:force-layout :force-atlas2}}
+            :plots  {1 {:tda  {:force-layout :force-atlas2}
+                        :data nil}}
             :config c/default-config}))))
 
 
