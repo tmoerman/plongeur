@@ -2,25 +2,20 @@
   (:require [cljs.core.async :as a :refer [<! >! tap chan pipe close!]]
             [quiescent.core :as q :include-macros true :refer-macros [defcomponent]]
             [sablono.core :refer-macros [html]]
+            [foreign.sigma]
+            [foreign.fullscreen]
             [plongeur.model :as m]
             [plongeur.sigma :as s])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-
-(defn rand-node [id]
-  (let [node-id (str (rand-int 10))]
+(defn rand-node [_]
+  (let [node-id (str (rand-int 50))]
     {:id    node-id
      :label node-id
      :x (rand-int 20)
      :y (rand-int 20)
-     :size 0.5
-     :color "#FF0"}))
-
-;; Sigma-api
-
-#_(defn add-node
-  [sigma-inst node]
-  (silently-apply sigma-inst sigma/addNode node))
+     :size (-> (rand-int 10) (* 0.1))
+     :color "#FF9"}))
 
 ;; MDL machinery
 
@@ -40,8 +35,15 @@
                 (let [sigma-instance   (s/make-sigma-instance (graph-id id)
                                                               (m/sigma-settings state)
                                                               cmd-chans)
+
+                      ; plugins (js/fullScreen. (clj->js {:btnId  (str "full-screen-" id)}))
+                      ; _ (.log js/console plugins)
+
                       web-response-tap (->> (chan 10)
                                             (tap web-response-mult))]
+
+                  (.fullScreen (.-plugins js/sigma) (clj->js {:container (str "graph-" id)
+                                                              :btnId     (str "full-screen-" id)}))
 
                   (go-loop []
                            (when-let [v (<! web-response-tap)]
@@ -57,13 +59,13 @@
                           :ch    web-response-tap})))
 
     :on-unmount (fn [node [state id props] {:keys [web-response-mult] :as cmd-chans}]
-
                   (swap! sigma-state
                          (fn [m]
                            (some->> id m :ch (a/untap web-response-mult))
                            (some->> id m :ch close!)
                            (some->> id m :sigma s/kill)
                            (dissoc m id))))
+
     [[state id props] cmd-chans]
     (html [:div {:id         (graph-id id)
                  :class-name "sigma-dark"}])))
@@ -73,18 +75,24 @@
   :keyfn (fn [[state id props]] id)
   [[state id props] {:keys [drop-plot] :as cmd-chans}]
   (html [:div {:class-name "mdl-cell mdl-cell--6-col-desktop mdl-cell--6-col-tablet mdl-cell--6-col-phone"}
-         [:div {:class-name "mdl-card mdl-shadow--2dp"}
+         [:div {:id         (str "card-" id)
+                :class-name "mdl-card mdl-shadow--2dp"}
 
           (Sigma [state id props] cmd-chans)
 
           [:div {:class-name "mdl-card__title"}
            id
            [:div {:class-name "mdl-layout-spacer"}]
+
+           [:button {:id         (str "full-screen-" id)
+                     :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect"}
+            [:i {:class-name "material-icons"} "fullscreen"]]
+
            [:button {:on-click   #(go (>! drop-plot id))
                      :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect"}
-            [:i {:class-name "material-icons"} "delete"]
+            [:i {:class-name "material-icons"} "delete"]]
 
-            ]]]]))
+           ]]]))
 
 (defcomponent Header
   [state {:keys [debug add-plot] :as cmd-chans}]

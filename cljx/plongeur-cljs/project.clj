@@ -30,9 +30,16 @@
                                         :output-to "resources/public/js/compiled/plongeur.js"
                                         :output-dir "resources/public/js/compiled/out"
                                         :source-map-timestamp true
-                                        :foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.require.js"
-                                                        :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
-                                                        :provides ["foreign.sigma"]}]}}
+                                        :foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.js"
+                                                        ;:file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
+                                                        :provides ["foreign.sigma"]}
+
+                                                       {:file     "resources/public/js/node_modules/linkurious/plugins/sigma.plugins.fullScreen/sigma.plugins.fullScreen.js"
+                                                        :file-min "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
+                                                        :provides ["foreign.fullscreen"]
+                                                        :requires ["foreign.sigma"]}
+
+                                                       ]}}
 
                        ;:prod {:source-paths ["src"]
                        ;       :compiler {:output-to "main.js"
@@ -43,10 +50,22 @@
                        :test {:source-paths ["src" "test"]
                               :compiler {:output-to "resources/private/js/compiled/unit-test.js"
                                          :pretty-print true
-                                         :foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.require.js"
+
+                                         :foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.js"
                                                          :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
-                                                         :provides ["foreign.sigma"]
-                                                         :module-type :amd}]
+                                                         :provides ["foreign.sigma"]}
+
+                                                        {:file     "resources/public/js/node_modules/linkurious/plugins/sigma.plugins.fullScreen/sigma.plugins.fullScreen.js"
+                                                         :file-min "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
+                                                         :provides ["foreign.fullscreen"]
+                                                         :requires ["foreign.sigma"]}
+
+                                                        ]
+
+                                         ;:foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.require.js"
+                                         ;                :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
+                                         ;                :provides ["foreign.sigma"]
+                                         ;                :module-type :amd}]
                                          }}}
 
               :test-commands {"unit" ["phantomjs"
@@ -54,10 +73,7 @@
 
   ;; lein clean
   ;; lein npm install
-  :npm {:dependencies [
-                       ;[sigma "1.1.0"]
-                       [linkurious "1.5.1"]
-                       ]
+  :npm {:dependencies [[linkurious "1.5.1"]]
         :root "resources/public/js"}
 
   :profiles {:dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
