@@ -42,13 +42,11 @@
                                                         :provides ["foreign.forcelink"]
                                                         :requires ["foreign.sigma"]}
 
-                                                       ]}}
+                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceAtlas2.min.js"
+                                                        :provides ["foreign.forceatlas2"]
+                                                        :requires ["foreign.sigma"]}
 
-                       ;:prod {:source-paths ["src"]
-                       ;       :compiler {:output-to "main.js"
-                       ;                  :source-map "main.js.map"
-                       ;                  :optimizations :advanced
-                       ;                  :pretty-print true}}
+                                                       ]}}
 
                        :test {:source-paths ["src" "test"]
                               :compiler {:output-to "resources/private/js/compiled/unit-test.js"
@@ -66,13 +64,19 @@
                                                          :provides ["foreign.forcelink"]
                                                          :requires ["foreign.sigma"]}
 
-                                                        ]
+                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceAtlas2.min.js"
+                                                         :provides ["foreign.forceatlas2"]
+                                                         :requires ["foreign.sigma"]}
 
-                                         ;:foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.require.js"
-                                         ;                :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
-                                         ;                :provides ["foreign.sigma"]
-                                         ;                :module-type :amd}]
-                                         }}}
+                                                        ]}}
+
+                       ;:prod {:source-paths ["src"]
+                       ;       :compiler {:output-to "main.js"
+                       ;                  :source-map "main.js.map"
+                       ;                  :optimizations :advanced
+                       ;                  :pretty-print true}}
+
+                       }
 
               :test-commands {"unit" ["phantomjs"
                                       "resources/private/js/compiled/unit-test.js"]}}

@@ -5,11 +5,12 @@
             [foreign.sigma]
             [foreign.fullscreen]
             [foreign.forcelink]
+            [foreign.forceatlas2]
             [plongeur.model :as m]
             [plongeur.sigma :as s])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(defn rand-node [_]
+#_(defn rand-node [_]
   (let [node-id (str (rand-int 50))]
     {:id    node-id
      :label node-id
@@ -48,14 +49,18 @@
                   (go-loop []
                            (when-let [v (<! web-response-tap)]
                              (do
+                               (.killForceAtlas2 sigma-instance)
+
                                (-> sigma-instance
                                    (s/clear)
-                                   (s/read (s/make-loop 10))
+                                   (s/read (s/make-shape))
                                    (s/refresh))
 
-                               (.startForceLink (.-layouts js/sigma) sigma-instance (clj->js {;:worker   true
+                               #_(.startForceLink (.-layouts js/sigma) sigma-instance (clj->js {;:worker   true
                                                                                               :autoStop true
                                                                                               :maxIterations 100}))
+
+                               (.startForceAtlas2 sigma-instance (clj->js {:worker true}))
 
                                (recur))))
 

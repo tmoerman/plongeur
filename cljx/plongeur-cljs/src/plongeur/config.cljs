@@ -3,8 +3,8 @@
 (def default-config
   "Default configuration map. Configuration is a part of the application state."
 
-  {:sigma    {:settings {:verbose   true ;; gets turned into json and passed to the sigma constructor.
-                         :immutable true
+  {:sigma    {:settings {:verbose   true
+                         :immutable false
                          :defaultLabelColor "#FFF"
                          :labelColor "default"}
               }
