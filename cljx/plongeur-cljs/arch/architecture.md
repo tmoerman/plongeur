@@ -2,9 +2,3 @@
 
 ![architecture](img/diagram.jpg)
 
-## Drivers
-
-### `sigma-driver`
-
-* bla
-

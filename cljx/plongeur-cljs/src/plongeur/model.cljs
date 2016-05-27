@@ -56,10 +56,7 @@
   (transform [:plots] #(dissoc % id) state))
 
 
-(defn prn-state [_ state]
-  (prn state)
-
-  state)
+(defn prn-state [_ state] (prn state) state)
 
 ;; Model machinery
 

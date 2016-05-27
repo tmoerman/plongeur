@@ -146,7 +146,6 @@
                             {:id 3 :source 2 :target 2}]}
         sigma-inst (-> (s/make-sigma-instance id nil)
                        (s/read network))]
-    (.log js/console (clj->js network))
     (is (= 3 (-> sigma-inst s/nodes count)))
     (is (= 3 (-> sigma-inst s/edges count)))))
 

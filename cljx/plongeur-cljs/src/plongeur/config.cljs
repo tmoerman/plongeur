@@ -3,9 +3,10 @@
 (def default-config
   "Default configuration map. Configuration is a part of the application state."
 
-  {:sigma    {:settings {:verbose true ;; gets turned into json and passed to the sigma constructor.
-                         }
-
+  {:sigma    {:settings {:verbose   true ;; gets turned into json and passed to the sigma constructor.
+                         :immutable true
+                         :defaultLabelColor "#FFF"
+                         :labelColor "default"}
               }
 
    :defaults {:plot     :tda ; [:tda :t-sne],

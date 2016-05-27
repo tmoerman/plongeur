@@ -1,7 +1,8 @@
 (ns kierros.util)
 
 (defn scan
-  "Returns a transducer that implements scan (cfr. Scala) or reductions (cfr. Clojure) semantics."
+  "Returns a transducer that implements scan (cfr. Scala) or reductions (cfr. Clojure) semantics.
+  TODO try this: http://dev.clojure.org/jira/secure/attachment/15550/0001-clojure.core-add-reductions-stateful-transducer.patch"
   [f]
   (fn [xf]
     (let [state (volatile! ::none)]
