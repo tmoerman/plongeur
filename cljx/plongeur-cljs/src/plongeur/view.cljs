@@ -28,7 +28,6 @@
 ;; React components
 
 (defn graph-id [id] (str "graph-" id))
-µ
 
 (let [sigma-state (atom {})]
   (defcomponent Sigma
