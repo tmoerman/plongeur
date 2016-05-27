@@ -22,7 +22,7 @@
   (let [intent-chans              (i/intents)
 
         _ (go-loop []
-                   (<! (timeout 1000))
+                   (<! (timeout 5000))
                    (>! web-response-chan :ping)
                    (recur))
 

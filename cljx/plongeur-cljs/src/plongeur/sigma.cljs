@@ -49,7 +49,6 @@
      (catch :default e
        (prn (str e " " dom-container-id)))))
 
-
   ([dom-container-id sigma-settings cmd-chans]
    (some->> (make-sigma-instance dom-container-id sigma-settings)
             (bind-event-listeners cmd-chans))))
@@ -94,3 +93,10 @@
 (defn clear
   [sigma-inst]
   (some-> sigma-inst graph .clear) sigma-inst)
+
+;; Data generators
+
+(defn make-loop
+  [size]
+  {:nodes (->> size range (map (fn [n] {:id n :label n :x (rand-int 100) :y (rand-int 100) :color "#FF9"})))
+   :edges (->> size range (map (fn [n] {:id n :source n :target (-> n inc (mod 10))})))})

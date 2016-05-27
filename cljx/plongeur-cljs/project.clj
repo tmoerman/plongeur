@@ -31,12 +31,15 @@
                                         :output-dir "resources/public/js/compiled/out"
                                         :source-map-timestamp true
                                         :foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.js"
-                                                        ;:file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
+                                                        :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
                                                         :provides ["foreign.sigma"]}
 
-                                                       {:file     "resources/public/js/node_modules/linkurious/plugins/sigma.plugins.fullScreen/sigma.plugins.fullScreen.js"
-                                                        :file-min "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
+                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
                                                         :provides ["foreign.fullscreen"]
+                                                        :requires ["foreign.sigma"]}
+
+                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceLink.min.js"
+                                                        :provides ["foreign.forcelink"]
                                                         :requires ["foreign.sigma"]}
 
                                                        ]}}
@@ -55,9 +58,12 @@
                                                          :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
                                                          :provides ["foreign.sigma"]}
 
-                                                        {:file     "resources/public/js/node_modules/linkurious/plugins/sigma.plugins.fullScreen/sigma.plugins.fullScreen.js"
-                                                         :file-min "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
+                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
                                                          :provides ["foreign.fullscreen"]
+                                                         :requires ["foreign.sigma"]}
+
+                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceLink.min.js"
+                                                         :provides ["foreign.forcelink"]
                                                          :requires ["foreign.sigma"]}
 
                                                         ]

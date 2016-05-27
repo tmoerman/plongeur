@@ -1,9 +1,10 @@
 (ns plongeur.view
-  (:require [cljs.core.async :as a :refer [<! >! tap chan pipe close!]]
+  (:require [cljs.core.async :as a :refer [<! >! timeout tap chan pipe close!]]
             [quiescent.core :as q :include-macros true :refer-macros [defcomponent]]
             [sablono.core :refer-macros [html]]
             [foreign.sigma]
             [foreign.fullscreen]
+            [foreign.forcelink]
             [plongeur.model :as m]
             [plongeur.sigma :as s])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -27,6 +28,7 @@
 ;; React components
 
 (defn graph-id [id] (str "graph-" id))
+µ
 
 (let [sigma-state (atom {})]
   (defcomponent Sigma
@@ -36,22 +38,26 @@
                                                               (m/sigma-settings state)
                                                               cmd-chans)
 
-                      ; plugins (js/fullScreen. (clj->js {:btnId  (str "full-screen-" id)}))
-                      ; _ (.log js/console plugins)
+                      sigma-plugins    (.-plugins js/sigma)
 
                       web-response-tap (->> (chan 10)
                                             (tap web-response-mult))]
 
-                  (.fullScreen (.-plugins js/sigma) (clj->js {:container (str "graph-" id)
-                                                              :btnId     (str "full-screen-" id)}))
+                  #_(.fullScreen sigma-plugins (clj->js {:container (str "graph-" id)
+                                                       :btnId     (str "full-screen-" id)}))
 
                   (go-loop []
                            (when-let [v (<! web-response-tap)]
                              (do
-                               #_(prn (str "captured in Sigma " id ": " v))
-                               (->> (rand-node id)
-                                    (s/add-node sigma-instance)
-                                    (s/refresh))
+                               (-> sigma-instance
+                                   (s/clear)
+                                   (s/read (s/make-loop 10))
+                                   (s/refresh))
+
+                               (.startForceLink (.-layouts js/sigma) sigma-instance (clj->js {;:worker   true
+                                                                                              :autoStop true
+                                                                                              :maxIterations 100}))
+
                                (recur))))
 
                   (swap! sigma-state assoc id
