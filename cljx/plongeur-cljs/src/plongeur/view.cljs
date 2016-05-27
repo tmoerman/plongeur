@@ -6,6 +6,8 @@
             [foreign.fullscreen]
             [foreign.forcelink]
             [foreign.forceatlas2]
+            [foreign.activestate]
+            [foreign.dragnodes]
             [plongeur.model :as m]
             [plongeur.sigma :as s])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -38,13 +40,18 @@
                                                               (m/sigma-settings state)
                                                               cmd-chans)
 
+                      sigma-renderer   (-> sigma-instance .-renderers (aget 0))
+
                       sigma-plugins    (.-plugins js/sigma)
+
+                      active-state     (.activeState sigma-plugins sigma-instance)
+
+                      ;drag-listener    (.dragNodes   sigma-plugins sigma-instance sigma-renderer active-state)
+
+                      _ (.log js/console active-state)
 
                       web-response-tap (->> (chan 10)
                                             (tap web-response-mult))]
-
-                  #_(.fullScreen sigma-plugins (clj->js {:container (str "graph-" id)
-                                                       :btnId     (str "full-screen-" id)}))
 
                   (go-loop []
                            (when-let [v (<! web-response-tap)]
@@ -55,10 +62,6 @@
                                    (s/clear)
                                    (s/read (s/make-shape))
                                    (s/refresh))
-
-                               #_(.startForceLink (.-layouts js/sigma) sigma-instance (clj->js {;:worker   true
-                                                                                              :autoStop true
-                                                                                              :maxIterations 100}))
 
                                (.startForceAtlas2 sigma-instance (clj->js {:worker true}))
 
@@ -105,18 +108,26 @@
            ]]]))
 
 (defcomponent Header
-  [state {:keys [debug add-plot] :as cmd-chans}]
+  [state {:keys [debug add-plot web-response-chan] :as cmd-chans}]
   (html [:header {:class-name "mdl-layout__header"}
          [:div {:class-name "mdl-layout__header-row"}
           [:div {:class-name "mdl-layout-spacer"}]
+
           [:button {:on-click   #(go (>! add-plot :tda))
                     :hidden     (>= (m/plot-count state) 4)
                     :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored"}
            [:i {:class-name "material-icons"} "add"]]
+
           [:div {:class-name "mdl-layout-spacer"}]
+
+          [:button {:on-click #(go (>! web-response-chan :click))
+                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored"}
+           [:i {:class-name "material-icons"} "refresh"]]
+
           [:button {:on-click #(go (>! debug :click))
                     :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored"}
            [:i {:class-name "material-icons"} "print"]]
+
           ]]))
 
 (defcomponent Drawer

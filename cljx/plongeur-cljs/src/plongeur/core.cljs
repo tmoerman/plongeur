@@ -21,10 +21,10 @@
     web-response-chan :WEB}]
   (let [intent-chans              (i/intents)
 
-        _ (go-loop []
-                   (<! (timeout 10000))
-                   (>! web-response-chan :ping)
-                   (recur))
+        ;_ (go-loop []
+        ;           (<! (timeout 10000))
+        ;           (>! web-response-chan :ping)
+        ;           (recur))
 
         web-response-mult         (mult web-response-chan)
 
@@ -48,6 +48,7 @@
 
         cmd-chans              (assoc intent-chans
                                  :post-request      post-request-chan
+                                 :web-response-chan web-response-chan
                                  :web-response-mult web-response-mult)
 
         views-chan             (v/view view-states-chan cmd-chans)]
