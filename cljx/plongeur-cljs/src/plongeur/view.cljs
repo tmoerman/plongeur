@@ -1,4 +1,5 @@
 (ns plongeur.view
+  "See https://github.com/CreativeIT/material-dashboard-lite"
   (:require [cljs.core.async :as a :refer [<! >! timeout tap chan pipe close!]]
             [quiescent.core :as q :include-macros true :refer-macros [defcomponent]]
             [sablono.core :refer-macros [html]]
@@ -11,15 +12,6 @@
             [plongeur.model :as m]
             [plongeur.sigma :as s])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
-
-#_(defn rand-node [_]
-  (let [node-id (str (rand-int 50))]
-    {:id    node-id
-     :label node-id
-     :x (rand-int 20)
-     :y (rand-int 20)
-     :size (-> (rand-int 10) (* 0.1))
-     :color "#FF9"}))
 
 ;; MDL machinery
 
@@ -47,8 +39,6 @@
                       active-state     (.activeState sigma-plugins sigma-instance)
 
                       ;drag-listener    (.dragNodes   sigma-plugins sigma-instance sigma-renderer active-state)
-
-                      _ (.log js/console active-state)
 
                       web-response-tap (->> (chan 10)
                                             (tap web-response-mult))]
@@ -97,20 +87,40 @@
 
            id
 
-           [:div {}
-
-            [:div {:on-click   #(go (>! drop-plot id))
-                   :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect"}
-             [:i {:class-name "material-icons"} "delete"]]
-
-            [:div {:on-click   #(go (>! drop-plot id))
-                   :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect"}
-             [:i {:class-name "material-icons"} "delete"]]]
+           [:div {:on-click   #(go (>! drop-plot id))
+                  :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab"}
+            [:i {:class-name "material-icons"} "delete"]]
 
            ]]]))
 
+(defcomponent Menu
+  [state {:keys [debug]}]
+  (html [:ul {:class-name "mdl-menu mdl-list mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect mdl-shadow--2dp account-dropdown"
+              :for "more-vert-btn"}
+
+         [:li {:class-name "mdl-menu__item mdl-list__item"}
+          [:span {:class-name "mdl-list__item-primary-content"}
+           [:i {:class-name "material-icons mdl-list__item-icon"} "settings"] "Configuration"]]
+
+         [:li {:class-name "list__item--border-top"}]
+
+         [:li {:class-name "mdl-menu__item mdl-list__item"}
+          [:span {:on-click #(go (>! debug :click))
+                  :class-name "mdl-list__item-primary-content"}
+           [:i {:class-name "material-icons mdl-list__item-icon"} "get_app"] "Write app state to console"]]
+
+         [:li {:class-name "list__item--border-top"}]
+
+         [:li {:class-name "mdl-menu__item mdl-list__item"}
+          [:span {:class-name "mdl-list__item-primary-content"}
+           [:i {:class-name "material-icons mdl-list__item-icon"} "attach_file"] "Publication"]]
+
+         [:li {:class-name "mdl-menu__item mdl-list__item"}
+          [:span {:class-name "mdl-list__item-primary-content"}
+           [:i {:class-name "material-icons mdl-list__item-icon"} "link"] "Github"]]]))
+
 (defcomponent Header
-  [state {:keys [debug add-plot web-response-chan] :as cmd-chans}]
+  [state {:keys [add-plot web-response-chan] :as cmd-chans}]
   (html [:header {:class-name "mdl-layout__header"}
          [:div {:class-name "mdl-layout__header-row"}
 
@@ -119,40 +129,15 @@
           [:div {:on-click   #(go (>! add-plot :tda))
                  :hidden     (>= (m/plot-count state) 4)
                  :class-name "material-icons mdl-badge mdl-button--icon"} "add"]
+
           [:div {:on-click #(go (>! web-response-chan :click))
                  :class-name "material-icons mdl-badge mdl-button--icon"} "refresh"]
-          [:div {:on-click #(go (>! debug :click))
-                 :class-name "material-icons mdl-badge mdl-button--icon"} "print"]
 
-          ]]))
+          [:button {:id "more-vert-btn"
+                    :class-name "mdl-button mdl-js-button mdl-button--icon"}
+           [:i {:class-name "material-icons"} "more_vert"]]
 
-(defcomponent Drawer
-  [state cmd-chans]
-  (html [:div {:class-name "mdl-layout__drawer"}
-         [:header {} "(0_0)"]
-         [:nav {:class-name "mdl-navigation"}
-          [:a {:class-name "mdl-navigation__link mdl-navigation__link--current"
-               :href "index.html"}
-           [:i {:class-name "material-icons"
-                :role       "presentation"} "dashboard"] "Dashboard"]
-          [:a {:class-name "mdl-navigation__link"
-               :href "config.html"}
-           [:i {:class-name "material-icons"
-                :role       "presentation"} "settings"] "Settings"]
-          [:a {:class-name "mdl-navigation__link"
-               :href "config.html"}
-           [:i {:class-name "material-icons"
-                :role       "presentation"} "reorder"] "Logs"]
-
-          [:div {:class-name "mdl-layout-spacer"}]
-
-          [:a {:class-name "mdl-navigation__link"
-               :href "https://github.com/tmoerman/plongeur"
-               :target "_blank"}
-           [:i {:class-name "material-icons"
-                :role       "presentation"} "link"] "Github"]
-
-          ]]))
+          (Menu state cmd-chans)]]))
 
 (defcomponent Grid
   [state cmd-chans]
@@ -166,9 +151,9 @@
   [state cmd-chans]
   (html [:div {:id "plongeur-main"}
          [:div {:id         "layout"
-                :class-name "mdl-layout mdl-js-layout mdl-layout--fixed-drawer mdl-layout--fixed-header is-small-screen"}
+                :class-name "mdl-layout mdl-js-layout mdl-layout--fixed-header"}
           (Header state cmd-chans)
-          (Drawer state cmd-chans)
+          #_(Drawer state cmd-chans)
           (Grid   state cmd-chans)]]))
 
 (defn view
