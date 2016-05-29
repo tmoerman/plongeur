@@ -93,17 +93,19 @@
 
           (Sigma [state id props] cmd-chans)
 
-          [:div {:class-name "mdl-card__title"}
+          [:div {:class-name "mdl-card__actions"}
+
            id
-           [:div {:class-name "mdl-layout-spacer"}]
 
-           [:button {:id         (str "full-screen-" id)
-                     :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect"}
-            [:i {:class-name "material-icons"} "fullscreen"]]
+           [:div {}
 
-           [:button {:on-click   #(go (>! drop-plot id))
-                     :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect"}
-            [:i {:class-name "material-icons"} "delete"]]
+            [:div {:on-click   #(go (>! drop-plot id))
+                   :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect"}
+             [:i {:class-name "material-icons"} "delete"]]
+
+            [:div {:on-click   #(go (>! drop-plot id))
+                   :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored mdl-js-ripple-effect"}
+             [:i {:class-name "material-icons"} "delete"]]]
 
            ]]]))
 
@@ -111,29 +113,23 @@
   [state {:keys [debug add-plot web-response-chan] :as cmd-chans}]
   (html [:header {:class-name "mdl-layout__header"}
          [:div {:class-name "mdl-layout__header-row"}
-          [:div {:class-name "mdl-layout-spacer"}]
-
-          [:button {:on-click   #(go (>! add-plot :tda))
-                    :hidden     (>= (m/plot-count state) 4)
-                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored"}
-           [:i {:class-name "material-icons"} "add"]]
 
           [:div {:class-name "mdl-layout-spacer"}]
 
-          [:button {:on-click #(go (>! web-response-chan :click))
-                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored"}
-           [:i {:class-name "material-icons"} "refresh"]]
-
-          [:button {:on-click #(go (>! debug :click))
-                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored"}
-           [:i {:class-name "material-icons"} "print"]]
+          [:div {:on-click   #(go (>! add-plot :tda))
+                 :hidden     (>= (m/plot-count state) 4)
+                 :class-name "material-icons mdl-badge mdl-button--icon"} "add"]
+          [:div {:on-click #(go (>! web-response-chan :click))
+                 :class-name "material-icons mdl-badge mdl-button--icon"} "refresh"]
+          [:div {:on-click #(go (>! debug :click))
+                 :class-name "material-icons mdl-badge mdl-button--icon"} "print"]
 
           ]]))
 
 (defcomponent Drawer
   [state cmd-chans]
   (html [:div {:class-name "mdl-layout__drawer"}
-         [:header {} "Plongeur"]
+         [:header {} "(0_0)"]
          [:nav {:class-name "mdl-navigation"}
           [:a {:class-name "mdl-navigation__link mdl-navigation__link--current"
                :href "index.html"}
@@ -162,7 +158,7 @@
   [state cmd-chans]
   (html [:main {:class-name "mdl-layout__content"}
          [:div {:class-name "mdl-grid mdl-grid--no-spacing"}
-          [:div {:class-name "mdl-grid mdl-cell mdl-cell--9-col-desktop mdl-cell--12-col-tablet mdl-cell--4-col-phone mdl-cell--top"}
+          [:div {:class-name "mdl-grid mdl-cell mdl-cell--12-col-desktop mdl-cell--12-col-tablet mdl-cell--4-col-phone mdl-cell--top"}
            (for [[id props] (m/plots state)]
              (Card [state id props] cmd-chans))]]]))
 
