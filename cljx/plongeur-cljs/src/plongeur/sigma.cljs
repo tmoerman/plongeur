@@ -1,17 +1,64 @@
 (ns plongeur.sigma
   "See: https://github.com/Linkurious/linkurious.js/wiki"
   (:require [foreign.sigma]
+            [foreign.activestate]
+            [foreign.forceatlas2]
+            [foreign.dragnodes]
             [clojure.set :refer [difference]]
             [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
-;; Sigma Public API
-;; See https://github.com/Linkurious/linkurious.js/wiki/Public-API
+;; Sigma properties
+
+(defn renderer
+  "Returns the sigma instance's first renderer."
+  [sigma-inst]
+  (some-> sigma-inst .-renderers (aget 0)))
 
 (defn graph
-  "Returns the sigma instance's graph property"
+  "Returns the sigma instance's graph."
   [sigma-inst]
-  (.-graph sigma-inst))
+  (some-> sigma-inst .-graph))
+
+;; Plugins
+
+(defn plugins [] (.-plugins js/sigma))
+
+;; Active state
+;; https://github.com/Linkurious/linkurious.js/tree/develop/plugins/sigma.plugins.activeState
+;; TODO figure out state management of this plugin... something smells fishy here...
+
+(defn active-state
+  [sigma-inst]
+  (.activeState (plugins) sigma-inst))
+
+(defn kill-active-state
+  []
+  (.killActiveState (plugins))
+  (plugins))
+
+;; Drag nodes
+;; https://github.com/Linkurious/linkurious.js/tree/develop/plugins/sigma.plugins.dragNodes
+
+(defn drag-nodes
+  "Arity 2: returns the drag listener.
+  Arity 3: returns the sigma instance."
+  ([sigma-inst active-state]
+   (.dragNodes (plugins) sigma-inst (renderer sigma-inst) active-state))
+  ([sigma-inst active-state event-handler-map]
+   (let [drag-listener (drag-nodes sigma-inst active-state)]
+     (doseq [[key handler-fn] event-handler-map]
+       (.bind drag-listener key handler-fn)))
+   sigma-inst))
+
+(defn kill-drag-nodes
+  [sigma-inst]
+  (.killDragNodes sigma-inst) sigma-inst)
+
+;; Select
+
+;; Sigma public API
+;; See https://github.com/Linkurious/linkurious.js/wiki/Public-API
 
 (defn refresh
   [sigma-inst]
@@ -21,7 +68,7 @@
   [sigma-inst]
   (some-> sigma-inst .kill) nil)
 
-(defn settings
+(defn apply-settings
   [sigma-inst sigma-settings]
   (when-let [sigma-settings-js (some-> sigma-settings clj->js)]
     (some-> sigma-inst (.settings sigma-settings-js)))
@@ -51,7 +98,7 @@
    (try
      (some-> (new js/sigma)
              (add-renderer {:type "canvas" :container dom-container-id})
-             (settings sigma-settings)
+             (apply-settings sigma-settings)
              (refresh))
 
      (catch :default e
