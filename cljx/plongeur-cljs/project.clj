@@ -38,16 +38,20 @@
                                                         :provides ["foreign.fullscreen"]
                                                         :requires ["foreign.sigma"]}
 
-                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceLink.min.js"
-                                                        :provides ["foreign.forcelink"]
-                                                        :requires ["foreign.sigma"]}
-
                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.activeState.min.js"
                                                         :provides ["foreign.activestate"]
                                                         :requires ["foreign.sigma"]}
 
                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.dragNodes.min.js"
                                                         :provides ["foreign.dragnodes"]
+                                                        :requires ["foreign.activestate"]}
+
+                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.select.min.js"
+                                                        :provides ["foreign.select"]
+                                                        :requires ["foreign.activestate"]}
+
+                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.lasso.min.js"
+                                                        :provides ["foreign.lasso"]
                                                         :requires ["foreign.activestate"]}
 
                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceAtlas2.min.js"
@@ -68,16 +72,20 @@
                                                          :provides ["foreign.fullscreen"]
                                                          :requires ["foreign.sigma"]}
 
-                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceLink.min.js"
-                                                         :provides ["foreign.forcelink"]
-                                                         :requires ["foreign.sigma"]}
-
                                                         {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.activeState.min.js"
                                                          :provides ["foreign.activestate"]
                                                          :requires ["foreign.sigma"]}
 
                                                         {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.dragNodes.min.js"
                                                          :provides ["foreign.dragnodes"]
+                                                         :requires ["foreign.activestate"]}
+
+                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.select.min.js"
+                                                         :provides ["foreign.select"]
+                                                         :requires ["foreign.activestate"]}
+
+                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.lasso.min.js"
+                                                         :provides ["foreign.lasso"]
                                                          :requires ["foreign.activestate"]}
 
                                                         {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceAtlas2.min.js"

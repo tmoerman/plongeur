@@ -5,12 +5,12 @@
             [sablono.core :refer-macros [html]]
             [foreign.sigma]
             [foreign.fullscreen]
-            [foreign.forcelink]
-            [foreign.forceatlas2]
             [foreign.activestate]
             [foreign.dragnodes]
+            [foreign.select]
             [plongeur.model :as m]
-            [plongeur.sigma :as s])
+            [plongeur.sigma :as s]
+            [kierros.async :refer [debounce]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 ;; MDL machinery
@@ -38,7 +38,13 @@
 
                       active-state     (.activeState sigma-plugins sigma-instance)
 
-                      ;drag-listener    (.dragNodes   sigma-plugins sigma-instance sigma-renderer active-state)
+                      select-handle    (.select sigma-plugins sigma-instance active-state sigma-renderer)
+
+                      drag-listener    (.dragNodes sigma-plugins sigma-instance sigma-renderer active-state)
+
+                      force-cmd-chan   (chan 10)
+                      _                (.bind drag-listener "startdrag" #(go (>! force-cmd-chan :start-drag)))
+                      _                (.bind drag-listener "dragend"   #(go (>! force-cmd-chan :end-drag)))
 
                       web-response-tap (->> (chan 10)
                                             (tap web-response-mult))]
@@ -46,27 +52,41 @@
                   (go-loop []
                            (when-let [v (<! web-response-tap)]
                              (do
-                               (.killForceAtlas2 sigma-instance)
+                               (s/kill-force-atlas-2 sigma-instance)
 
                                (-> sigma-instance
                                    (s/clear)
                                    (s/read (s/make-shape))
                                    (s/refresh))
 
-                               (.startForceAtlas2 sigma-instance (clj->js {:worker true}))
+                               (s/start-force-atlas-2 sigma-instance)
 
                                (recur))))
 
+                  (go-loop []
+                           (when-let [cmd (<! force-cmd-chan)]
+                             (do
+                               (condp = cmd
+                                 :start-drag (do
+                                               (prn cmd)
+                                               (s/kill-force-atlas-2 sigma-instance))
+                                 :end-drag (do
+                                             (prn cmd)
+                                             (s/start-force-atlas-2 sigma-instance))))
+                             (recur)))
+
                   (swap! sigma-state assoc id
-                         {:sigma sigma-instance
-                          :ch    web-response-tap})))
+                         {:sigma        sigma-instance
+                          :tap-ch       web-response-tap
+                          :force-cmd-ch force-cmd-chan})))
 
     :on-unmount (fn [node [state id props] {:keys [web-response-mult] :as cmd-chans}]
                   (swap! sigma-state
                          (fn [m]
-                           (some->> id m :ch (a/untap web-response-mult))
-                           (some->> id m :ch close!)
-                           (some->> id m :sigma s/kill)
+                           (some->> id m :tap-ch         (a/untap web-response-mult))
+                           (some->> id m :tap-ch         close!)
+                           (some->> id m :force-cmd-chan close!)
+                           (some->> id m :sigma          s/kill)
                            (dissoc m id))))
 
     [[state id props] cmd-chans]

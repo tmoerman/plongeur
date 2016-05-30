@@ -23,8 +23,14 @@
 
 (defn settings
   [sigma-inst sigma-settings]
-  (when-let [settings-js (some-> sigma-settings clj->js)]
-    (some-> sigma-inst (.settings settings-js)))
+  (when-let [sigma-settings-js (some-> sigma-settings clj->js)]
+    (some-> sigma-inst (.settings sigma-settings-js)))
+  sigma-inst)
+
+(defn add-renderer
+  [sigma-inst renderer-options]
+  (when-let [renderer-options-js (some-> renderer-options clj->js)]
+    (some-> sigma-inst (.addRenderer renderer-options-js)))
   sigma-inst)
 
 ;; Sigma constructors
@@ -43,9 +49,11 @@
 
   ([dom-container-id sigma-settings]
    (try
-     (some-> (js/sigma. dom-container-id)
+     (some-> (new js/sigma)
+             (add-renderer {:type "canvas" :container dom-container-id})
              (settings sigma-settings)
              (refresh))
+
      (catch :default e
        (prn (str e " " dom-container-id)))))
 
@@ -93,6 +101,30 @@
 (defn clear
   [sigma-inst]
   (some-> sigma-inst graph .clear) sigma-inst)
+
+;; Sigma Force Atlas 2
+;; https://github.com/Linkurious/linkurious.js/tree/develop/plugins/sigma.layouts.forceAtlas2
+
+(defn start-force-atlas-2
+  ([sigma-inst]
+   (some-> sigma-inst .startForceAtlas2) sigma-inst)
+  ([sigma-inst force-atlas-config]
+   (if-let [cfg-js (some-> force-atlas-config clj->js)]
+     (do
+       (some-> sigma-inst (.startForceAtlas2 cfg-js)) sigma-inst)
+     (start-force-atlas-2 sigma-inst))))
+
+(defn stop-force-atlas-2
+  [sigma-inst]
+  (some-> sigma-inst .stopForceAtlas2) sigma-inst)
+
+(defn kill-force-atlas-2
+  [sigma-inst]
+  (some-> sigma-inst .killForceAtlas2) sigma-inst)
+
+(defn force-atlas-2-running?
+  [sigma-inst]
+  (.isForceAtlas2Running sigma-inst))
 
 ;; Data generators
 
