@@ -2,23 +2,26 @@
   (:require [cljs.core.async :as a :refer [<! chan to-chan pipe]]
             [com.rpl.specter :as sp :refer [select select-one transform keypath ALL VAL FIRST]]
             [kierros.model :refer [scan-to-states]]
-            [plongeur.config :as c]))
+            [plongeur.config :as c]
+            [plongeur.sigma :as s]))
 
 ;; State queries
 ;; The developer should never navigate the state map in another namespace.
 ;; All navigation should be done by means of the state queries specified here.
 
-(defn plots [state] (select-one [:plots] state))
-
-(defn plot-ids [state] (select [:plots ALL FIRST] state))
-
-(defn plot-count [state] (-> state plots count))
-
 (defn seq-val [state] (select-one [:seq] state))
 
-(defn defaults [key state] (select-one [:config :defaults key] state))
+(defn plot       [state id] (select-one [:plots (keypath id)] state))
+(defn plots      [state] (select-one [:plots] state))
+(defn plot-ids   [state] (select [:plots ALL FIRST] state))
+(defn plot-count [state] (-> state plots count))
 
-(defn sigma-settings [state] (select-one [:config :sigma :settings] state))
+(defn init-sigma-settings [state] (select-one [:config :sigma :settings] state))
+(defn init-sigma-props    [state] (select-one [:config :sigma :props] state))
+
+(defn force-layout-active? [plot-state] (select-one [:props :force-layout-active] plot-state))
+(defn sigma-settings       [plot-state] (select-one [:settings] plot-state))
+(defn sigma-data           [plot-state] (select-one [:data] plot-state))
 
 
 ;; Intent handler functions have signature [param state], where param is a data structure that captures
@@ -41,20 +44,45 @@
   #_(prn (str "received DOM event: " event))
   state)
 
-(defn add-plot [plot-type state]
-  "Add an empty graph visualization."
+(defn make-sigma-plot
+  [state]
+  {:type     :sigma
+   :props    (init-sigma-props state)
+   :settings (init-sigma-settings state)
+   :data     (s/make-shape)})
 
+(defn make-scatter-plot
+  [state]
+  {:type     :scatter
+   :props    {}
+   :settings {}
+   :data     {}})
+
+(defn add-plot
+  "Add an empty graph visualization."
+  [plot-type state]
   (let [plot-id    (seq-val state)
-        plot-entry {plot-type (defaults plot-type state)
-                    :data     nil}]
+        plot-entry (condp = plot-type
+                     :sigma   (make-sigma-plot state)
+                     :scatter (make-scatter-plot state))]
     (->> state
          (transform [:seq] inc)
          (transform [:plots] #(assoc % plot-id plot-entry)))))
 
-(defn drop-plot [id state]
+(defn drop-plot
   "Drop a graph to the app state."
+  [id state]
   (transform [:plots] #(dissoc % id) state))
 
+(defn fill-plots [_ state] state)
+
+(defn toggle-force
+  [id state]
+  (transform [:plots (keypath id) :props :force-layout-active] not state))
+
+(defn set-force
+  [[id active?] state]
+  (transform [:plots (keypath id) :props :force-layout-active] (fn [_] active?) state))
 
 (defn prn-state [_ state] (prn state) state)
 
@@ -65,6 +93,10 @@
    :handle-dom-event    handle-dom-event
    :add-plot            add-plot
    :drop-plot           drop-plot
+   :fill-plots          fill-plots
+   :toggle-force        toggle-force
+   :set-force           set-force
+
    :debug               prn-state})
 
 ;; The model is a channel of application states.

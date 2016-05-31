@@ -3,23 +3,13 @@
 (def default-config
   "Default configuration map. Configuration is a part of the application state."
 
-  {:sigma    {:settings {:verbose           true
-                         :immutable         false
-                         :defaultLabelColor "#FFF"
-                         :labelColor        "default"}}
+  {:sigma {:settings {:verbose           true
+                      :immutable         false
+                      :defaultLabelColor "#FFF"
+                      :labelColor        "default"}
 
-   :defaults {:plot     :tda                                 ;; [:tda :t-sne],
-
-              :tda      {:force-layout        :force-atlas2  ;; [:force-atlas2, :fruchterman-reingold, ...]
-                         :force-layout-active true}
-
-              :t-sne    {:perplexity 1}                      ;; defaults for TSNA visualizations
-
-              }
-
-   :ui       {:theme    :dark}                               ;; [:dark, :light]
-
-   })
+           :props    {:force-layout        :force-atlas2
+                      :force-layout-active true}}})
 
 
 (defn validate-config

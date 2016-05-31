@@ -211,10 +211,12 @@
 (defn stop-force-atlas-2     [sigma-inst] (some-> sigma-inst .stopForceAtlas2) sigma-inst)
 (defn kill-force-atlas-2     [sigma-inst] (some-> sigma-inst .killForceAtlas2) sigma-inst)
 
-#_(defn toggle-force-atlas-2
-  [sigma-inst]
-  (if (force-atlas-2-running? sigma-inst) (kill-force-atlas-2 sigma-inst)
-                                          (start-force-atlas-2 sigma-inst)))
+(defn toggle-force-atlas-2
+  [sigma-inst running?]
+  (prn (str "toggle-force-atlas-2 " running?))
+  (if running? (start-force-atlas-2 sigma-inst)
+               (kill-force-atlas-2 sigma-inst))
+  sigma-inst)
 
 ;; Data generators
 
