@@ -25,79 +25,107 @@
 (let [sigma-state (atom {})]
   (defcomponent Sigma
     "Component on which the Sigma canvas is mounted."
-    :on-mount (fn [node [state id props] {:keys [web-response-mult] :as cmd-chans}]
-                (let [sigma-instance   (s/make-sigma-instance (graph-id id)
+    :on-mount (fn [node [state idx id props] {:keys [web-response-mult] :as cmd-chans}]
+                (let [sigma-ctrl       (chan 10)
+
+                      sigma-instance   (s/make-sigma-instance (graph-id id)
                                                               (m/sigma-settings state)
-                                                              cmd-chans)
+                                                              {;;:click        #(go (>! sigma-ctrl [:click        id]))
+                                                               :double-click #(go (>! sigma-ctrl [:toggle-force id]))})
 
                       sigma-renderer   (s/renderer sigma-instance)
 
-                      ;sigma-plugins    (.-plugins js/sigma)
-
                       active-state     (s/active-state sigma-instance)
 
-                      select-handle    (.select (s/plugins) sigma-instance active-state sigma-renderer)
+                      keyboard         (s/keyboard sigma-instance)
 
-                      ;; lasso-handle     (.lasso sigma-plugins)
+                      lasso            (s/lasso sigma-instance)
+
+                      select-handle    (s/select sigma-instance active-state {:keyboard keyboard
+                                                                              :lasso    lasso})
 
                       _                (s/drag-nodes sigma-instance
                                                      active-state
-                                                     {"startdrag" #(s/kill-force-atlas-2 sigma-instance)
-                                                      "dragend"   #(s/start-force-atlas-2 sigma-instance)})
+                                                     {:startdrag #(s/kill-force-atlas-2 sigma-instance)
+                                                      :dragend   #(s/start-force-atlas-2 sigma-instance)})
 
                       web-response-tap (->> (chan 10)
                                             (tap web-response-mult))]
 
                   (go-loop []
+                           (when-let [[k id] (<! sigma-ctrl)]
+
+                             #_(condp = k
+                               :click         (s/toggle-active lasso)
+                               :toggle-force  (do
+                                                (prn "double click captured")
+                                                (s/toggle-force-atlas-2 sigma-instance)))
+
+                             (recur)))
+
+                  (go-loop []
                            (when-let [v (<! web-response-tap)]
-                             (do
-                               (s/kill-force-atlas-2 sigma-instance)
+                             (s/kill-force-atlas-2 sigma-instance)
 
-                               (-> sigma-instance
-                                   (s/clear)
-                                   (s/read (s/make-shape))
-                                   (s/refresh))
+                             (-> sigma-instance
+                                 (s/clear)
+                                 (s/read (s/make-shape))
+                                 (s/refresh))
 
-                               (s/start-force-atlas-2 sigma-instance)
+                             (s/start-force-atlas-2 sigma-instance)
 
-                               (recur))))
+                             (recur)))
 
                   (swap! sigma-state assoc id
                          {:sigma        sigma-instance
-                          :tap-ch       web-response-tap})))
+                          :ctrl-ch      sigma-ctrl
+                          :tap-ch       web-response-tap
+                          :keyboard     keyboard
+                          :lasso        lasso})))
 
-    :on-unmount (fn [node [state id props] {:keys [web-response-mult] :as cmd-chans}]
+    :on-unmount (fn [node [state idx id props] {:keys [web-response-mult] :as cmd-chans}]
                   (swap! sigma-state
                          (fn [m]
                            (some->> id m :tap-ch         (a/untap web-response-mult))
                            (some->> id m :tap-ch         close!)
+                           (some->> id m :ctrl-ch        close!)
                            (some->> id m :force-cmd-chan close!)
                            (some->> id m :sigma          s/kill)
                            (dissoc m id))))
 
-    [[state id props] cmd-chans]
+    [[state idx id props] cmd-chans]
     (html [:div {:id         (graph-id id)
                  :class-name "sigma-dark"}])))
 
 (defcomponent Card
   "Component surrounding the visualization containers."
-  :keyfn (fn [[state id props]] id)
-  [[state id props] {:keys [drop-plot] :as cmd-chans}]
+  :keyfn (fn [[_ id _ _]] id)
+
+  [[state id props idx] {:keys [drop-plot] :as cmd-chans}]
   (html [:div {:class-name "mdl-cell mdl-cell--6-col-desktop mdl-cell--6-col-tablet mdl-cell--6-col-phone"}
          [:div {:id         (str "card-" id)
-                :class-name "mdl-card mdl-shadow--2dp"}
+                :class-name "mdl-card mdl-shadow--2dp"
+                :tab-index  (inc idx)}
 
-          (Sigma [state id props] cmd-chans)
+          (Sigma [state idx id props] cmd-chans)
 
           [:div {:class-name "mdl-card__actions"}
 
-           id
+           [:button {:on-click   #(prn "bla")
+                     :title      "Generate plots"
+                     :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"}
+            [:i {:class-name "material-icons mdl-badge"} "play_arrow"]]
+
+           [:button {:on-click   #(prn "bla")
+                     :title      "Generate plots"
+                     :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"}
+            [:i {:class-name "material-icons mdl-badge"} "pause"]]
 
            [:div {:on-click   #(go (>! drop-plot id))
+                  :id         (str "drop-plot-" id)
+                  :title      (str "Remove plot " id)
                   :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab"}
-            [:i {:class-name "material-icons"} "delete"]]
-
-           ]]]))
+            [:i {:class-name "material-icons"} "delete"]]]]]))
 
 (defcomponent Menu
   [state {:keys [debug]}]
@@ -133,13 +161,16 @@
           [:div {:class-name "mdl-layout-spacer"}]
 
           [:div {:on-click   #(go (>! add-plot :tda))
+                 :title      "Add plot"
                  :hidden     (>= (m/plot-count state) 4)
                  :class-name "material-icons mdl-badge mdl-button--icon"} "add"]
 
           [:div {:on-click #(go (>! web-response-chan :click))
+                 :title      "Generate plots"
                  :class-name "material-icons mdl-badge mdl-button--icon"} "refresh"]
 
           [:button {:id "more-vert-btn"
+                    :title      "More options"
                     :class-name "mdl-button mdl-js-button mdl-button--icon"}
            [:i {:class-name "material-icons"} "more_vert"]]
 
@@ -150,8 +181,9 @@
   (html [:main {:class-name "mdl-layout__content"}
          [:div {:class-name "mdl-grid mdl-grid--no-spacing"}
           [:div {:class-name "mdl-grid mdl-cell mdl-cell--12-col-desktop mdl-cell--12-col-tablet mdl-cell--4-col-phone mdl-cell--top"}
-           (for [[id props] (m/plots state)]
-             (Card [state id props] cmd-chans))]]]))
+           (for [[idx [id props]] (->> (m/plots state)
+                                       (map-indexed vector))]
+             (Card [state id props idx] cmd-chans))]]]))
 
 (defcomponent Root
   [state cmd-chans]

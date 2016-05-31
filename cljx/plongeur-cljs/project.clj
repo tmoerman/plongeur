@@ -38,6 +38,10 @@
                                                         :provides ["foreign.fullscreen"]
                                                         :requires ["foreign.sigma"]}
 
+                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.keyboard.min.js"
+                                                        :provides ["foreign.keyboard"]
+                                                        :requires ["foreign.sigma"]}
+
                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.activeState.min.js"
                                                         :provides ["foreign.activestate"]
                                                         :requires ["foreign.sigma"]}
@@ -70,6 +74,10 @@
 
                                                         {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
                                                          :provides ["foreign.fullscreen"]
+                                                         :requires ["foreign.sigma"]}
+
+                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.keyboard.min.js"
+                                                         :provides ["foreign.keyboard"]
                                                          :requires ["foreign.sigma"]}
 
                                                         {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.activeState.min.js"

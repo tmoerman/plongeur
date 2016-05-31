@@ -4,9 +4,19 @@
             [foreign.activestate]
             [foreign.forceatlas2]
             [foreign.dragnodes]
+            [foreign.keyboard]
+            [foreign.lasso]
+            [foreign.select]
             [clojure.set :refer [difference]]
-            [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]])
+            [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]]
+            [sablono.util :as u])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
+
+(defn sigma-key
+  [str-or-kw]
+  (if (keyword? str-or-kw)
+    (-> str-or-kw u/camel-case name)
+    (-> str-or-kw)))
 
 ;; Sigma properties
 
@@ -37,6 +47,53 @@
   (.killActiveState (plugins))
   (plugins))
 
+;; Keyboard
+;; https://github.com/Linkurious/linkurious.js/tree/linkurious-version/plugins/sigma.plugins.keyboard
+
+(defn keyboard
+  ([sigma-inst]
+   (keyboard sigma-inst nil))
+  ([sigma-inst keyboard-options]
+   (.keyboard (plugins) sigma-inst (renderer sigma-inst) (clj->js keyboard-options)))
+  ([sigma-inst keyboard-options bindings-map]
+   (let [keyboard-inst (keyboard sigma-inst keyboard-options)]
+     (doseq [[k fn] bindings-map]
+       (.bind keyboard-inst (sigma-key k) fn))
+     keyboard-inst)))
+
+;; Lasso
+;; https://github.com/Linkurious/linkurious.js/blob/linkurious-version/examples/lasso.html
+
+(defn lasso
+  ([sigma-inst]
+   (lasso sigma-inst nil))
+  ([sigma-inst sigma-options]
+   (.lasso (plugins) sigma-inst (renderer sigma-inst) (clj->js sigma-options)))
+  ([sigma-inst sigma-options bindings-map]
+   (let [lasso-inst (lasso sigma-inst sigma-options)]
+     (doseq [[k fn] bindings-map]
+       (.bind lasso-inst (sigma-key k) fn))
+     lasso-inst)))
+
+(defn active?    [lasso-inst] (.-isActive   lasso-inst))
+(defn activate   [lasso-inst] (.activate   lasso-inst) lasso-inst)
+(defn deactivate [lasso-inst] (.deactivate lasso-inst) lasso-inst)
+
+#_(defn toggle-active [lasso-inst] (if (active? lasso-inst) (deactivate lasso-inst)
+                                                          (activate lasso-inst)))
+
+;; Select
+;; https://github.com/Linkurious/linkurious.js/tree/linkurious-version/plugins/sigma.plugins.select
+
+(defn select
+  ([sigma-inst active-state]
+   (.select (plugins) sigma-inst active-state (renderer sigma-inst)))
+  ([sigma-inst active-state {:keys [keyboard lasso]}]
+   (let [select-inst (select sigma-inst active-state)]
+     (some->> keyboard (.bindKeyboard select-inst))
+     (some->> lasso    (.bindLasso    select-inst))
+     select-inst)))
+
 ;; Drag nodes
 ;; https://github.com/Linkurious/linkurious.js/tree/develop/plugins/sigma.plugins.dragNodes
 
@@ -45,17 +102,15 @@
   Arity 3: returns the sigma instance."
   ([sigma-inst active-state]
    (.dragNodes (plugins) sigma-inst (renderer sigma-inst) active-state))
-  ([sigma-inst active-state event-handler-map]
+  ([sigma-inst active-state bindings-map]
    (let [drag-listener (drag-nodes sigma-inst active-state)]
-     (doseq [[key handler-fn] event-handler-map]
-       (.bind drag-listener key handler-fn)))
+     (doseq [[k fn] bindings-map]
+       (.bind drag-listener (sigma-key k) fn)))
    sigma-inst))
 
 (defn kill-drag-nodes
   [sigma-inst]
   (.killDragNodes sigma-inst) sigma-inst)
-
-;; Select
 
 ;; Sigma public API
 ;; See https://github.com/Linkurious/linkurious.js/wiki/Public-API
@@ -80,34 +135,25 @@
     (some-> sigma-inst (.addRenderer renderer-options-js)))
   sigma-inst)
 
-;; Sigma constructors
-
-(defn bind-event-listeners
-  "Bind event handlers to the sigma instance, dispatch events through the intent handlers.
-  See: https://github.com/jacomyal/sigma.js/wiki/Events-API"
-  [cmd-chans sigma-inst]
-  (do
-    ;; TODO implement event binding system
-    )
-  sigma-inst)
+;; Sigma constructor
 
 (defn make-sigma-instance
-  "Sigma instance contructor function."
-
+  "Sigma instance contructor.
+  See: https://github.com/jacomyal/sigma.js/wiki/Events-API "
   ([dom-container-id sigma-settings]
    (try
      (some-> (new js/sigma)
-             (add-renderer {:type "canvas" :container dom-container-id})
+             (add-renderer   {:type "canvas" ;; some plugins only work with canvas renderer (as opposed to WebGL)
+                              :container dom-container-id})
              (apply-settings sigma-settings)
              (refresh))
-
      (catch :default e
        (prn (str e " " dom-container-id)))))
-
-  ([dom-container-id sigma-settings cmd-chans]
-   (some->> (make-sigma-instance dom-container-id sigma-settings)
-            (bind-event-listeners cmd-chans))))
-
+  ([dom-container-id sigma-settings bindings-map]
+   (when-let [sigma-inst (make-sigma-instance dom-container-id sigma-settings)]
+     (doseq [[k fn] bindings-map]
+       (.bind sigma-inst (sigma-key k) fn))
+     sigma-inst)))
 
 ;; Sigma Graph API
 ;; See https://github.com/Linkurious/linkurious.js/wiki/Graph-API
@@ -161,17 +207,14 @@
        (some-> sigma-inst (.startForceAtlas2 cfg-js)) sigma-inst)
      (start-force-atlas-2 sigma-inst))))
 
-(defn stop-force-atlas-2
-  [sigma-inst]
-  (some-> sigma-inst .stopForceAtlas2) sigma-inst)
+(defn force-atlas-2-running? [sigma-inst] (.isForceAtlas2Running sigma-inst))
+(defn stop-force-atlas-2     [sigma-inst] (some-> sigma-inst .stopForceAtlas2) sigma-inst)
+(defn kill-force-atlas-2     [sigma-inst] (some-> sigma-inst .killForceAtlas2) sigma-inst)
 
-(defn kill-force-atlas-2
+#_(defn toggle-force-atlas-2
   [sigma-inst]
-  (some-> sigma-inst .killForceAtlas2) sigma-inst)
-
-(defn force-atlas-2-running?
-  [sigma-inst]
-  (.isForceAtlas2Running sigma-inst))
+  (if (force-atlas-2-running? sigma-inst) (kill-force-atlas-2 sigma-inst)
+                                          (start-force-atlas-2 sigma-inst)))
 
 ;; Data generators
 
