@@ -34,6 +34,10 @@
                                                         :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
                                                         :provides ["foreign.sigma"]}
 
+                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.helpers.graph.min.js"
+                                                        :provides ["foreign.graph"]
+                                                        :requires ["foreign.sigma"]}
+
                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
                                                         :provides ["foreign.fullscreen"]
                                                         :requires ["foreign.sigma"]}
@@ -52,7 +56,7 @@
 
                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.select.min.js"
                                                         :provides ["foreign.select"]
-                                                        :requires ["foreign.activestate"]}
+                                                        :requires ["foreign.activestate" "foreign.graph"]}
 
                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.lasso.min.js"
                                                         :provides ["foreign.lasso"]
@@ -60,6 +64,10 @@
 
                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceAtlas2.min.js"
                                                         :provides ["foreign.forceatlas2"]
+                                                        :requires ["foreign.sigma"]}
+
+                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.renderers.halo.min.js"
+                                                        :provides ["foreign.halo"]
                                                         :requires ["foreign.sigma"]}
 
                                                        ]}}
@@ -71,6 +79,10 @@
                                          :foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.js"
                                                          :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
                                                          :provides ["foreign.sigma"]}
+
+                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.helpers.graph.min.js"
+                                                         :provides ["foreign.graph"]
+                                                         :requires ["foreign.sigma"]}
 
                                                         {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
                                                          :provides ["foreign.fullscreen"]
@@ -90,7 +102,7 @@
 
                                                         {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.select.min.js"
                                                          :provides ["foreign.select"]
-                                                         :requires ["foreign.activestate"]}
+                                                         :requires ["foreign.activestate" "foreign.graph"]}
 
                                                         {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.lasso.min.js"
                                                          :provides ["foreign.lasso"]
@@ -98,6 +110,10 @@
 
                                                         {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceAtlas2.min.js"
                                                          :provides ["foreign.forceatlas2"]
+                                                         :requires ["foreign.sigma"]}
+
+                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.renderers.halo.min.js"
+                                                         :provides ["foreign.halo"]
                                                          :requires ["foreign.sigma"]}
 
                                                         ]}}
