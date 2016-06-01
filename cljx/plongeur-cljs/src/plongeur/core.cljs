@@ -19,20 +19,11 @@
   [{dom-event-chan    :DOM
     saved-state-chan  :STORAGE
     web-response-chan :WEB}]
+
   (let [intent-chans              (i/intents)
 
-        ;_ (go-loop []
-        ;           (<! (timeout 10000))
-        ;           (>! web-response-chan :ping)
-        ;           (recur))
-
-        web-response-mult         (mult web-response-chan)
-
-        web-response-intent-chan  (->> (chan 10)
-                                       (tap web-response-mult))
-
-        _ (pipe web-response-intent-chan (:handle-web-response intent-chans))
-        _ (pipe dom-event-chan           (:handle-dom-event intent-chans))
+        _ (pipe web-response-chan (:handle-web-response intent-chans))
+        _ (pipe dom-event-chan    (:handle-dom-event    intent-chans))
 
         states-chan            (m/model saved-state-chan intent-chans)
         states-mult            (mult states-chan)
@@ -47,14 +38,15 @@
         post-request-chan      (chan 10)
 
         cmd-chans              (assoc intent-chans
-                                 :post-request      post-request-chan
+                                 ; temporary hack to simulate web responses.
                                  :web-response-chan web-response-chan
-                                 :web-response-mult web-response-mult)
+                                 :dom-event-chan    dom-event-chan)
 
         views-chan             (v/view view-states-chan cmd-chans)]
-    {:DOM     views-chan
-     :STORAGE pickle-states-chan
-     :WEB     post-request-chan}))
+
+    {:DOM      views-chan
+     :STORAGE  pickle-states-chan
+     :WEB      post-request-chan}))
 
 (defn launch-client []
   (cycle/run plongeur-client-main

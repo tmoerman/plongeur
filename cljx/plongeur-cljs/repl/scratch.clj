@@ -1,50 +1,27 @@
 (ns scratch)
 
+{:seq 4,
+ :plots {2 {:type :tda,
+            :props {:force-layout :force-atlas2,
+                    :force-layout-active true},
+            :data nil},
 
-(def state-example
-  {:config {:sigma    {:settings {:verbose   true
-                                  :immutable true}},
-            :defaults {:t-sne {:perplexity 1},
-                       :viz   :tda,
-                       :tda   {:force-layout :force-atlas2}},
-            :ui       {:theme :dark}},
+         3 {:type :tda,
+            :props {:force-layout :force-atlas2,
+                    :force-layout-active true},
+            :data nil}},
 
-   :seq    20,
+ :config {:sigma {:settings {:verbose true,
+                             :immutable false,
+                             :defaultLabelColor "#FFF",
+                             :labelColor "default"}},
 
-   :plots  {16 {:tda  {:force-layout :force-atlas2},
-                :data nil},
+          :defaults {:plot :tda,
+                     :tda {:force-layout :force-atlas2, :force-layout-active true},
+                     :t-sne {:perplexity 1}},
 
-            17 {:tda  {:force-layout :force-atlas2},
-                :data nil},
+          :ui {:theme :dark}},
 
-            18 {:tda  {:force-layout :force-atlas2},
-                :data nil},
-
-            19 {:tda  {:force-layout :force-atlas2},
-                :data nil}}})
+ :transient {:launched #inst "2016-05-31T15:10:56.676-00:00"}}
 
 
-(not (= {:seq 2,
-
-         :plots {1 {nil {:plot :tda,
-                         :tda {:force-layout :force-atlas2},
-                         :t-sne {:perplexity 1}},
-                    :data nil}},
-
-         :config {:sigma {:settings {:verbose true,
-                                     :immutable true}},
-                  :defaults {:plot :tda,
-                             :tda {:force-layout :force-atlas2},
-                             :t-sne {:perplexity 1}},
-                  :ui {:theme :dark}}}
-
-        {:seq 2,
-
-         :plots {1 {:force-layout :force-atlas2}},
-
-         :config {:sigma {:settings {:verbose true,
-                                     :immutable true}},
-                  :defaults {:plot :tda,
-                             :tda {:force-layout :force-atlas2},
-                             :t-sne {:perplexity 1}},
-                  :ui {:theme :dark}}}))

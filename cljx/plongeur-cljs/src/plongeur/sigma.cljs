@@ -75,12 +75,37 @@
        (.bind lasso-inst (sigma-key k) fn))
      lasso-inst)))
 
-(defn active?    [lasso-inst] (.-isActive   lasso-inst))
-(defn activate   [lasso-inst] (.activate   lasso-inst) lasso-inst)
-(defn deactivate [lasso-inst] (.deactivate lasso-inst) lasso-inst)
+#_(defn lasso-active?    [lasso-inst] (.-isActive lasso-inst))
+(defn activate-lasso   [lasso-inst] (.activate lasso-inst) lasso-inst)
+(defn deactivate-lasso [lasso-inst] (.deactivate lasso-inst) lasso-inst)
 
-#_(defn toggle-active [lasso-inst] (if (active? lasso-inst) (deactivate lasso-inst)
-                                                          (activate lasso-inst)))
+(defn toggle-lasso
+  [lasso-inst active?]
+  (if active? (activate-lasso lasso-inst)
+              (deactivate-lasso lasso-inst))
+  lasso-inst)
+
+;; Sigma Force Atlas 2
+;; https://github.com/Linkurious/linkurious.js/tree/develop/plugins/sigma.layouts.forceAtlas2
+
+(defn start-force-atlas-2
+  ([sigma-inst]
+   (some-> sigma-inst .startForceAtlas2) sigma-inst)
+  ([sigma-inst force-atlas-config]
+   (if-let [cfg-js (some-> force-atlas-config clj->js)]
+     (do
+       (some-> sigma-inst (.startForceAtlas2 cfg-js)) sigma-inst)
+     (start-force-atlas-2 sigma-inst))))
+
+#_(defn force-atlas-2-running? [sigma-inst] (.isForceAtlas2Running sigma-inst))
+#_(defn stop-force-atlas-2     [sigma-inst] (some-> sigma-inst .stopForceAtlas2) sigma-inst)
+(defn kill-force-atlas-2     [sigma-inst] (some-> sigma-inst .killForceAtlas2) sigma-inst)
+
+(defn toggle-force-atlas-2
+  [sigma-inst running?]
+  (if running? (start-force-atlas-2 sigma-inst)
+               (kill-force-atlas-2 sigma-inst))
+  sigma-inst)
 
 ;; Select
 ;; https://github.com/Linkurious/linkurious.js/tree/linkurious-version/plugins/sigma.plugins.select
@@ -194,27 +219,6 @@
 (defn clear
   [sigma-inst]
   (some-> sigma-inst graph .clear) sigma-inst)
-
-;; Sigma Force Atlas 2
-;; https://github.com/Linkurious/linkurious.js/tree/develop/plugins/sigma.layouts.forceAtlas2
-
-(defn start-force-atlas-2
-  ([sigma-inst]
-   (some-> sigma-inst .startForceAtlas2) sigma-inst)
-  ([sigma-inst force-atlas-config]
-   (if-let [cfg-js (some-> force-atlas-config clj->js)]
-     (do
-       (some-> sigma-inst (.startForceAtlas2 cfg-js)) sigma-inst)
-     (start-force-atlas-2 sigma-inst))))
-
-(defn force-atlas-2-running? [sigma-inst] (.isForceAtlas2Running sigma-inst))
-(defn stop-force-atlas-2     [sigma-inst] (some-> sigma-inst .stopForceAtlas2) sigma-inst)
-(defn kill-force-atlas-2     [sigma-inst] (some-> sigma-inst .killForceAtlas2) sigma-inst)
-
-#_(defn toggle-force-atlas-2
-  [sigma-inst]
-  (if (force-atlas-2-running? sigma-inst) (kill-force-atlas-2 sigma-inst)
-                                          (start-force-atlas-2 sigma-inst)))
 
 ;; Data generators
 
