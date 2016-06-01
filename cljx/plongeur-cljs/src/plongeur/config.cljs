@@ -9,7 +9,8 @@
                       :labelColor        "default"}
 
            :props    {:force-layout        :force-atlas2
-                      :force-layout-active true}}})
+                      :force-layout-active true
+                      :lasso-tool-active   false}}})
 
 
 (defn validate-config

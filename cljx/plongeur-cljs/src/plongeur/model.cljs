@@ -23,6 +23,8 @@
 (defn sigma-settings       [plot-state] (select-one [:settings] plot-state))
 (defn sigma-data           [plot-state] (select-one [:data] plot-state))
 
+(defn lasso-tool-active?   [plot-state] (select-one [:props :lasso-tool-active] plot-state))
+
 
 ;; Intent handler functions have signature [param state], where param is a data structure that captures
 ;; all necessary data for handling the intent, and state is the entire application state.
@@ -76,13 +78,36 @@
 
 (defn fill-plots [_ state] state)
 
-(defn toggle-force
-  [id state]
-  (transform [:plots (keypath id) :props :force-layout-active] not state))
+(defn toggle-prop
+  [id state prop-key]
+  (->> state
+       (transform [:plots (keypath id) :props prop-key]
+                  not)))
 
-(defn set-force
-  [[id active?] state]
-  (transform [:plots (keypath id) :props :force-layout-active] (fn [_] active?) state))
+(defn set-prop
+  [id state prop-key prop-val]
+  (->> state
+       (transform [:plots (keypath id) :props prop-key]
+                  (constantly prop-val))))
+
+(defn set-force [[id active?] state] (set-prop id state :force-layout-active active?))
+
+(defn toggle-force [id state] (toggle-prop id state :force-layout-active))
+
+(defn set-lasso [[id active?] state] (set-prop id state :lasso-tool-active active?))
+
+(defn toggle-lasso [id state]
+  (prn "toggling lasso")
+  (->> state
+       (transform [:plots (keypath id) :props]
+                  (fn [plot-props]
+                    (prn (str "lasso? "(lasso-tool-active? plot-props)))
+                    (if (lasso-tool-active? plot-props)
+                      (-> plot-props ; deactivating lasso.
+                          (update :lasso-tool-active not))
+                      (-> plot-props ; activating lasso stops the force layout.
+                          (update :lasso-tool-active not)
+                          (update :force-layout-active (constantly false))))))))
 
 (defn prn-state [_ state] (prn state) state)
 
@@ -94,8 +119,11 @@
    :add-plot            add-plot
    :drop-plot           drop-plot
    :fill-plots          fill-plots
+
    :toggle-force        toggle-force
    :set-force           set-force
+   :toggle-lasso        toggle-lasso
+   :set-lasso           set-lasso
 
    :debug               prn-state})
 
