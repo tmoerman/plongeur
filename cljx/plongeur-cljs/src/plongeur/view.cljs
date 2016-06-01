@@ -29,15 +29,19 @@
 (let [sigma-state (atom {})]
   (defcomponent Sigma
     "Component on which the Sigma canvas is mounted."
-    :on-mount (fn [node [plot-state id] {:keys [set-force
+
+    :keyfn (fn [[plot-state id idx]] id)
+
+    :on-mount (fn [node [plot-state id idx] {:keys [drop-plot
+                                                set-force
                                                 toggle-force
                                                 toggle-lasso
                                                 merge-plot-data]}]
                 (prn "on-mount")
 
                 (let [sigma-instance   (-> (s/make-sigma-instance (graph-id id)
-                                                                  (m/sigma-settings plot-state))
-                                           (s/read (m/sigma-data plot-state))
+                                                                  (m/plot-settings plot-state))
+                                           (s/read (m/plot-data plot-state))
                                            (s/toggle-force-atlas-2 (m/force-layout-active? plot-state))
                                            (s/refresh))
 
@@ -59,12 +63,16 @@
                   (go-loop []
                            (let [interval-ms (-> plot-state m/sync-interval-ms (or 30000))
                                  timeout-ch  (timeout interval-ms)
-                                 [_ ch]      (alts! [timeout-ch ctrl-ch])]
+                                 [v ch]      (alts! [timeout-ch ctrl-ch])]
                              (condp = ch
-                               timeout-ch (let [plot-data (s/data sigma-instance)]
-                                            (>! merge-plot-data [id plot-data])
+                               timeout-ch (do
+                                            (prn (str "merging plot " id))
+                                            (>! merge-plot-data [id (s/data sigma-instance)])
                                             (recur))
-                               _ )))
+                               ctrl-ch    (when v
+                                            (prn (str "merging plot " id))
+                                            (>! merge-plot-data [id (s/data sigma-instance)])
+                                            (recur)))))
 
                   (swap! sigma-state assoc id
                          {:sigma     sigma-instance
@@ -72,62 +80,59 @@
                           :lasso     lasso
                           :ctrl      ctrl-ch})))
 
-    :on-unmount (fn [node [plot-state id] cmd-chans]
+    :on-unmount (fn [node [plot-state id idx] cmd-chans]
 
                   (prn "on-unmount")
 
                   (swap! sigma-state
                          (fn [m]
-                           (some->> id m :sigma s/kill)
-                           (some->> id m :ctrl  close!)
+                           (some-> id m :sigma s/kill)
+                           (some-> id m :ctrl  close!)
                            (dissoc m id))))
 
-    :on-update (fn [node [plot-state id] old cmd-chans]
-                 (let [{{:keys [sigma keyboard lasso]} id} @sigma-state]
+    :on-update (fn [node [plot-state id idx] old cmd-chans]
+                 (let [{{:keys [sigma lasso]} id} @sigma-state]
                    (some-> sigma
                            (s/toggle-force-atlas-2 (m/force-layout-active? plot-state))
                            (s/refresh))
                    (some-> lasso
                            (s/toggle-lasso (m/lasso-tool-active? plot-state)))))
 
-    [[plot-state id] cmd-chans]
-    (html [:div {:id         (graph-id id)
-                 :class-name "sigma-dark"}])))
+    [[plot-state id idx] {:keys [drop-plot toggle-force toggle-lasso]}]
 
-(defcomponent
-  Card
-  "Component surrounding the visualization containers."
-  :keyfn (fn [[_ id _]] id)
+    (html
+      [:div {:class-name "mdl-cell mdl-cell--6-col-desktop mdl-cell--6-col-tablet mdl-cell--6-col-phone"}
+       [:div {:id         (str "card-" id)
+              :class-name "mdl-card mdl-shadow--2dp"}
 
-  [[plot-state id idx] {:keys [drop-plot toggle-force toggle-lasso] :as cmd-chans}]
+        [:div {:id         (graph-id id)
+               :class-name "sigma-dark"}]
 
-  (let [force? (m/force-layout-active? plot-state)
-        lasso? (m/lasso-tool-active?   plot-state)]
+        [:div {:class-name "mdl-card__actions"}
 
-    (html [:div {:class-name "mdl-cell mdl-cell--6-col-desktop mdl-cell--6-col-tablet mdl-cell--6-col-phone"}
-           [:div {:id         (str "card-" id)
-                  :class-name "mdl-card mdl-shadow--2dp"}
+         (let [force? (m/force-layout-active? plot-state)]
+           [:button {:on-click   #(go (>! toggle-force id))
+                     :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"
+                     :title      (if force? "Pause force layout" "Resume force layout")}
+            [:i {:class-name "material-icons mdl-badge"} (if force? "pause" "play_arrow")]])
 
-            (Sigma [plot-state id] cmd-chans)
+         (let [lasso? (m/lasso-tool-active? plot-state)]
+           [:button {:on-click   #(go (>! toggle-lasso id))
+                     :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"
+                     :title      (if lasso? "Pan tool" "Lasso tool")}
+            [:i {:class-name "material-icons mdl-badge"} (if lasso? "pan_tool" "gesture")]])
 
-            [:div {:class-name "mdl-card__actions"}
+         [:button {:on-click   #(let [{{ctrl-ch :ctrl} id} @sigma-state]
+                                  (go (>! ctrl-ch :!)))
+                   :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"
+                   :title      "Persist"}
+          [:i {:class-name "material-icons mdl-badge"} "save"]]
 
-             [:button {:on-click   #(go (>! toggle-force id))
-                       :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"
-                       :title      (if force? "Pause force layout" "Resume force layout")}
-              [:i {:class-name "material-icons mdl-badge"} (if force? "pause" "play_arrow")]]
-
-             [:button {:on-click   #(go (>! toggle-lasso id))
-                       :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"
-                       :title      (if lasso? "Pan tool" "Lasso tool")}
-              [:i {:class-name "material-icons mdl-badge"} (if lasso? "pan_tool" "gesture" )]]
-
-             [:div {:on-click   #(go (>! drop-plot id))
-                    :id         (str "drop-plot-" id)
-                    :title      (str "Remove plot " id)
-                    :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab"}
-              [:i {:class-name "material-icons"} "delete"]]]]])))
-
+         [:div {:on-click   #(go (>! drop-plot id))
+               :id         (str "drop-plot-" id)
+               :title      (str "Remove plot " id)
+               :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab"}
+         [:i {:class-name "material-icons"} "delete"]]]]])))
 
 (defcomponent Grid
   [state cmd-chans]
@@ -136,7 +141,8 @@
           [:div {:class-name "mdl-grid mdl-cell mdl-cell--12-col-desktop mdl-cell--12-col-tablet mdl-cell--4-col-phone mdl-cell--top"}
            (for [[idx [id plot-state]] (->> (m/plots state)
                                             (map-indexed vector))]
-             (Card [plot-state id idx] cmd-chans))]]]))
+             (condp = (m/plot-type plot-state)
+               :sigma (Sigma [plot-state id idx] cmd-chans)))]]]))
 
 (defcomponent Menu
               [state {:keys [debug]}]
@@ -175,10 +181,6 @@
                              :title      "Add plot"
                              :hidden     (>= (m/plot-count state) 4)
                              :class-name "material-icons mdl-badge mdl-button--icon"} "add"]
-
-                      [:div {:on-click #(go (>! fill-plots :click))
-                             :title      "Generate plots"
-                             :class-name "material-icons mdl-badge mdl-button--icon"} "new_releases"]
 
                       [:button {:id "more-vert-btn"
                                 :title      "More options"
