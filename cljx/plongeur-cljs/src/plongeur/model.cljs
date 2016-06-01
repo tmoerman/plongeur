@@ -97,7 +97,6 @@
 (defn set-lasso [[id active?] state] (set-prop id state :lasso-tool-active active?))
 
 (defn toggle-lasso [id state]
-  (prn "toggling lasso")
   (->> state
        (transform [:plots (keypath id) :props]
                   (fn [plot-props]

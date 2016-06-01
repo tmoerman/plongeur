@@ -94,8 +94,7 @@
 
              [:button {:on-click   #(go (>! toggle-lasso id))
                        :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"
-                       :title      (if lasso? "Pan tool" "Lasso tool")
-                       }
+                       :title      (if lasso? "Pan tool" "Lasso tool")}
               [:i {:class-name "material-icons mdl-badge"} (if lasso? "pan_tool" "gesture" )]]
 
              [:div {:on-click   #(go (>! drop-plot id))
