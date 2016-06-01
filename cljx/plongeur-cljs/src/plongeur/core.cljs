@@ -19,6 +19,7 @@
   [{dom-event-chan    :DOM
     saved-state-chan  :STORAGE
     web-response-chan :WEB}]
+
   (let [intent-chans              (i/intents)
 
         _ (pipe web-response-chan (:handle-web-response intent-chans))
@@ -42,9 +43,10 @@
                                  :dom-event-chan    dom-event-chan)
 
         views-chan             (v/view view-states-chan cmd-chans)]
-    {:DOM     views-chan
-     :STORAGE pickle-states-chan
-     :WEB     post-request-chan}))
+
+    {:DOM      views-chan
+     :STORAGE  pickle-states-chan
+     :WEB      post-request-chan}))
 
 (defn launch-client []
   (cycle/run plongeur-client-main

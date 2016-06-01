@@ -11,6 +11,10 @@
             [kierros.async :refer [debounce]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
+(defn ascii [c] (-> c {\f 70
+                       \l 76
+                       \s 83} str))
+
 ;; MDL machinery
 
 (defn upgrade-mdl-components
@@ -25,7 +29,7 @@
 (let [sigma-state (atom {})]
   (defcomponent Sigma
     "Component on which the Sigma canvas is mounted."
-    :on-mount (fn [node [plot-state id] {:keys [set-force]}]
+    :on-mount (fn [node [plot-state id] {:keys [set-force toggle-force toggle-lasso]}]
                 (let [sigma-instance   (-> (s/make-sigma-instance (graph-id id)
                                                                   (m/sigma-settings plot-state))
                                            (s/read (m/sigma-data plot-state))
@@ -34,7 +38,8 @@
 
                       active-state     (s/active-state sigma-instance)
 
-                      keyboard         (s/keyboard sigma-instance)
+                      keyboard         (s/keyboard sigma-instance nil {(ascii \f) #(go (>! toggle-force id))
+                                                                       (ascii \l) #(go (>! toggle-lasso id))})
 
                       lasso            (s/lasso sigma-instance)
 
@@ -43,7 +48,7 @@
 
                       _                (s/drag-nodes sigma-instance active-state
                                                      {:startdrag #(go (>! set-force [id false]))})]
-                  
+
                   (swap! sigma-state assoc id
                          {:sigma        sigma-instance
                           :keyboard     keyboard
@@ -57,8 +62,8 @@
 
     :on-update (fn [node [plot-state id] old cmd-chans]
                  (let [{{:keys [sigma keyboard lasso]} id} @sigma-state]
-                   (some-> sigma
-                           (s/toggle-force-atlas-2 (m/force-layout-active? plot-state)))))
+                   (some-> sigma (s/toggle-force-atlas-2 (m/force-layout-active? plot-state)))
+                   (some-> lasso (s/toggle-lasso         (m/lasso-tool-active? plot-state)))))
 
     [[plot-state id] cmd-chans]
     (html [:div {:id         (graph-id id)
@@ -69,14 +74,14 @@
   "Component surrounding the visualization containers."
   :keyfn (fn [[_ id _]] id)
 
-  [[plot-state id idx] {:keys [drop-plot toggle-force] :as cmd-chans}]
+  [[plot-state id idx] {:keys [drop-plot toggle-force toggle-lasso] :as cmd-chans}]
 
-  (let [force? (m/force-layout-active? plot-state)]
-    #_(prn ">>>>" plot-state)
+  (let [force? (m/force-layout-active? plot-state)
+        lasso? (m/lasso-tool-active?   plot-state)]
+
     (html [:div {:class-name "mdl-cell mdl-cell--6-col-desktop mdl-cell--6-col-tablet mdl-cell--6-col-phone"}
            [:div {:id         (str "card-" id)
-                  :class-name "mdl-card mdl-shadow--2dp"
-                  :tab-index  (inc idx)}
+                  :class-name "mdl-card mdl-shadow--2dp"}
 
             (Sigma [plot-state id] cmd-chans)
 
@@ -86,6 +91,12 @@
                        :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"
                        :title      (if force? "Pause force layout" "Resume force layout")}
               [:i {:class-name "material-icons mdl-badge"} (if force? "pause" "play_arrow")]]
+
+             [:button {:on-click   #(go (>! toggle-lasso id))
+                       :class-name "mdl-button mdl-js-button mdl-js-ripple-effect"
+                       :title      (if lasso? "Pan tool" "Lasso tool")
+                       }
+              [:i {:class-name "material-icons mdl-badge"} (if lasso? "pan_tool" "gesture" )]]
 
              [:div {:on-click   #(go (>! drop-plot id))
                     :id         (str "drop-plot-" id)
