@@ -7,6 +7,8 @@
             [foreign.keyboard]
             [foreign.lasso]
             [foreign.select]
+            [foreign.halo]
+            [foreign.graph]
             [clojure.set :refer [difference]]
             [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]]
             [sablono.util :refer [camel-case]]
@@ -55,7 +57,9 @@
   ([sigma-inst]
    (keyboard sigma-inst nil))
   ([sigma-inst keyboard-options]
-   (.keyboard (plugins) sigma-inst (renderer sigma-inst) (clj->js keyboard-options)))
+   (if keyboard-options
+     (.keyboard (plugins) sigma-inst (renderer sigma-inst) (clj->js keyboard-options))
+     (.keyboard (plugins) sigma-inst (renderer sigma-inst))))
   ([sigma-inst keyboard-options bindings-map]
    (let [keyboard-inst (keyboard sigma-inst keyboard-options)]
      (doseq [[k fn] bindings-map]
@@ -138,6 +142,15 @@
   [sigma-inst]
   (.killDragNodes sigma-inst) sigma-inst)
 
+;; Halo
+;; https://github.com/Linkurious/linkurious.js/tree/develop/plugins/sigma.renderers.halo
+
+(defn halo-active-nodes
+  [sigma-inst active-state]
+  (let [renderer     (->> sigma-inst renderer)
+        active-nodes (->> active-state .nodes (hash-map :nodes) clj->js)]
+    (.bind renderer "render" #(.halo renderer active-nodes))))
+
 ;; Sigma public API
 ;; See https://github.com/Linkurious/linkurious.js/wiki/Public-API
 
@@ -149,29 +162,18 @@
   [sigma-inst]
   (some-> sigma-inst .kill) nil)
 
-(defn apply-settings
-  [sigma-inst sigma-settings]
-  (when-let [sigma-settings-js (some-> sigma-settings clj->js)]
-    (some-> sigma-inst (.settings sigma-settings-js)))
-  sigma-inst)
-
-(defn add-renderer
-  [sigma-inst renderer-options]
-  (when-let [renderer-options-js (some-> renderer-options clj->js)]
-    (some-> sigma-inst (.addRenderer renderer-options-js)))
-  sigma-inst)
-
 ;; Sigma constructor
 
 (defn make-sigma-instance
   "Sigma instance contructor.
   See: https://github.com/jacomyal/sigma.js/wiki/Events-API "
   ([dom-container-id sigma-settings]
+   (prn (str "settings " sigma-settings))
    (try
-     (some-> (new js/sigma)
-             (add-renderer   {:type "canvas" ;; some plugins only work with canvas renderer (as opposed to WebGL)
-                              :container dom-container-id})
-             (apply-settings sigma-settings)
+     (some-> (new js/sigma (clj->js {:renderer {:type      "canvas"
+                                                :container dom-container-id}
+                                     :settings  sigma-settings
+                                     }))
              (refresh))
      (catch :default e
        (prn (str e " " dom-container-id)))))
@@ -238,16 +240,18 @@
 
 (defn make-node
   [id]
-  {:id id
-   :label id
-   :x (rand-int 100)
-   :y (rand-int 100)
-   :size (-> (rand-int 10) (* 0.1))
-   :color "#FF9"})
+  {:id    id
+   :label (str "node " id)
+   :x     (rand-int 100)
+   :y     (rand-int 100)
+   :size  (-> (rand-int 10) (* 0.1))})
 
 (defn make-edge
   [id source target]
-  {:id id :label id :source source :target target})
+  {:id     id
+   :label  (str id)
+   :source source
+   :target target})
 
 (defn make-loop
   [size]

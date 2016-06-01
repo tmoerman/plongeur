@@ -19,7 +19,8 @@
   a channel with the previously stored or specified initial state."
   [storage-key init-state]
   (fn [state-chan]
-    (let [return-state (-> (or (load storage-key) init-state)
+    (let [return-state (-> (load storage-key)
+                           (or init-state)
                            (assoc :transient {:launched (js/Date.)}))]
       (go-loop []
                (if-let [state (<! state-chan)]

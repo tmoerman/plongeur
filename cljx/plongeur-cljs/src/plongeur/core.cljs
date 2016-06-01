@@ -45,6 +45,7 @@
         views-chan             (v/view view-states-chan cmd-chans)]
 
     {:DOM      views-chan
+     ;:STORAGE  (chan (a/sliding-buffer 10))
      :STORAGE  pickle-states-chan
      :WEB      post-request-chan}))
 

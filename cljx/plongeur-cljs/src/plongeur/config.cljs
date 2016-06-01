@@ -3,10 +3,22 @@
 (def default-config
   "Default configuration map. Configuration is a part of the application state."
 
-  {:sigma {:settings {:verbose           true
-                      :immutable         false
-                      :defaultLabelColor "#FFF"
-                      :labelColor        "default"}
+  {:sigma {:settings {:verbose                            true
+                      :immutable                          false
+                      :defaultLabelColor                  "#999"
+                      :defaultNodeColor                   "#FF9"
+
+                      :nodeHoverBorderSize                "2"
+                      :defaultNodeHoverBorderColor        "#fff"
+                      :nodeActiveBorderSize               "2"
+                      :nodeActiveOuterBorderSize          "3"
+                      :defaultNodeActiveBorderColor       "#fff"
+                      :defaultNodeActiveOuterBorderColor  "#AAA",
+                      :edgeHoverExtremities               true
+                      :nodeHaloColor                      "#99F"
+                      :nodeHaloSize                       "5"
+
+                      }
 
            :props    {:force-layout        :force-atlas2
                       :force-layout-active true
@@ -18,3 +30,12 @@
   [state]
   ; TODO implement tasteful validation logic for the config ~ core.spec
   )
+
+#_{:nodeHoverBorderSize                2
+:defaultNodeHoverBorderColor        "#fff"
+:nodeActiveBorderSize               2
+:nodeActiveOuterBorderSize          3
+:defaultNodeActiveBorderColor       "#fff"
+:defaultNodeActiveOuterBorderColor  "rgb(236, 81, 72)",
+:enableEdgeHovering                 true
+:edgeHoverExtremities               true}
