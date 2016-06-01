@@ -21,8 +21,9 @@
 
 (defn force-layout-active? [plot-state] (select-one [:props :force-layout-active] plot-state))
 (defn sync-interval-ms     [plot-state] (select-one [:props :sync-interval-ms] plot-state))
-(defn sigma-settings       [plot-state] (select-one [:settings] plot-state))
-(defn sigma-data           [plot-state] (select-one [:data] plot-state))
+(defn plot-settings        [plot-state] (select-one [:settings] plot-state))
+(defn plot-data            [plot-state] (select-one [:data] plot-state))
+(defn plot-type            [plot-state] (select-one [:type] plot-state))
 
 (defn lasso-tool-active?   [plot-state] (select-one [:props :lasso-tool-active] plot-state))
 

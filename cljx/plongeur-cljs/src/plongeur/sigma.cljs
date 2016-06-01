@@ -9,13 +9,14 @@
             [foreign.select]
             [clojure.set :refer [difference]]
             [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]]
-            [sablono.util :as u])
+            [sablono.util :refer [camel-case]]
+            [clojure.string :refer [starts-with?]])
   (:require-macros [cljs.core.async.macros :refer [go-loop]]))
 
 (defn sigma-key
   [str-or-kw]
   (if (keyword? str-or-kw)
-    (-> str-or-kw u/camel-case name)
+    (-> str-or-kw camel-case name)
     (-> str-or-kw)))
 
 ;; Sigma properties
@@ -183,17 +184,25 @@
 ;; Sigma Graph API
 ;; See https://github.com/Linkurious/linkurious.js/wiki/Graph-API
 
+(defn clean
+  [entries]
+  (->> entries
+       (map #(->> %
+                  (remove (fn [[k _]] (or (starts-with? k "renderer")
+                                          (starts-with? k "read_cam"))))
+                  (into {})))))
+
 (defn nodes
   ([sigma-inst]
-   (some-> sigma-inst graph .nodes js->clj))
+   (some-> sigma-inst graph .nodes js->clj clean))
   ([sigma-inst node-id]
-   (some-> sigma-inst graph (.nodes node-id) js->clj)))
+   (some-> sigma-inst graph (.nodes node-id) js->clj clean)))
 
 (defn edges
   ([sigma-inst]
-   (some-> sigma-inst graph .edges js->clj))
+   (some-> sigma-inst graph .edges js->clj clean))
   ([sigma-inst node-id]
-   (some-> sigma-inst graph (.edges node-id) js->clj)))
+   (some-> sigma-inst graph (.edges node-id) js->clj clean)))
 
 (defn data
   [sigma-inst]
