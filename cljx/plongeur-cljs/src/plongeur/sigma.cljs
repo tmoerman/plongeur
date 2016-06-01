@@ -195,6 +195,11 @@
   ([sigma-inst node-id]
    (some-> sigma-inst graph (.edges node-id) js->clj)))
 
+(defn data
+  [sigma-inst]
+  {:nodes (nodes sigma-inst)
+   :edges (edges sigma-inst)})
+
 (defn add-node
   [sigma-inst node]
   (try

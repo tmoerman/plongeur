@@ -1,6 +1,6 @@
 (ns plongeur.view
   "See https://github.com/CreativeIT/material-dashboard-lite"
-  (:require [cljs.core.async :as a :refer [<! >! timeout tap chan pipe close!]]
+  (:require [cljs.core.async :as a :refer [<! >! timeout alts! tap chan pipe close!]]
             [quiescent.core :as q :include-macros true :refer-macros [defcomponent]]
             [sablono.core :refer-macros [html]]
             [foreign.sigma]
@@ -29,7 +29,12 @@
 (let [sigma-state (atom {})]
   (defcomponent Sigma
     "Component on which the Sigma canvas is mounted."
-    :on-mount (fn [node [plot-state id] {:keys [set-force toggle-force toggle-lasso]}]
+    :on-mount (fn [node [plot-state id] {:keys [set-force
+                                                toggle-force
+                                                toggle-lasso
+                                                merge-plot-data]}]
+                (prn "on-mount")
+
                 (let [sigma-instance   (-> (s/make-sigma-instance (graph-id id)
                                                                   (m/sigma-settings plot-state))
                                            (s/read (m/sigma-data plot-state))
@@ -47,23 +52,43 @@
                                                                               :lasso    lasso})
 
                       _                (s/drag-nodes sigma-instance active-state
-                                                     {:startdrag #(go (>! set-force [id false]))})]
+                                                     {:startdrag #(go (>! set-force [id false]))})
+
+                      ctrl-ch          (chan 10)]
+
+                  (go-loop []
+                           (let [interval-ms (-> plot-state m/sync-interval-ms (or 30000))
+                                 timeout-ch  (timeout interval-ms)
+                                 [_ ch]      (alts! [timeout-ch ctrl-ch])]
+                             (condp = ch
+                               timeout-ch (let [plot-data (s/data sigma-instance)]
+                                            (>! merge-plot-data [id plot-data])
+                                            (recur))
+                               _ )))
 
                   (swap! sigma-state assoc id
-                         {:sigma        sigma-instance
-                          :keyboard     keyboard
-                          :lasso        lasso})))
+                         {:sigma     sigma-instance
+                          :keyboard  keyboard
+                          :lasso     lasso
+                          :ctrl      ctrl-ch})))
 
     :on-unmount (fn [node [plot-state id] cmd-chans]
+
+                  (prn "on-unmount")
+
                   (swap! sigma-state
                          (fn [m]
                            (some->> id m :sigma s/kill)
+                           (some->> id m :ctrl  close!)
                            (dissoc m id))))
 
     :on-update (fn [node [plot-state id] old cmd-chans]
                  (let [{{:keys [sigma keyboard lasso]} id} @sigma-state]
-                   (some-> sigma (s/toggle-force-atlas-2 (m/force-layout-active? plot-state)))
-                   (some-> lasso (s/toggle-lasso         (m/lasso-tool-active? plot-state)))))
+                   (some-> sigma
+                           (s/toggle-force-atlas-2 (m/force-layout-active? plot-state))
+                           (s/refresh))
+                   (some-> lasso
+                           (s/toggle-lasso (m/lasso-tool-active? plot-state)))))
 
     [[plot-state id] cmd-chans]
     (html [:div {:id         (graph-id id)
