@@ -20,6 +20,7 @@
 (defn init-sigma-props    [state] (select-one [:config :sigma :props] state))
 
 (defn force-layout-active? [plot-state] (select-one [:props :force-layout-active] plot-state))
+(defn sync-interval-ms     [plot-state] (select-one [:props :sync-interval-ms] plot-state))
 (defn sigma-settings       [plot-state] (select-one [:settings] plot-state))
 (defn sigma-data           [plot-state] (select-one [:data] plot-state))
 
@@ -34,7 +35,6 @@
   [response state]
   #_(prn (str "received websocket response: " response))
 
-  ;;
   ;; TODO merge the received data into the state's plots map.
   ;; OR: perhaps allow the Sigma graphs to periodically (while running the force algorithm)
 
@@ -53,7 +53,7 @@
    :settings (init-sigma-settings state)
    :data     (s/make-shape)})
 
-(defn make-scatter-plot
+(defn make-scatter-plot ;; TODO implement this
   [state]
   {:type     :scatter
    :props    {}
@@ -61,7 +61,7 @@
    :data     {}})
 
 (defn add-plot
-  "Add an empty graph visualization."
+  "Add a new plot."
   [plot-type state]
   (let [plot-id    (seq-val state)
         plot-entry (condp = plot-type
@@ -69,10 +69,11 @@
                      :scatter (make-scatter-plot state))]
     (->> state
          (transform [:seq] inc)
-         (transform [:plots] #(assoc % plot-id plot-entry)))))
+         (transform [:plots]
+                    (fn [plots] (assoc plots plot-id plot-entry))))))
 
 (defn drop-plot
-  "Drop a graph to the app state."
+  "Remove a plot."
   [id state]
   (transform [:plots] #(dissoc % id) state))
 
@@ -92,11 +93,17 @@
 
 (defn set-force [[id active?] state] (set-prop id state :force-layout-active active?))
 
-(defn toggle-force [id state] (toggle-prop id state :force-layout-active))
+(defn toggle-force
+  "Toggles the force layout for the plot with specified id."
+  [id state]
+  (toggle-prop id state :force-layout-active))
 
 (defn set-lasso [[id active?] state] (set-prop id state :lasso-tool-active active?))
 
-(defn toggle-lasso [id state]
+(defn toggle-lasso
+  "Toggles the lasso tool for the plot with specified id. If by means of this function, the lasso will
+  be activated, the force layout is deactivated."
+  [id state]
   (->> state
        (transform [:plots (keypath id) :props]
                   (fn [plot-props]
@@ -108,7 +115,17 @@
                           (update :lasso-tool-active not)
                           (update :force-layout-active (constantly false))))))))
 
-(defn prn-state [_ state] (prn state) state)
+(defn merge-plot-data
+  "Handles updates to the plot, effected by user interaction (dragging nodes) or by a
+  force layout algorithm"
+  [[id data] state]
+  (->> state
+       (transform [:plots (keypath id) :data]
+                  (constantly data))))
+
+(defn prn-state
+  "Print the current application state to the console."
+  [_ state] (prn state) state)
 
 ;; Model machinery
 
@@ -124,16 +141,17 @@
    :toggle-lasso        toggle-lasso
    :set-lasso           set-lasso
 
+   :merge-plot-data     merge-plot-data
+
    :debug               prn-state})
 
 ;; The model is a channel of application states.
 
 (def default-state
   "Returns a new initial application state."
-  {:seq    2                 ;; database sequence-like
-   :plots  {1 {}}            ;; contains the visualization properties
-   :config c/default-config  ;; the default config
-   })
+  {:seq    1                  ;; database sequence-like
+   :plots  {}                 ;; contains the visualization properties
+   :config c/default-config}) ;; the default config
 
 (defn model
   [init-state-chan intent-chans]

@@ -10,7 +10,8 @@
 
            :props    {:force-layout        :force-atlas2
                       :force-layout-active true
-                      :lasso-tool-active   false}}})
+                      :lasso-tool-active   false
+                      :sync-interval-ms    30000 }}})
 
 
 (defn validate-config
