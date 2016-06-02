@@ -23,6 +23,52 @@
                                     "resources/private/js/compiled"
                                     "target"]
 
+  :compiler {:foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.js"
+                             :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
+                             :provides ["foreign.sigma"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.helpers.graph.min.js"
+                             :provides ["foreign.graph"]
+                             :requires ["foreign.sigma"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.fullScreen.min.js"
+                             :provides ["foreign.fullscreen"]
+                             :requires ["foreign.sigma"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.keyboard.min.js"
+                             :provides ["foreign.keyboard"]
+                             :requires ["foreign.sigma"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.activeState.min.js"
+                             :provides ["foreign.activestate"]
+                             :requires ["foreign.sigma"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.dragNodes.min.js"
+                             :provides ["foreign.dragnodes"]
+                             :requires ["foreign.activestate"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.select.min.js"
+                             :provides ["foreign.select"]
+                             :requires ["foreign.activestate" "foreign.graph"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.lasso.min.js"
+                             :provides ["foreign.lasso"]
+                             :requires ["foreign.activestate"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.layouts.forceAtlas2.min.js"
+                             :provides ["foreign.forceatlas2"]
+                             :requires ["foreign.sigma"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.renderers.halo.min.js"
+                             :provides ["foreign.halo"]
+                             :requires ["foreign.sigma"]}
+
+                            {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.renderers.linkurious.min.js"
+                             :provides ["foreign.linkurious"]
+                             :requires ["foreign.sigma"]}
+
+                            ]}
+
   :cljsbuild {:builds {:dev {:source-paths ["src" "test"]
                              :figwheel {:on-jsload "plongeur.system/on-js-reload"}
                              :compiler {:main plongeur.core
@@ -30,6 +76,7 @@
                                         :output-to "resources/public/js/compiled/plongeur.js"
                                         :output-dir "resources/public/js/compiled/out"
                                         :source-map-timestamp true
+
                                         :foreign-libs [{:file     "resources/public/js/node_modules/linkurious/dist/sigma.js"
                                                         :file-min "resources/public/js/node_modules/linkurious/dist/sigma.min.js"
                                                         :provides ["foreign.sigma"]}
@@ -46,7 +93,9 @@
                                                         :provides ["foreign.keyboard"]
                                                         :requires ["foreign.sigma"]}
 
-                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.activeState.min.js"
+                                                       {:file     "resources/public/js/patch/linkurious/plugins/sigma.plugins.activeState/sigma.plugins.activeState.js"
+                                                        ;:file     "resources/public/js/node_modules/linkurious/plugins/sigma.plugins.activeState/sigma.plugins.activeState.js"
+                                                        ;:file-min "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.activeState.min.js"
                                                         :provides ["foreign.activestate"]
                                                         :requires ["foreign.sigma"]}
 
@@ -70,7 +119,11 @@
                                                         :provides ["foreign.halo"]
                                                         :requires ["foreign.sigma"]}
 
-                                                       ]}}
+                                                       {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.renderers.linkurious.min.js"
+                                                        :provides ["foreign.linkurious"]
+                                                        :requires ["foreign.sigma"]}]
+
+                                        }}
 
                        :test {:source-paths ["src" "test"]
                               :compiler {:output-to "resources/private/js/compiled/unit-test.js"
@@ -92,7 +145,9 @@
                                                          :provides ["foreign.keyboard"]
                                                          :requires ["foreign.sigma"]}
 
-                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.activeState.min.js"
+                                                        {:file     "resources/public/js/patch/linkurious/plugins/sigma.plugins.activeState/sigma.plugins.activeState.js"
+                                                         ;:file     "resources/public/js/node_modules/linkurious/plugins/sigma.plugins.activeState/sigma.plugins.activeState.js"
+                                                         ;:file-min "resources/public/js/node_modules/linkurious/dist/plugins/sigma.plugins.activeState.min.js"
                                                          :provides ["foreign.activestate"]
                                                          :requires ["foreign.sigma"]}
 
@@ -116,7 +171,11 @@
                                                          :provides ["foreign.halo"]
                                                          :requires ["foreign.sigma"]}
 
-                                                        ]}}
+                                                        {:file     "resources/public/js/node_modules/linkurious/dist/plugins/sigma.renderers.linkurious.min.js"
+                                                         :provides ["foreign.linkurious"]
+                                                         :requires ["foreign.sigma"]}]
+
+                                         }}
 
                        ;:prod {:source-paths ["src"]
                        ;       :compiler {:output-to "main.js"
