@@ -4,19 +4,19 @@
   "Default configuration map. Configuration is a part of the application state."
 
   {:sigma {:settings {:verbose                            true
-                      :immutable                          false
+                      :immutable                          true
                       :defaultLabelColor                  "#999"
                       :defaultNodeColor                   "#FF9"
 
-                      :nodeHoverBorderSize                "2"
+                      :nodeHoverBorderSize                2
                       :defaultNodeHoverBorderColor        "#fff"
-                      :nodeActiveBorderSize               "2"
-                      :nodeActiveOuterBorderSize          "3"
-                      :defaultNodeActiveBorderColor       "#fff"
-                      :defaultNodeActiveOuterBorderColor  "#AAA",
+                      :nodeActiveBorderSize               2
+                      :nodeActiveOuterBorderSize          3
+                      :defaultNodeActiveBorderColor       "#000"
+                      :defaultNodeActiveOuterBorderColor  "#f33",
                       :edgeHoverExtremities               true
                       :nodeHaloColor                      "#99F"
-                      :nodeHaloSize                       "5"
+                      :nodeHaloSize                       5
 
                       }
 

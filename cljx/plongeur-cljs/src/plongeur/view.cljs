@@ -4,7 +4,7 @@
             [quiescent.core :as q :include-macros true :refer-macros [defcomponent]]
             [sablono.core :refer-macros [html]]
             [foreign.sigma]
-            [foreign.halo]
+            [foreign.linkurious]
             [plongeur.model :as m]
             [plongeur.sigma :as s]
             [kierros.async :refer [debounce]])
@@ -38,25 +38,28 @@
                 (prn "on-mount")
 
                 (let [sigma-instance   (-> (s/make-sigma-instance (plot-container-id id)
-                                                                  (m/plot-settings plot-state)
-                                                                  )
+                                                                  (m/plot-settings plot-state))
                                            (s/read (m/plot-data plot-state))
                                            (s/toggle-force-atlas-2 (m/force-layout-active? plot-state))
                                            (s/refresh))
 
                       active-state     (s/active-state sigma-instance)
 
-                      keyboard         (s/keyboard sigma-instance {}
+                      ; _                (.log js/console "ACTIVE >>>" active-state)
+                      ; _                (.log js/console "PLUGINS >>> " (s/plugins))
+
+                      keyboard         (s/keyboard sigma-instance nil
                                                    {(ascii \f) #(go (>! toggle-force id))
                                                     (ascii \l) #(go (>! toggle-lasso id))})
 
                       lasso            (s/lasso sigma-instance)
 
-                      ;_                (s/halo-active-nodes sigma-instance active-state)
-                      _                 (.halo (s/renderer sigma-instance) (clj->js {:nodes (-> sigma-instance .-graph .nodes)}))
+                      ; _                 (.halo (s/renderer sigma-instance) (clj->js {:nodes (-> sigma-instance .-graph .nodes)}))
 
-                      _                (s/select sigma-instance active-state {:keyboard keyboard
-                                                                              :lasso    lasso})
+                      _                (s/select sigma-instance active-state {
+                                                                              :keyboard keyboard
+                                                                              :lasso    lasso
+                                                                              })
 
                       _                (s/drag-nodes sigma-instance active-state
                                                      {:startdrag #(go (>! set-force [id false]))})
@@ -98,7 +101,9 @@
                    (some-> sigma
                            (s/toggle-force-atlas-2 (m/force-layout-active? plot-state)))
                    (some-> lasso
-                           (s/toggle-lasso (m/lasso-tool-active? plot-state)))))
+                           (s/toggle-lasso (m/lasso-tool-active? plot-state)))
+                   ;; (some-> sigma s/refresh)
+                   ))
 
     [[plot-state id idx] {:keys [drop-plot toggle-force toggle-lasso]}]
 
