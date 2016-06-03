@@ -9,6 +9,7 @@
                       :defaultNodeColor                   "#FF9"
 
                       :nodeHoverBorderSize                2
+                      :defaultLabelActiveColor            "#CCC"
                       :defaultNodeHoverBorderColor        "#fff"
                       :nodeActiveBorderSize               2
                       :nodeActiveOuterBorderSize          3
@@ -16,9 +17,7 @@
                       :defaultNodeActiveOuterBorderColor  "#f33",
                       :edgeHoverExtremities               true
                       :nodeHaloColor                      "#99F"
-                      :nodeHaloSize                       5
-
-                      }
+                      :nodeHaloSize                       5}
 
            :props    {:force-layout        :force-atlas2
                       :force-layout-active true
