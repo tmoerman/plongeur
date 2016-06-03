@@ -7,6 +7,7 @@
             [foreign.linkurious]
             [plongeur.model :as m]
             [plongeur.sigma :as s]
+            [plongeur.config :as c]
             [kierros.async :refer [debounce]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
@@ -38,21 +39,29 @@
                 (prn "on-mount")
 
                 (let [sigma-instance   (-> (s/make-sigma-instance (plot-container-id id)
-                                                                  (m/plot-settings plot-state))
+                                                                  (-> c/default-config :sigma :settings)
+                                                                  ;(m/plot-settings plot-state)
+                                                                  )
                                            (s/read (m/plot-data plot-state))
                                            (s/toggle-force-atlas-2 (m/force-layout-active? plot-state))
                                            (s/refresh))
 
                       active-state     (s/active-state sigma-instance)
 
-                      ; _                (.log js/console "ACTIVE >>>" active-state)
-                      ; _                (.log js/console "PLUGINS >>> " (s/plugins))
-
                       keyboard         (s/keyboard sigma-instance nil
                                                    {(ascii \f) #(go (>! toggle-force id))
                                                     (ascii \l) #(go (>! toggle-lasso id))})
 
-                      lasso            (s/lasso sigma-instance)
+                      lasso            (s/lasso sigma-instance
+                                                {}
+                                                {:selected-nodes (fn [lasso event]
+                                                                   (->> event
+                                                                        .-data
+                                                                        (map #(.-id %))
+                                                                        clj->js
+                                                                        (.addNodes active-state))
+                                                                   (s/refresh sigma-instance)
+                                                                   (go (>! toggle-lasso id)))})
 
                       ; _                 (.halo (s/renderer sigma-instance) (clj->js {:nodes (-> sigma-instance .-graph .nodes)}))
 
