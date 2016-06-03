@@ -39,16 +39,11 @@
 
 ;; Active state
 ;; https://github.com/Linkurious/linkurious.js/tree/develop/plugins/sigma.plugins.activeState
-;; TODO figure out state management of this plugin... something smells fishy here...
 
 (defn active-state
   [sigma-inst]
-  (.activeState (plugins) sigma-inst))
-
-(defn kill-active-state
-  []
-  (.killActiveState (plugins))
-  (plugins))
+  ;; (.customActiveState (plugins) sigma-inst))
+  (.customActiveState (plugins) sigma-inst))
 
 ;; Keyboard
 ;; https://github.com/Linkurious/linkurious.js/tree/linkurious-version/plugins/sigma.plugins.keyboard
@@ -70,6 +65,7 @@
 ;; https://github.com/Linkurious/linkurious.js/blob/linkurious-version/examples/lasso.html
 
 (defn lasso
+  "The bindings are functions with signature (lasso-inst, event) -> unit"
   ([sigma-inst]
    (lasso sigma-inst nil))
   ([sigma-inst sigma-options]
@@ -77,17 +73,17 @@
   ([sigma-inst sigma-options bindings-map]
    (let [lasso-inst (lasso sigma-inst sigma-options)]
      (doseq [[k fn] bindings-map]
-       (.bind lasso-inst (sigma-key k) fn))
+       (.bind lasso-inst (sigma-key k) (partial fn lasso-inst)))
      lasso-inst)))
 
 #_(defn lasso-active?    [lasso-inst] (.-isActive lasso-inst))
-(defn activate-lasso   [lasso-inst] (.activate lasso-inst) lasso-inst)
-(defn deactivate-lasso [lasso-inst] (.deactivate lasso-inst) lasso-inst)
+(defn activate   [lasso-inst] (.activate lasso-inst) lasso-inst)
+(defn deactivate [lasso-inst] (.deactivate lasso-inst) lasso-inst)
 
 (defn toggle-lasso
   [lasso-inst active?]
-  (if active? (activate-lasso lasso-inst)
-              (deactivate-lasso lasso-inst))
+  (if active? (activate lasso-inst)
+              (deactivate lasso-inst))
   lasso-inst)
 
 ;; Sigma Force Atlas 2
@@ -163,24 +159,25 @@
   (some-> sigma-inst .kill) nil)
 
 ;; Sigma constructor
+;; https://github.com/jacomyal/sigma.js/wiki/Events-API
 
 (defn make-sigma-instance
   "Sigma instance contructor.
-  See: https://github.com/jacomyal/sigma.js/wiki/Events-API "
+  The bindings are functions with signature (sigma-inst, payload) -> unit"
   ([dom-container-id sigma-settings]
    (prn (str "settings " sigma-settings))
    (try
-     (some-> (new js/sigma (clj->js {:renderer {:type      "canvas"
-                                                :container dom-container-id}
-                                     :settings  sigma-settings
-                                     }))
+     (some-> (new js/sigma (clj->js {:id       dom-container-id
+                                     :settings sigma-settings
+                                     :renderer {:type      "canvas"
+                                                :container dom-container-id}}))
              (refresh))
      (catch :default e
        (prn (str e " " dom-container-id)))))
   ([dom-container-id sigma-settings bindings-map]
    (when-let [sigma-inst (make-sigma-instance dom-container-id sigma-settings)]
      (doseq [[k fn] bindings-map]
-       (.bind sigma-inst (sigma-key k) fn))
+       (.bind sigma-inst (sigma-key k) (partial fn sigma-inst)))
      sigma-inst)))
 
 ;; Sigma Graph API
