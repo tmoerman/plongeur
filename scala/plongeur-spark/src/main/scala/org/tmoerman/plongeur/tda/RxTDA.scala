@@ -1,9 +1,10 @@
 package org.tmoerman.plongeur.tda
 
 import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters.toFilterFunction
-import org.tmoerman.plongeur.tda.Model.{Cluster, TDALens}
+import org.tmoerman.plongeur.tda.Model.{DataPoint, LevelSetID, Cluster, TDALens}
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
 import rx.lang.scala.Observable
@@ -13,9 +14,62 @@ import rx.lang.scala.Observable
   */
 object RxTDA {
 
-  def tdaMachine(tdaParams$: Observable[TDAParams],
-                 ctx$:    Observable[TDAContext])
-                (implicit sc: SparkContext): Observable[TDAResult] = {
+  val groupDataPointsByLevelSets = (lens: TDALens, ctx: TDAContext) => {
+    import ctx._
+
+    val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, ctx))
+
+    val boundaries = calculateBoundaries(filterFunctions, dataPoints)
+
+    val levelSetsInverse = levelSetsInverseFunction(boundaries, lens, filterFunctions)
+
+    dataPoints
+      .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
+      .groupByKey
+      .cache
+  }
+
+  val clusterLevelSets = (clusterer: LocalClusteringProvider) => (byLevelSet: RDD[(LevelSetID, Iterable[DataPoint])],
+                                                                  clusteringParams: ClusteringParams) => {
+    import clusteringParams._
+
+    byLevelSet
+      .map { case (levelSetID, levelSetPoints) =>
+        (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, distanceFunction, clusteringMethod)) }
+      .cache
+  }
+
+  val selectClusteringScale = (tripleRDD: RDD[(LevelSetID, List[DataPoint], LocalClustering)],
+                               scaleSelection: ScaleSelection) => {
+    tripleRDD
+      .map{ case (levelSetID, clusterPoints, clustering) =>
+        localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
+      .cache
+  }
+
+  val makeTDAResult = (partitionedClustersRDD: RDD[List[Cluster]], collapseDuplicateClusters: Boolean) => {
+    val clustersRDD =
+      if (collapseDuplicateClusters)
+        partitionedClustersRDD
+          .flatMap(_.map(cluster => (cluster.dataPoints, cluster)))
+          .reduceByKey((c1, c2) => c1)
+          .values
+      else
+        partitionedClustersRDD
+          .flatMap(identity)
+
+    val clusterEdgesRDD =
+      clustersRDD
+        .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id)))   // melt all clusters by points
+        .groupByKey
+        .values
+        .flatMap(_.toSet.subsets(2))
+        .distinct
+
+    TDAResult(clustersRDD.cache, clusterEdgesRDD.cache)
+  }
+
+  def tdaMachine(tdaParams$: Observable[TDAParams], ctx$: Observable[TDAContext]): Observable[TDAResult] = {
 
     val clusterer = SmileClusteringProvider // TODO inject
 
@@ -31,85 +85,17 @@ object RxTDA {
 
     // TDA computation merges in parameter changes
 
-    val lensCtx$: Observable[(TDALens, TDAContext)] =
-      (lens$ combineLatest ctx$)
-        .map{ case (lens, ctx) => (lens, lens.assocFilterMemos(ctx)) }
+    val lensCtx$ = lens$.combineLatest(ctx$).map{ case (lens, ctx) => (lens, lens.assocFilterMemos(ctx)) }
 
-    val byLevelSetRDD$ =
-      lensCtx$
-        .map{ case (lens, ctx) => {
-          import ctx._
+    val byLevelSetRDD$ = lensCtx$.map(groupDataPointsByLevelSets.tupled)
 
-          val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, ctx))
+    val tripleRDD$ = byLevelSetRDD$.combineLatest(clusteringParams$).map(clusterLevelSets(clusterer).tupled)
 
-          val boundaries = calculateBoundaries(filterFunctions, dataPoints)
+    val partitionedClustersRDD$ = tripleRDD$.combineLatest(scaleSelection$).map(selectClusteringScale.tupled)
 
-          val levelSetsInverse = levelSetsInverseFunction(boundaries, lens, filterFunctions)
-
-          val byLevelSetRDD =
-            dataPoints
-              .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
-              .groupByKey
-
-          byLevelSetRDD.cache
-        }}
-
-    val tripleRDD$ =
-      (byLevelSetRDD$ combineLatest clusteringParams$)
-        .map{ case (byLevelSet, clusteringParams) => {
-          import clusteringParams._
-
-          val tripleRDD =
-            byLevelSet
-              .map { case (levelSetID, levelSetPoints) =>
-                (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, distanceFunction, clusteringMethod)) }
-
-          tripleRDD.cache
-        }}
-
-    val partitionedClustersRDD$ =
-      (tripleRDD$ combineLatest scaleSelection$)
-        .map{ case (tripleRDD, scaleSelection) => {
-
-          val partitionedClustersRDD =
-            tripleRDD.map{ case (levelSetID, clusterPoints, clustering) =>
-              localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
-
-          partitionedClustersRDD.cache
-        }}
-
-    val tdaResult$ =
-      (partitionedClustersRDD$ combineLatest collapseDuplicates$)
-        .map{ case (partitionedClustersRDD, collapseDuplicateClusters) => {
-
-          val clustersRDD =
-            if (collapseDuplicateClusters)
-              partitionedClustersRDD
-                .flatMap(_.map(cluster => (cluster.dataPoints, cluster)))
-                .reduceByKey((c1, c2) => c1)
-                .values
-            else
-              partitionedClustersRDD
-                .flatMap(identity)
-
-          val clusterEdgesRDD =
-            clustersRDD
-              .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id)))   // melt all clusters by points
-              .groupByKey
-              .values
-              .flatMap(_.toSet.subsets(2))
-              .distinct
-              .cache
-
-          TDAResult(clustersRDD, clusterEdgesRDD)
-        }}
+    val tdaResult$ = partitionedClustersRDD$.combineLatest(collapseDuplicates$).map(makeTDAResult.tupled)
 
     tdaResult$
-  }
-
-  def launch(file: String): Observable[TDAResult] = {
-
-    ???
   }
 
 }
