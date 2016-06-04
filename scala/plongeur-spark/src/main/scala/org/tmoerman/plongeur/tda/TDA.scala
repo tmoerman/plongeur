@@ -85,11 +85,17 @@ object TDA {
 
 }
 
+// TODO: the TDA context is an observable of memoized auziliary data structures
+// TODO: it changes in function of selected specs in the TDA configurations
+//
+// Heuristic: whenever there is mutable state in a data system, consider modeling
+// it as changes propagated through an observable !!!
+
 case class TDAContext(val dataPoints: RDD[DataPoint]) extends Serializable {
 
   lazy val N = dataPoints.count
 
-  lazy val pca = new PCA(10).fit(dataPoints.map(_.features))
+  lazy val pca = new PCA(3).fit(dataPoints.map(_.features))
 
 }
 
