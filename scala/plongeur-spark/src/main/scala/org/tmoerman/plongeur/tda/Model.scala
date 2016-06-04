@@ -53,12 +53,23 @@ object Model {
 
   type Percentage = BigDecimal
 
-  case class TDALens(val filters: Filter*) extends Serializable
+  case class TDALens(val filters: Filter*) extends Serializable {
 
+    def assocFilterMemos(ctx: TDAContext): TDAContext =
+      filters.foldLeft(ctx)((c, filter) => filter.assocFilterMemo(c))
+
+  }
+
+  // TODO instead of length, define in nr of partitions.
   case class Filter(val spec:     HList,
                     val length:   Percentage,
                     val overlap:  Percentage,
                     val balanced: Boolean = false) extends Serializable {
+
+    def assocFilterMemo(ctx: TDAContext): TDAContext = {
+
+      ???
+    }
 
     require(length >= 0 && length <= 1, "length must be a percentage.")
     require(overlap >= 0,               "overlap cannot be negative")
