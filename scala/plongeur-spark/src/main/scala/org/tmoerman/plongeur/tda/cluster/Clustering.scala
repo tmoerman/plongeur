@@ -47,13 +47,9 @@ object Clustering extends Serializable {
   /**
     * @param distanceFunction Distance function in the hierarchical clustering effort.
     * @param clusteringMethod Single, Complete, etc...
-    * @param collapseDuplicateClusters Eliminates identical clusters.
-    * @param scaleSelection The clustering scale selection function.
     */
   case class ClusteringParams(distanceFunction: DistanceFunction = euclidean,
-                              clusteringMethod: ClusteringMethod = SINGLE,
-                              collapseDuplicateClusters: Boolean = true,
-                              scaleSelection: ScaleSelection = histogram()) extends Serializable
+                              clusteringMethod: ClusteringMethod = SINGLE) extends Serializable
 
   /**
     * Protocol for constructing Clustering instances.

@@ -1,6 +1,5 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters.toFilterFunction
@@ -73,27 +72,28 @@ object RxTDA {
 
     val clusterer = SmileClusteringProvider // TODO inject
 
+
     // deconstructing the parameters
 
-    val lens$: Observable[TDALens] = tdaParams$.map(_.lens).distinct
+    val lens$                   = tdaParams$.map(_.lens).distinct
 
-    val scaleSelection$: Observable[ScaleSelection] = tdaParams$.map(_.clusteringParams.scaleSelection).distinct
+    val clusteringParams$       = tdaParams$.map(_.clusteringParams).distinct
 
-    val clusteringParams$: Observable[ClusteringParams] = tdaParams$.map(_.clusteringParams).distinct
+    val scaleSelection$         = tdaParams$.map(_.scaleSelection).distinct
 
-    val collapseDuplicates$: Observable[Boolean] = clusteringParams$.map(_.collapseDuplicateClusters).distinct
+    val collapseDuplicates$     = tdaParams$.map(_.collapseDuplicateClusters).distinct
 
     // TDA computation merges in parameter changes
 
-    val lensCtx$ = lens$.combineLatest(ctx$).map{ case (lens, ctx) => (lens, lens.assocFilterMemos(ctx)) }
+    val lensCtx$                = lens$.combineLatest(ctx$).map{ case (lens, ctx) => (lens, lens.assocFilterMemos(ctx)) }
 
-    val byLevelSetRDD$ = lensCtx$.map(groupDataPointsByLevelSets.tupled)
+    val byLevelSetRDD$          = lensCtx$.map(groupDataPointsByLevelSets.tupled)
 
-    val tripleRDD$ = byLevelSetRDD$.combineLatest(clusteringParams$).map(clusterLevelSets(clusterer).tupled)
+    val tripleRDD$              = byLevelSetRDD$.combineLatest(clusteringParams$).map(clusterLevelSets(clusterer).tupled)
 
     val partitionedClustersRDD$ = tripleRDD$.combineLatest(scaleSelection$).map(selectClusteringScale.tupled)
 
-    val tdaResult$ = partitionedClustersRDD$.combineLatest(collapseDuplicates$).map(makeTDAResult.tupled)
+    val tdaResult$              = partitionedClustersRDD$.combineLatest(collapseDuplicates$).map(makeTDAResult.tupled)
 
     tdaResult$
   }

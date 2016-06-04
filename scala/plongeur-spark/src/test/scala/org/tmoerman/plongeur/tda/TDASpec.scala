@@ -34,8 +34,8 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
         lens = TDALens(
           Filter("feature" :: 0 :: HNil, 1.0, 0.5),
           Filter("feature" :: 1 :: HNil, 1.0, 0.5)),
-        clusteringParams = ClusteringParams(
-          scaleSelection = histogram(10)),
+        clusteringParams = ClusteringParams(),
+        scaleSelection = histogram(10),
         coveringBoundaries = Some(Array((0.0, 12.0), (0.0, 12.0))))
 
     val result = TDA.apply(tdaParams, TDAContext(sc, test2DLabeledPointsRDD))
@@ -66,9 +66,8 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
     val tdaParams =
       TDAParams(
         lens = TDALens(Filter("feature" :: 0 :: HNil, 0.10, 0.5)),
-        clusteringParams = ClusteringParams(
-          scaleSelection = histogram(10)
-        ))
+        clusteringParams = ClusteringParams(),
+        scaleSelection = histogram(10))
 
     val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
 
@@ -79,9 +78,8 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
     val tdaParams =
       TDAParams(
         lens = TDALens(Filter("eccentricity" :: 1 :: HNil, 0.10, 0.5)),
-        clusteringParams = ClusteringParams(
-          scaleSelection = histogram(10)
-        ))
+        clusteringParams = ClusteringParams(),
+        scaleSelection = histogram(10))
 
     val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
   }

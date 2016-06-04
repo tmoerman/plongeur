@@ -8,6 +8,7 @@ import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model.{DataPoint, _}
 import org.tmoerman.plongeur.tda.cluster.Clustering._
+import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
 import org.tmoerman.plongeur.util.IterableFunctions._
 import rx.lang.scala.Observable
@@ -57,7 +58,7 @@ object TDA {
     val partitionedClustersRDD: RDD[List[Cluster]] =
       tripletsRDD
         .map{ case (levelSetID, clusterPoints, clustering) =>
-          localClusters(levelSetID, clusterPoints, clustering.labels(tdaParams.clusteringParams.scaleSelection)) }
+          localClusters(levelSetID, clusterPoints, clustering.labels(tdaParams.scaleSelection)) }
 
     lazy val duplicatesAllowed: RDD[Cluster] =
       partitionedClustersRDD
@@ -69,7 +70,7 @@ object TDA {
         .reduceByKey((c1, c2) => c1)
         .values
 
-    val clustersRDD = (if (tdaParams.clusteringParams.collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed)
+    val clustersRDD = (if (tdaParams.collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed)
 
     val clusterEdgesRDD =
       clustersRDD
@@ -101,6 +102,8 @@ case class TDAContext(val sc: SparkContext, val dataPoints: RDD[DataPoint]) exte
 
 case class TDAParams(val lens: TDALens,
                      val clusteringParams: ClusteringParams,
+                     val collapseDuplicateClusters: Boolean = true,
+                     val scaleSelection: ScaleSelection = histogram(),
                      val coveringBoundaries: Option[Boundaries] = None) extends Serializable
 
 case class TDAResult(val clustersRDD: RDD[Cluster], val edgesRDD: RDD[Set[ID]]) extends Serializable {
