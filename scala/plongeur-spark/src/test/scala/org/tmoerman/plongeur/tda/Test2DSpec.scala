@@ -25,7 +25,7 @@ class Test2DSpec extends FlatSpec with TestResources with Matchers {
 
     val boundaries = Array((0.0, size), (0.0, size))
 
-    val filterFunctions = lens.filters.map(f => Filters.toFilterFunction(f.spec, test2DLabeledPointsRDD))
+    val filterFunctions = lens.filters.map(f => Filters.toFilterFunction(f.spec, TDAContext(sc, test2DLabeledPointsRDD)))
 
     val covering = levelSetsInverseFunction(boundaries, lens, filterFunctions)
 

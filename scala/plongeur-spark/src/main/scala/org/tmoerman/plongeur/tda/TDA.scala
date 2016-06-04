@@ -28,8 +28,7 @@ object TDA {
 
   def echo(call: String) = s"$call $call"
 
-  def apply(tdaParams: TDAParams, tdaContext: TDAContext)
-           (implicit sc: SparkContext): TDAResult = {
+  def apply(tdaParams: TDAParams, tdaContext: TDAContext): TDAResult = {
 
     import tdaContext._
     import tdaParams._
@@ -81,8 +80,6 @@ object TDA {
     TDAResult(clustersRDD, clusterEdgesRDD)
   }
 
-  implicit def toTDAContext(rdd: RDD[DataPoint]): TDAContext = new TDAContext(rdd)
-
 }
 
 // TODO: the TDA context is an observable of memoized auziliary data structures
@@ -90,8 +87,10 @@ object TDA {
 //
 // Heuristic: whenever there is mutable state in a data system, consider modeling
 // it as changes propagated through an observable !!!
+//
+//
 
-case class TDAContext(val dataPoints: RDD[DataPoint]) extends Serializable {
+case class TDAContext(val sc: SparkContext, val dataPoints: RDD[DataPoint]) extends Serializable {
 
   lazy val N = dataPoints.count
 
