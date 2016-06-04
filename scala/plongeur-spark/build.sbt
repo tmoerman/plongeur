@@ -27,7 +27,7 @@ libraryDependencies ++= Seq(
   "com.github.haifengl"    % "smile-plot"        % "1.0.4",
   "org.scalanlp"           %% "breeze-natives"   % "0.12"       exclude("com.chuusai", "*"),
 
-  "io.reactivex"           %% "rxscala"          % "0.26.0",
+  "io.reactivex"           %% "rxscala"          % "0.26.1",
   "org.scalaz"             %% "scalaz-core"      % "7.2.0",
   "com.chuusai"            %% "shapeless"        % "2.3.0",
 

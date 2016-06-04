@@ -22,8 +22,7 @@ object Filters extends Serializable {
     * @return Returns a FilterFunction for the specified filter specification.
     *         Closes over TDAContext for references to SparkContext and DataPoints.
     */
-  def toFilterFunction(spec: HList, tdaContext: TDAContext)
-                      (implicit sc: SparkContext): FilterFunction = spec match {
+  def toFilterFunction(spec: HList, tdaContext: TDAContext): FilterFunction = spec match {
 
     case ("feature" | "features") :: n :: HNil => (d: DataPoint) => d.features(n.asInstanceOf[Int])
 
@@ -39,7 +38,7 @@ object Filters extends Serializable {
     case "eccentricity" :: n :: distanceSpec =>
       val broadcastFnMemo = eccentricityMap(n, tdaContext, toDistanceFunction(distanceSpec))
 
-      makeFn(sc.broadcast(broadcastFnMemo))
+      makeFn(tdaContext.sc.broadcast(broadcastFnMemo))
 
     case _ => throw new IllegalArgumentException(s"could not materialize spec: $spec")
   }

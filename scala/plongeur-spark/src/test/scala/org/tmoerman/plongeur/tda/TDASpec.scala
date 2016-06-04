@@ -38,7 +38,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
           scaleSelection = histogram(10)),
         coveringBoundaries = Some(Array((0.0, 12.0), (0.0, 12.0))))
 
-    val result = TDA.apply(tdaParams, TDAContext(test2DLabeledPointsRDD))
+    val result = TDA.apply(tdaParams, TDAContext(sc, test2DLabeledPointsRDD))
 
     val all = test2DLabeledPointsRDD.distinct.collect.toSet
 
@@ -70,7 +70,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
           scaleSelection = histogram(10)
         ))
 
-    val result = TDA.apply(tdaParams, TDAContext(circle250RDD))
+    val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
 
     printInspections(result, "circle250")
   }
@@ -83,7 +83,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
           scaleSelection = histogram(10)
         ))
 
-    val result = TDA.apply(tdaParams, TDAContext(circle250RDD))
+    val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
   }
 
 }

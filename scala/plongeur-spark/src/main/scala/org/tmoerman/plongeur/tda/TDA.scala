@@ -28,34 +28,36 @@ object TDA {
 
   def echo(call: String) = s"$call $call"
 
-  def apply(tdaParams: TDAParams, tdaContext: TDAContext)
-           (implicit sc: SparkContext): TDAResult = {
+  def apply(tdaParams: TDAParams, tdaContext: TDAContext): TDAResult = {
 
-    import tdaContext._
-    import tdaParams._
-    import tdaParams.clusteringParams._
+//    import tdaContext._
+//    import tdaParams._
+//    import tdaParams.clusteringParams._
 
-    val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, tdaContext))
+    val filterFunctions = tdaParams.lens.filters.map(f => toFilterFunction(f.spec, tdaContext))
 
-    val boundaries = coveringBoundaries.getOrElse(calculateBoundaries(filterFunctions, dataPoints))
+    //val boundaries = coveringBoundaries.getOrElse(calculateBoundaries(filterFunctions, dataPoints))
+    val boundaries = calculateBoundaries(filterFunctions, tdaContext.dataPoints)
 
-    val levelSetsInverse = levelSetsInverseFunction(boundaries, lens, filterFunctions)
+    val levelSetsInverse = levelSetsInverseFunction(boundaries, tdaParams.lens, filterFunctions)
 
     val byLevelSet =
-      dataPoints
+      tdaContext
+        .dataPoints
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
         .groupByKey // TODO turn this into a reduceByKey with an incremental single linkage algorithm? -> probably pointless
 
     val tripletsRDD =
       byLevelSet
         .map{ case (levelSetID, levelSetPoints) =>
-          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, distanceFunction, clusteringMethod)) }
+          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, tdaParams.clusteringParams.distanceFunction,
+                                                                                    tdaParams.clusteringParams.clusteringMethod)) }
         .cache
 
     val partitionedClustersRDD: RDD[List[Cluster]] =
       tripletsRDD
         .map{ case (levelSetID, clusterPoints, clustering) =>
-          localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
+          localClusters(levelSetID, clusterPoints, clustering.labels(tdaParams.clusteringParams.scaleSelection)) }
 
     lazy val duplicatesAllowed: RDD[Cluster] =
       partitionedClustersRDD
@@ -67,7 +69,7 @@ object TDA {
         .reduceByKey((c1, c2) => c1)
         .values
 
-    val clustersRDD = (if (collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed).cache
+    val clustersRDD = (if (tdaParams.clusteringParams.collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed)
 
     val clusterEdgesRDD =
       clustersRDD
@@ -81,8 +83,6 @@ object TDA {
     TDAResult(clustersRDD, clusterEdgesRDD)
   }
 
-  implicit def toTDAContext(rdd: RDD[DataPoint]): TDAContext = new TDAContext(rdd)
-
 }
 
 // TODO: the TDA context is an observable of memoized auziliary data structures
@@ -91,7 +91,7 @@ object TDA {
 // Heuristic: whenever there is mutable state in a data system, consider modeling
 // it as changes propagated through an observable !!!
 
-case class TDAContext(val dataPoints: RDD[DataPoint]) extends Serializable {
+case class TDAContext(val sc: SparkContext, val dataPoints: RDD[DataPoint]) extends Serializable {
 
   lazy val N = dataPoints.count
 
