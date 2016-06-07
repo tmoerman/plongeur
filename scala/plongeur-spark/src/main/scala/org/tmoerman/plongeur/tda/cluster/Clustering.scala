@@ -17,7 +17,7 @@ object Clustering extends Serializable {
   /**
     * Function that takes a Seq of clustering heights as input and returns a clustering height as output.
     */
-  type ScaleSelection = (Seq[Double]) => Double
+  trait ScaleSelection extends (Seq[Double] => Double)
 
   /**
     * Project specific protocol for hierarchical clustering. Not to be confused with the SMILE implementation.
