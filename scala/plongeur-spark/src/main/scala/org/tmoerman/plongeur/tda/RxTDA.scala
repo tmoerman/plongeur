@@ -13,8 +13,9 @@ import rx.lang.scala.Observable
   */
 object RxTDA {
 
-  val groupDataPointsByLevelSets = (lens: TDALens, ctx: TDAContext) => {
+  val clusterLevelSets = (clusterer: LocalClusteringProvider) => (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
     import ctx._
+    import clusteringParams._
 
     val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, ctx))
 
@@ -25,21 +26,13 @@ object RxTDA {
     dataPoints
       .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
       .groupByKey
-      .cache
-  }
-
-  val clusterLevelSets = (clusterer: LocalClusteringProvider) => (byLevelSet: RDD[(LevelSetID, Iterable[DataPoint])],
-                                                                  clusteringParams: ClusteringParams) => {
-    import clusteringParams._
-
-    byLevelSet
       .map { case (levelSetID, levelSetPoints) =>
         (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, distanceFunction, clusteringMethod)) }
       .cache
   }
 
-  val selectClusteringScale = (tripleRDD: RDD[(LevelSetID, List[DataPoint], LocalClustering)],
-                               scaleSelection: ScaleSelection) => {
+  val applyScale = (tripleRDD: RDD[(LevelSetID, List[DataPoint], LocalClustering)],
+                    scaleSelection: ScaleSelection) => {
     tripleRDD
       .map{ case (levelSetID, clusterPoints, clustering) =>
         localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
@@ -68,32 +61,30 @@ object RxTDA {
     TDAResult(clustersRDD.cache, clusterEdgesRDD.cache)
   }
 
+  def flattenTuple[A, B, C](t: ((A, B), C)) = t match {case ((a: A, b: B), c: C) => (a, b, c) }
+
   def tdaMachine(tdaParams$: Observable[TDAParams], ctx$: Observable[TDAContext]): Observable[TDAResult] = {
 
     val clusterer = SmileClusteringProvider // TODO inject
 
-
     // deconstructing the parameters
 
-    val lens$                   = tdaParams$.map(_.lens).distinct
+    val distinctTdaParams$      = tdaParams$.distinct
 
-    val clusteringParams$       = tdaParams$.map(_.clusteringParams).distinct
-
-    val scaleSelection$         = tdaParams$.map(_.scaleSelection).distinct
-
-    val collapseDuplicates$     = tdaParams$.map(_.collapseDuplicateClusters).distinct
+    val lens$                   = distinctTdaParams$ map(_.lens)                      distinct
+    val clusteringParams$       = distinctTdaParams$ map(_.clusteringParams)          distinct
+    val scaleSelection$         = distinctTdaParams$ map(_.scaleSelection)            distinct
+    val collapseDuplicates$     = distinctTdaParams$ map(_.collapseDuplicateClusters) distinct
 
     // TDA computation merges in parameter changes
 
-    val lensCtx$                = lens$.combineLatest(ctx$).map{ case (lens, ctx) => (lens, lens.assocFilterMemos(ctx)) }
+    val lensCtx$     = lens$.combineLatest(ctx$).map{ case (lens, ctx) => (lens, lens.assocFilterMemos(ctx)) }
 
-    val byLevelSetRDD$          = lensCtx$.map(groupDataPointsByLevelSets.tupled)
+    val tripleRDD$   = lensCtx$.combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets(clusterer).tupled)
 
-    val tripleRDD$              = byLevelSetRDD$.combineLatest(clusteringParams$).map(clusterLevelSets(clusterer).tupled)
+    val clustersRDD$ = tripleRDD$.combineLatest(scaleSelection$).map(applyScale.tupled)
 
-    val partitionedClustersRDD$ = tripleRDD$.combineLatest(scaleSelection$).map(selectClusteringScale.tupled)
-
-    val tdaResult$              = partitionedClustersRDD$.combineLatest(collapseDuplicates$).map(makeTDAResult.tupled)
+    val tdaResult$   = clustersRDD$.combineLatest(collapseDuplicates$).map(makeTDAResult.tupled)
 
     tdaResult$
   }
