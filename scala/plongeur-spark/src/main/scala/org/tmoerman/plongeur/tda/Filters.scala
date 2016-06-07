@@ -1,13 +1,11 @@
 package org.tmoerman.plongeur.tda
 
 import breeze.linalg.{Vector => MLVector}
-import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
 import org.tmoerman.plongeur.tda.Distance.DistanceFunction
 import org.tmoerman.plongeur.tda.Model._
-import shapeless._
-
 import org.tmoerman.plongeur.util.MapFunctions._
+import shapeless._
 
 import scala.math.{max, pow}
 
@@ -24,7 +22,7 @@ object Filters extends Serializable {
     */
   def toFilterFunction(spec: HList, tdaContext: TDAContext): FilterFunction = spec match {
 
-    case ("feature" | "features") :: n :: HNil => (d: DataPoint) => d.features(n.asInstanceOf[Int])
+    case ("feature" | "features") :: (n: Int) :: HNil => (d: DataPoint) => d.features(n)
 
     case ("PCA" | "PC") :: n :: HNil =>
 //      (d: DataPoint) => tdaContext.pca.transform(d.features).
