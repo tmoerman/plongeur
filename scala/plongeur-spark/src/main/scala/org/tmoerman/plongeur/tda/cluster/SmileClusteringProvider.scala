@@ -19,7 +19,7 @@ object SmileClusteringProvider extends LocalClusteringProvider with Serializable
     * @see LocalClusteringProvider
     */
   def apply(dataPoints: Seq[DataPoint],
-            distanceFunction: DistanceFunction = euclidean,
+            distanceFunction: DistanceFunction = EuclideanDistance,
             clusteringMethod: ClusteringMethod = SINGLE) = new LocalClustering {
 
       lazy val distances = distanceMatrix(dataPoints, distanceFunction)

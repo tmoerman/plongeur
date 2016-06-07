@@ -48,7 +48,7 @@ object Clustering extends Serializable {
     * @param distanceFunction Distance function in the hierarchical clustering effort.
     * @param clusteringMethod Single, Complete, etc...
     */
-  case class ClusteringParams(distanceFunction: DistanceFunction = euclidean,
+  case class ClusteringParams(distanceFunction: DistanceFunction = EuclideanDistance,
                               clusteringMethod: ClusteringMethod = SINGLE) extends Serializable
 
   /**
@@ -57,7 +57,7 @@ object Clustering extends Serializable {
   trait LocalClusteringProvider {
 
     def apply(dataPoints: Seq[DataPoint],
-              distanceFunction: DistanceFunction = euclidean,
+              distanceFunction: DistanceFunction = EuclideanDistance,
               clusteringMethod: ClusteringMethod = SINGLE): LocalClustering
 
   }

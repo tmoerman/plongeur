@@ -2,7 +2,7 @@ package org.tmoerman.plongeur.tda
 
 import breeze.linalg.{Vector => MLVector}
 import org.apache.spark.broadcast.Broadcast
-import org.tmoerman.plongeur.tda.Distance.DistanceFunction
+import org.tmoerman.plongeur.tda.Distance.{EuclideanDistance, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
 import shapeless._
@@ -46,7 +46,7 @@ object Filters extends Serializable {
   def toDistanceFunction(distanceSpec: HList): DistanceFunction = distanceSpec match {
     case (name: String) :: HNil               => Distance.from(name)(Nil)
     case (name: String) :: (arg: Any) :: HNil => Distance.from(name)(arg)
-    case _                                    => Distance.euclidean
+    case _                                    => EuclideanDistance
   }
 
   /**

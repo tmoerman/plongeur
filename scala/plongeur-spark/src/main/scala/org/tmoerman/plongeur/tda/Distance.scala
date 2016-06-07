@@ -33,32 +33,42 @@ object Distance {
     result
   }
 
-  type DistanceFunction = (DataPoint, DataPoint) => Double
+  trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with Serializable
 
   // TODO Pearson correlation, closing over ~~TDAContext~~ / over broadcast variable
 
   // TODO Spearman
 
-  val L_infinity = (a: DataPoint, b: DataPoint) => chebyshevDistance(a.features.toBreeze, b.features.toBreeze)
+  case object ChebyshevDistance extends DistanceFunction {
+    override def apply(a: DataPoint, b: DataPoint) = chebyshevDistance(a.features.toBreeze, b.features.toBreeze)
+  }
 
-  val cosine    = (a: DataPoint, b: DataPoint) => cosineDistance(a.features.toBreeze, b.features.toBreeze)
+  case object CosineDistance extends DistanceFunction {
+    override def apply(a: DataPoint, b: DataPoint) = cosineDistance(a.features.toBreeze, b.features.toBreeze)
+  }
 
-  val euclidean = (a: DataPoint, b: DataPoint) => euclideanDistance(a.features.toBreeze, b.features.toBreeze)
+  case object EuclideanDistance extends DistanceFunction {
+    override def apply(a: DataPoint, b: DataPoint) = euclideanDistance(a.features.toBreeze, b.features.toBreeze)
+  }
 
-  val manhattan = (a: DataPoint, b: DataPoint) => manhattanDistance(a.features.toBreeze, b.features.toBreeze)
+  case object ManhattanDistance extends DistanceFunction {
+    override def apply(a: DataPoint, b: DataPoint) = manhattanDistance(a.features.toBreeze, b.features.toBreeze)
+  }
 
-  def minkowski(exponent: Double) = (a: DataPoint, b: DataPoint) => minkowskiDistance(a.features.toBreeze, b.features.toBreeze, exponent)
+  case class MinkowskiDistance(exponent: Double) extends DistanceFunction {
+    override def apply(a: DataPoint, b: DataPoint) = minkowskiDistance(a.features.toBreeze, b.features.toBreeze, exponent)
+  }
 
   /**
     * @param name
     * @return Returns the DistanceFunction associated with specified name.
     */
   def from(name: String): (Any) => DistanceFunction = name match {
-    case "L_infinity" => (_) => L_infinity
-    case "cosine"     => (_) => cosine
-    case "euclidean"  => (_) => euclidean
-    case "manhattan"  => (_) => manhattan
-    case "minkowski"  => (e: Any) => minkowski(e.asInstanceOf[Double])
+    case "chebyshev"  => (_)      => ChebyshevDistance
+    case "cosine"     => (_)      => CosineDistance
+    case "euclidean"  => (_)      => EuclideanDistance
+    case "manhattan"  => (_)      => ManhattanDistance
+    case "minkowski"  => (e: Any) => MinkowskiDistance(e.asInstanceOf[Double])
 
     case _ => throw new IllegalArgumentException(s"unknown distance function $name")
    }
