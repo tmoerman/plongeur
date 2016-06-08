@@ -33,7 +33,9 @@ object Distance {
     result
   }
 
-  trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with Serializable
+  trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with Serializable {
+    override def toString = getClass.getSimpleName
+  }
 
   // TODO Pearson correlation, closing over ~~TDAContext~~ / over broadcast variable
 
@@ -57,6 +59,7 @@ object Distance {
 
   case class MinkowskiDistance(exponent: Double) extends DistanceFunction {
     override def apply(a: DataPoint, b: DataPoint) = minkowskiDistance(a.features.toBreeze, b.features.toBreeze, exponent)
+    override def toString = { val name = getClass.getSimpleName; s"$name($exponent)" }
   }
 
   /**
