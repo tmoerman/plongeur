@@ -2,7 +2,8 @@ package org.tmoerman.plongeur.tda
 
 import breeze.linalg.{Vector => MLVector}
 import org.apache.spark.broadcast.Broadcast
-import org.tmoerman.plongeur.tda.Distance.{EuclideanDistance, DistanceFunction}
+import org.apache.spark.mllib.feature.PCA
+import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, EuclideanDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
 import shapeless._
@@ -16,29 +17,51 @@ object Filters extends Serializable {
 
   /**
     * @param spec
-    * @param tdaContext
+    * @param ctx
     * @return Returns a FilterFunction for the specified filter specification.
     *         Closes over TDAContext for references to SparkContext and DataPoints.
     */
-  def toFilterFunction(spec: HList, tdaContext: TDAContext): FilterFunction = spec match {
+  def toFilterFunction(spec: HList, ctx: TDAContext): FilterFunction = {
+    lazy val key = toFilterMemoKey(spec)
 
-    case ("feature" | "features") :: (n: Int) :: HNil => (d: DataPoint) => d.features(n)
+    spec match {
 
-    case ("PCA" | "PC") :: n :: HNil =>
-//      (d: DataPoint) => tdaContext.pca.transform(d.features).
-//      val projected = data.map(p => p.copy(features = pca.transform(p.features)))
-//      (d: DataPoint) => new LabeledPoint(d.features).copy()
+      case "feature" :: (n: Int) :: HNil => (d: DataPoint) => d.features(n)
 
-      ???
+      case "PCA" :: n :: HNil =>
+        val pcaMemo = ctx.memo(key).asInstanceOf[PCA]
 
-    case ("SVD" | "SV") :: n :: HNil => ???
+        ???
 
-    case "eccentricity" :: n :: distanceSpec =>
-      val broadcastFnMemo = eccentricityMap(n, tdaContext, toDistanceFunction(distanceSpec))
+      case "SVD" :: n :: HNil => ???
 
-      makeFn(tdaContext.sc.broadcast(broadcastFnMemo))
+      case "eccentricity" :: n :: distanceSpec =>
+        val eccMemo = ctx.memo(key).asInstanceOf[Map[Index, Double]]
 
-    case _ => throw new IllegalArgumentException(s"could not materialize spec: $spec")
+        makeFn(ctx.sc.broadcast(eccMemo))
+
+      case _ => throw new IllegalArgumentException(s"could not materialize spec: $spec")
+    }
+  }
+
+  val MAX_PCs: Int = 5
+
+  def toFilterMemo(spec: HList, ctx: TDAContext): Option[(Any, Any)] =  {
+    lazy val key = toFilterMemoKey(spec)
+
+    spec match {
+      case "PCA"          :: _ :: HNil         => Some(key -> new PCA(MAX_PCs).fit(ctx.dataPoints.map(_.features)))
+
+      case "eccentricity" :: n :: distanceSpec => Some(key -> eccentricityMap(n, ctx, toDistanceFunction(distanceSpec)))
+
+      case _                                   => None
+    }
+  }
+
+  def toFilterMemoKey(spec: HList) = spec match {
+    case "PCA"          :: _ :: HNil => "PCA"
+    case "eccentricity" :: n :: _    => s"ECC_$n"
+    case _                           => throw new IllegalArgumentException(s"no memo key for filter spec: $spec")
   }
 
   def makeFn(bc: Broadcast[Map[Index, Double]]) = (d: DataPoint) => bc.value.apply(d.index)
@@ -51,7 +74,7 @@ object Filters extends Serializable {
 
   /**
     * @param n The exponent
-    * @param tdaContext
+    * @param ctx
     * @param distance
     * @return Returns a Map by Index to the L_n eccentricity of that point.
     *         L_n eccentricity assigns to each point the distance to the point most distant from it.
@@ -61,8 +84,8 @@ object Filters extends Serializable {
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  def eccentricityMap(n: Any, tdaContext: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
-    import tdaContext._
+  def eccentricityMap(n: Any, ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
+    import ctx._
 
     val EMPTY = Map[Index, Double]()
 
@@ -72,7 +95,7 @@ object Filters extends Serializable {
         .filter { case (p1, p2) => p1.index < p2.index } // combinations only
 
     n match {
-      case "infinity" | "infty" | "_8"  =>
+      case "infinity" =>
         combinations
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)

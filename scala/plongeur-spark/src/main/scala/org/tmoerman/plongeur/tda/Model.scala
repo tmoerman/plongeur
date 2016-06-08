@@ -55,21 +55,21 @@ object Model {
 
   case class TDALens(val filters: Filter*) extends Serializable {
 
-    def assocFilterMemos(ctx: TDAContext): TDAContext =
-      filters.foldLeft(ctx)((c, filter) => filter.assocFilterMemo(c))
+    def assocFilterMemos(tdaContext: TDAContext): TDAContext =
+      filters.foldLeft(tdaContext) {
+        (ctx, filter) =>
+          Filters
+            .toFilterMemo(filter.spec, ctx)
+            .map(pair => ctx.updateMemo(memo => memo + pair))
+            .getOrElse(ctx)
+      }
 
   }
 
-  // TODO instead of length, define in nr of partitions.
   case class Filter(val spec:     HList,
-                    val length:   Percentage,
+                    val length:   Percentage, // TODO instead of length, define in nr of partitions.
                     val overlap:  Percentage,
                     val balanced: Boolean = false) extends Serializable {
-
-    def assocFilterMemo(ctx: TDAContext): TDAContext = {
-
-      ???
-    }
 
     require(length >= 0 && length <= 1, "length must be a percentage.")
     require(overlap >= 0,               "overlap cannot be negative")
