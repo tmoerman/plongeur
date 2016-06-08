@@ -3,7 +3,7 @@ package org.tmoerman.plongeur.tda
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters.toFilterFunction
-import org.tmoerman.plongeur.tda.Model.{DataPoint, LevelSetID, Cluster, TDALens}
+import org.tmoerman.plongeur.tda.Model.{Cluster, DataPoint, LevelSetID, TDALens}
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
 import rx.lang.scala.Observable
@@ -14,9 +14,9 @@ import shapeless._
   */
 object TDAMachine {
 
-  val clusterLevelSets = (clusterer: LocalClusteringProvider) => (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
-    import ctx._
+  private val clusterLevelSets = (clusterer: LocalClusteringProvider) => (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
     import clusteringParams._
+    import ctx._
 
     val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, ctx))
 
@@ -29,14 +29,14 @@ object TDAMachine {
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
         .groupByKey
         .map { case (levelSetID, levelSetPoints) =>
-          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, distanceFunction, clusteringMethod)) }
+          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toList, distanceFunction, clusteringMethod)) }
         .cache
 
     (clusteringParams :: lens :: HNil, rdd)
   }
 
-  val applyScale = (product: (HList, RDD[(LevelSetID, List[DataPoint], LocalClustering)]),
-                    scaleSelection: ScaleSelection) => {
+  private val applyScale = (product: (HList, RDD[(LevelSetID, List[DataPoint], LocalClustering)]),
+                            scaleSelection: ScaleSelection) => {
 
     val (hlist, levelSetClustersRDD) = product
 
@@ -48,8 +48,8 @@ object TDAMachine {
     (scaleSelection :: hlist, rdd)
   }
 
-  val makeTDAResult = (product: (HList, RDD[List[Cluster]]),
-                       collapseDuplicateClusters: Boolean) => {
+  private val makeTDAResult = (product: (HList, RDD[List[Cluster]]),
+                               collapseDuplicateClusters: Boolean) => {
 
     val (hlist, localClustersRDD) = product
 
@@ -79,27 +79,31 @@ object TDAMachine {
           scaleSelection            = scaleSelection,
           collapseDuplicateClusters = collapseDuplicateClusters) }
 
-    val result = TDAResult(clustersRDD.cache, clusterEdgesRDD.cache)
+    val result = TDAResult(clustersRDD, clusterEdgesRDD)
 
     (reconstructedParams, result)
   }
 
   private def flattenTuple[A, B, C](t: ((A, B), C)) = t match {case ((a: A, b: B), c: C) => (a, b, c) }
 
-  def tdaMachine(tdaParams$: Observable[TDAParams], ctx$: Observable[TDAContext]): Observable[(TDAParams, TDAResult)] = {
+  def run(ctx: TDAContext, tdaParams$: Observable[TDAParams]): Observable[(TDAParams, TDAResult)] = {
 
     val clusterer = SmileClusteringProvider // TODO inject
 
+    // source observable with backpressure
+
+    val tdaParamsSource$ = tdaParams$.distinct.onBackpressureLatest
+
     // deconstructing the parameters
 
-    val distinctTdaParams$      = tdaParams$.distinct
-
-    val lens$                   = distinctTdaParams$.map(_.lens                     ).distinct //.onBackpressureLatest
-    val clusteringParams$       = distinctTdaParams$.map(_.clusteringParams         ).distinct //.onBackpressureLatest
-    val scaleSelection$         = distinctTdaParams$.map(_.scaleSelection           ).distinct //.onBackpressureLatest
-    val collapseDuplicates$     = distinctTdaParams$.map(_.collapseDuplicateClusters).distinct //.onBackpressureLatest
+    val lens$               = tdaParamsSource$.map(_.lens                     ).distinct
+    val clusteringParams$   = tdaParamsSource$.map(_.clusteringParams         ).distinct
+    val scaleSelection$     = tdaParamsSource$.map(_.scaleSelection           ).distinct
+    val collapseDuplicates$ = tdaParamsSource$.map(_.collapseDuplicateClusters).distinct
 
     // TDA computation merges in parameter changes
+
+    val ctx$                 = Observable.just(ctx)
 
     val lensCtx$             = lens$.combineLatestWith(ctx$)((lens, ctx) => (lens, lens.assocFilterMemos(ctx)) )
 

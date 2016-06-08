@@ -1,7 +1,6 @@
 package org.tmoerman.plongeur.tda
 
 import org.apache.spark.SparkContext
-import org.apache.spark.mllib.feature.PCA
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
@@ -29,21 +28,19 @@ object TDA {
 
   def echo(call: String) = s"$call $call"
 
-  def apply(tdaParams: TDAParams, tdaContext: TDAContext): TDAResult = {
+  def apply(tdaParams: TDAParams, ctx: TDAContext): TDAResult = {
 
-//    import tdaContext._
-//    import tdaParams._
-//    import tdaParams.clusteringParams._
+    val ctxWithMemo = tdaParams.lens.assocFilterMemos(ctx)
 
-    val filterFunctions = tdaParams.lens.filters.map(f => toFilterFunction(f.spec, tdaContext))
+    val filterFunctions = tdaParams.lens.filters.map(f => toFilterFunction(f.spec, ctxWithMemo))
 
     //val boundaries = coveringBoundaries.getOrElse(calculateBoundaries(filterFunctions, dataPoints))
-    val boundaries = calculateBoundaries(filterFunctions, tdaContext.dataPoints)
+    val boundaries = calculateBoundaries(filterFunctions, ctxWithMemo.dataPoints)
 
     val levelSetsInverse = levelSetsInverseFunction(boundaries, tdaParams.lens, filterFunctions)
 
     val byLevelSet =
-      tdaContext
+      ctxWithMemo
         .dataPoints
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
         .groupByKey // TODO turn this into a reduceByKey with an incremental single linkage algorithm? -> probably pointless
@@ -86,17 +83,13 @@ object TDA {
 
 }
 
-// TODO: the TDA context is an observable of memoized auziliary data structures
-// TODO: it changes in function of selected specs in the TDA configurations
-//
-// Heuristic: whenever there is mutable state in a data system, consider modeling
-// it as changes propagated through an observable !!!
-
-case class TDAContext(val sc: SparkContext, val dataPoints: RDD[DataPoint]) extends Serializable {
+case class TDAContext(val sc: SparkContext,
+                      val dataPoints: RDD[DataPoint],
+                      val memo: Map[Any, Any] = Map()) extends Serializable {
 
   lazy val N = dataPoints.count
 
-  lazy val pca = new PCA(3).fit(dataPoints.map(_.features))
+  def updateMemo(f: Map[Any, Any] => Map[Any, Any]) = copy(memo = f(memo))
 
 }
 

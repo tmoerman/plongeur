@@ -1,7 +1,5 @@
 package org.tmoerman.plongeur.tda
 
-import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.TDA._
 import org.tmoerman.plongeur.util.IterableFunctions
 
 import scalaz.Memo
@@ -37,19 +35,7 @@ class TDAResultInspections(val result: TDAResult,
       "}").mkString("\n")
 
 
-  def connectedComponents: Seq[Set[Int]] = Nil // following code is wrong -> use edges instead!
-
-//    result
-//      .clusters
-//      .foldLeft(Set[Set[Cluster[ID]]]()) { case (acc, cluster) =>
-//        acc
-//          .find(component => component.exists(_.dataPoints.toSet.intersect(cluster.dataPoints.toSet).nonEmpty))
-//          .map(found => (acc - found) + (found + cluster))
-//          .getOrElse(acc + Set(cluster))
-//      }
-//      .toSeq
-//      .map(component => component.map(cluster => clusterCounter(cluster.id)))
-
+  def connectedComponents: Seq[Set[Int]] = Nil // TODO complete
 
   def clusterPoints =
     result
@@ -84,4 +70,3 @@ class TDAResultInspections(val result: TDAResult,
       .map{ case (point, clusterIds) => point + " -> " + clusterIds.map(clusterCounter).toList.sorted.mkString(", ") }
 
 }
-

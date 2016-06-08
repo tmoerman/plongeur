@@ -13,18 +13,16 @@ import shapeless.HNil
   */
 class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
 
-  behavior of "TDA"
+  behavior of "TDA algorithm"
 
   implicit val counter = mapToInt
 
-  def printInspections(result: TDAResult, name: String): Unit = {
+  def printInspections(result: TDAResult, name: String) = {
     println(
-      Seq(
-        result.levelSetsToClusters.mkString("\n"),
-        result.pointsToClusters.mkString("\n"),
-        result.dotGraph(name),
-        result.connectedComponents.mkString(" \n ")
-      ).mkString("\n"))
+      Seq(result.levelSetsToClusters.mkString("\n"),
+          result.pointsToClusters.mkString("\n"),
+          result.dotGraph(name))
+        .mkString("\n"))
   }
 
   it should "work with specified boundaries" in {
@@ -72,6 +70,8 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
     val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
 
     printInspections(result, "circle250")
+
+    // TODO verify stuff
   }
 
   it should "pass smoke test with eccentricity filter" in {
@@ -82,6 +82,8 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
         scaleSelection = histogram(10))
 
     val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
+
+    // TODO verify stuff
   }
 
 }
