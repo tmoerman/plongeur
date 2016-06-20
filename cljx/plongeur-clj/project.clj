@@ -12,7 +12,7 @@
   :source-paths ["src"]
   :test-paths   ["test"]
 
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha5"]
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  [com.netflix.rxjava/rxjava-clojure "0.20.7"]
@@ -31,9 +31,8 @@
 
                  [gorillalabs/sparkling "1.2.5"]
 
-                 ;[t6/from-scala "0.2.1"]
-                 ;[org.scala-lang/scala-library "2.11.6"]
-                 ;[org.tmoerman/plongeur-spark_2.10 "0.2.1"]
+                 [t6/from-scala "0.3.0"]
+                 [org.tmoerman/plongeur-spark_2.10 "0.2.2"]
 
                  ]
 
