@@ -13,10 +13,10 @@
   :test-paths   ["test"]
 
   :dependencies [[org.clojure/clojure "1.9.0-alpha5"]
-                 [org.clojure/core.async "0.2.374"]
+                 [org.clojure/core.async "0.2.385"]
                  [org.clojure/core.match "0.3.0-alpha4"]
                  [com.netflix.rxjava/rxjava-clojure "0.20.7"]
-                 [com.rpl/specter "0.10.0"]
+                 [com.rpl/specter "0.11.2"]
 
                  [ring "1.4.0"]
                  [ring/ring-defaults "0.2.0" :exclusions [[javax.servlet/*]]]
@@ -47,7 +47,7 @@
                        :dependencies [[org.clojure/tools.namespace "0.2.11"]
                                       [org.clojure/java.classpath "0.2.3"]
                                       [org.clojure/tools.nrepl "0.2.11"]
-                                      [midje "1.8.3"]
+                                      [midje "1.9.0-alpha2"]
                                       [aprint "0.1.3"]
                                       [org.clojure/tools.trace "0.7.9"]]
                        :plugins [[lein-midje "3.2"]
