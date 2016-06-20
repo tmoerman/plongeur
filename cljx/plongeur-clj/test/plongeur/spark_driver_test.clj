@@ -1,4 +1,4 @@
-(ns kierros.spark-driver-test
+(ns plongeur.spark-driver-test
   (use midje.sweet)
   (:require [clojure.core.async :as a :refer [<! <!! >! chan close! go]]
             [clojure.string :as str]
