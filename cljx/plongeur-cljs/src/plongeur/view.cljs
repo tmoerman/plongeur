@@ -161,7 +161,7 @@
                :sigma (Sigma [plot-state id idx] cmd-chans)))]]]))
 
 (defcomponent Menu
-  [state {:keys [debug]}]
+  [state {:keys [debug post-request-chan]}]
   (html [:ul {:class-name "mdl-menu mdl-list mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect mdl-shadow--2dp account-dropdown"
               :for "more-vert-btn"}
 
@@ -174,7 +174,12 @@
          [:li {:class-name "mdl-menu__item mdl-list__item"}
           [:span {:on-click #(go (>! debug :click))
                   :class-name "mdl-list__item-primary-content"}
-           [:i {:class-name "material-icons mdl-list__item-icon"} "get_app"] "Write app state to console"]]
+           [:i {:class-name "material-icons mdl-list__item-icon"} "bug_report"] "Write app state to console"]]
+
+         [:li {:class-name "mdl-menu__item mdl-list__item"}
+          [:span {:on-click #(go (>! post-request-chan [:plongeur/ping {}]))
+                  :class-name "mdl-list__item-primary-content"}
+           [:i {:class-name "material-icons mdl-list__item-icon"} "priority_high"] "Ping server"]]
 
          [:li {:class-name "list__item--border-top"}]
 

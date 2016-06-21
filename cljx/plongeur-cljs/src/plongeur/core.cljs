@@ -40,7 +40,8 @@
         cmd-chans              (assoc intent-chans
                                  ; temporary hack to simulate web responses.
                                  :web-response-chan web-response-chan
-                                 :dom-event-chan    dom-event-chan)
+                                 :dom-event-chan    dom-event-chan
+                                 :post-request-chan post-request-chan)
 
         views-chan             (v/view view-states-chan cmd-chans)]
 
@@ -53,5 +54,7 @@
   (cycle/run plongeur-client-main
              {:DOM     (dom/make-dom-driver "plongeur-app")
               :WEB     (ws/make-sente-client-driver {:path "/chsk"
-                                                     :host "localhost:8090"} :dummy)
+                                                     :host "localhost:3000"}
+                                                    ;:dummy
+                                                    )
               :STORAGE (st/make-storage-driver "plongeur" m/default-state)}))
