@@ -11,6 +11,9 @@
 
 (defn seq-val [state] (select-one [:seq] state))
 
+(def plots-path [:plots])
+(defn plot-path [id] (conj plots-path (keypath id)))
+
 (defn plot       [state id] (select-one [:plots (keypath id)] state))
 (defn plots      [state] (select-one [:plots] state))
 (defn plot-ids   [state] (select [:plots ALL FIRST] state))
@@ -34,7 +37,7 @@
 (defn handle-web-response
   "Handle a websocket response."
   [response state]
-  #_(prn (str "received websocket response: " response))
+  (prn (str "received websocket response: " response))
 
   ;; TODO merge the received data into the state's plots map.
   ;; OR: perhaps allow the Sigma graphs to periodically (while running the force algorithm)

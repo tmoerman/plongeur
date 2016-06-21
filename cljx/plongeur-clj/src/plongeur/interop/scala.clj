@@ -1,5 +1,7 @@
 (ns plongeur.interop.scala
-  (:import [org.tmoerman.plongeur.tda.TDA]))
+  (:require [t6.from-scala.internal :refer [$ $$] :as t6])
+  ;(:import [org.tmoerman.plongeur.tda.TDA])
+  )
 
 (defn bla [] "hello")
 

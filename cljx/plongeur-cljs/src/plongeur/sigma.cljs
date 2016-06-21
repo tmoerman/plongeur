@@ -269,8 +269,7 @@
                 e (->> arm-size range (map inc))] ;; 1 2 3 4 5
             (let [id     (-> (dec a) (* arm-size) (+ e))
                   source (if (= e 1) 0 (dec id))
-                  target id
-                  ]
+                  target id]
               (make-edge id source target)))})
 
 (defn make-shape

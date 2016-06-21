@@ -8,14 +8,22 @@
 
 (defn plongeur-server-main
   "Main function cfr. Cycle.js architecture."
-  [{client-request-chan :WEB
-    repl-msg-chan       :REPL}]
-  (let [client-push (chan 10)]
+  [{client-request-chan  :WEB
+    repl-msg-chan        :REPL
+    spark-ctx-chan       :SPARK}]
+
+  (let [push-response-chan (chan 10)
+        spark-cfg-chan     (chan 10)
+
+
+
+        ]
 
     (a/pipe repl-msg-chan (->> (map u/echo) (chan 10)))
 
-    {:WEB  client-push
-     :REPL repl-msg-chan}))
+    {:WEB   push-response-chan
+     :REPL  repl-msg-chan ;;TODO is this correct?
+     :SPARK spark-cfg-chan}))
 
 (defn launch []
   (cycle/run plongeur-server-main

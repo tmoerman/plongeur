@@ -11,6 +11,8 @@
             [taoensso.sente.server-adapters.http-kit :refer [sente-web-server-adapter]]
             [taoensso.timbre :refer [warn]]))
 
+;; TODO styling of these pages
+
 (defn landing-page   [] (html [:h1 "Ici Plongeur CLJ!"]))
 
 (defn page-not-found [] (html [:h1 "Parbleu! 404"]))
@@ -27,10 +29,11 @@
 (defn make-sente-server-driver
   "Accepts an options map.
   Returns a websocket server driver powered by Sente and http-kit.
-  The driver accepts a channel of client bound push messages and returns a channel of client requests."
+  The driver accepts a channel of client-bound response push messages.
+  The driver returns a channel of client requests."
   [& [{sente-options    :sente
        http-kit-options :http-kit}]]
-  (fn [client-bound-chan]
+  (fn [response-push-chan]
     (let [{:keys [ch-recv
                   send-fn
                   connected-uids
@@ -44,10 +47,12 @@
           ring-handler (wrap-defaults sente-routes site-defaults)
           http-shutdown-fn    (h/run-server ring-handler http-kit-options)
           client-request-chan (chan)
-          router-shutdown-fn  (s/start-chsk-router! ch-recv #(go (>! client-request-chan %)))]
+          router-shutdown-fn  (s/start-chsk-router! ch-recv (fn [{:keys [client-id id uid event connected-uids] :as msg}]
+                                                              (prn (str uid " - " id " - " client-id " - " event))
+                                                              (go (>! client-request-chan msg))))]
       (go-loop []
-               (if-let [client-bound-msg (<! client-bound-chan)]
-                 (do (send-fn client-bound-msg)
+               (if-let [msg (<! response-push-chan)]
+                 (do (send-fn msg)
                      (recur))
                  (do (http-shutdown-fn)
                      (router-shutdown-fn)
