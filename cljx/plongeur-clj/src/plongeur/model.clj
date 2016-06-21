@@ -4,7 +4,8 @@
   (:require [clojure.core.async :as a :refer [<! >! chan go go-loop close!]]
             [clojure.data :refer [diff]]
             [kierros.model :refer [scan-to-states]]
-            [plongeur.util :refer [sliding]]))
+            [plongeur.util :refer [sliding]]
+            [plongeur.datagen :as g]))
 
 ;; State queries
 ;;
@@ -31,7 +32,7 @@
      :added   only-in-new}))
 
 (def xf*diff-ops
-  "A transducer for diff-ops."
+  "Transducer for diff-ops."
   (comp
     (sliding 2 1)
     (map (fn [v]
@@ -40,7 +41,25 @@
              2 (let [[old new] v] (diff-ops old new)))))
     (remove nil?)))
 
+(defn apply-diff-ops
+  "Apply the diff-ops to the specified core.async mix."
+  [diff-ops-ch mix]
+  (go-loop []
+    (when-let [{:keys [added removed]} (<! diff-ops-ch)]
+      (do
+        (doseq [ch added]   (a/admix mix ch))
+        (doseq [ch removed] (a/unmix mix ch))
+        (recur)))))
+
 ;; Intent handlers
+
+(defn machine-response
+  "Creates a machine response"
+  [id type payload]
+  {:push-type :machine-response
+   :id        id
+   :type      type
+   :payload   payload})
 
 (defn update-spark-ctx
   [spark-ctx state]
@@ -57,7 +76,7 @@
 (defn make-tda-machine
   "Create a TDA machine.
   Returns map with :in and :out channel."
-  [spark-ctx]
+  [id spark-ctx]
   (let [in-chan  (chan 10)
         out-chan (chan 10)]
     {:in in-chan
@@ -65,36 +84,39 @@
 
 (defn make-loop-machine
   "Make a machine that returns loops."
-  []
-  (let [in-chan  (chan 10)
-        out-chan (chan 10)]
-    {:in in-chan
-     :out out-chan}))
+  [id]
+  (let [ch (chan 10 (map (fn [{:keys [size]}]
+                           (->> (g/make-loop size)
+                                (machine-response id :graph)))))]
+    {:in  ch
+     :out ch}))
 
 (defn make-star-machine
   "Make a machine that returns stars."
-  []
-  (let [in-chan  (chan 10)
-        out-chan (chan 10)]
-    {:in in-chan
-     :out out-chan}))
+  [id]
+  (let [ch (chan 10 (map (fn [{:keys [nr-arms arm-size]}]
+                           (->> (g/make-star nr-arms arm-size)
+                                (machine-response id :graph)))))]
+    {:in  ch
+     :out ch}))
 
 (defn make-random-machine
-  []
+  [id]
   "Make a machine that returns random shapes (loops or stars)."
-  (let [in-chan  (chan 10)
-        out-chan (chan 10)]
-    {:in in-chan
-     :out out-chan}))
+  (let [ch (chan 10 (map (fn [_]
+                           (->> (g/make-shape)
+                                (machine-response id :graph)))))]
+    {:in  ch
+     :out ch}))
 
 (defn make-machine
   "Create a machine of specified type."
-  [type spark-ctx]
+  [id type spark-ctx]
   (condp = type
-    :tda    (make-tda-machine spark-ctx)
-    :loop   (make-loop-machine)
-    :star   (make-star-machine)
-    :random (make-random-machine)))
+    :tda    (make-tda-machine id spark-ctx)
+    :loop   (make-loop-machine id)
+    :star   (make-star-machine id)
+    :random (make-random-machine id)))
 
 (defn put-params!
   "Put the params to the machine in-chan.
@@ -112,7 +134,7 @@
                                   (if (machines-state id)
                                     machines-state
                                     (->> (spark-ctx state)
-                                         (make-machine type)
+                                         (make-machine id type)
                                          (assoc machines-state id)))))
        (put-params! id params)))
 
