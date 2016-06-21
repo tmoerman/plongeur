@@ -3,7 +3,8 @@
   (:use com.rpl.specter.macros)
   (:require [clojure.core.async :as a :refer [<! >! chan go go-loop close!]]
             [clojure.data :refer [diff]]
-            [kierros.model :refer [scan-to-states]]))
+            [kierros.model :refer [scan-to-states]]
+            [plongeur.util :refer [sliding]]))
 
 ;; State queries
 ;;
@@ -29,6 +30,16 @@
     {:removed only-in-old
      :added   only-in-new}))
 
+(def xf*diff-ops
+  "A transducer for diff-ops."
+  (comp
+    (sliding 2 1)
+    (map (fn [v]
+           (condp = (count v)
+             1 nil
+             2 (let [[old new] v] (diff-ops old new)))))
+    (remove nil?)))
+
 ;; Intent handlers
 
 (defn update-spark-ctx
@@ -43,15 +54,47 @@
   (->> state
        (transform machines-path #(dissoc % id))))
 
+(defn make-tda-machine
+  "Create a TDA machine.
+  Returns map with :in and :out channel."
+  [spark-ctx]
+  (let [in-chan  (chan 10)
+        out-chan (chan 10)]
+    {:in in-chan
+     :out out-chan}))
+
+(defn make-loop-machine
+  "Make a machine that returns loops."
+  []
+  (let [in-chan  (chan 10)
+        out-chan (chan 10)]
+    {:in in-chan
+     :out out-chan}))
+
+(defn make-star-machine
+  "Make a machine that returns stars."
+  []
+  (let [in-chan  (chan 10)
+        out-chan (chan 10)]
+    {:in in-chan
+     :out out-chan}))
+
+(defn make-random-machine
+  []
+  "Make a machine that returns random shapes (loops or stars)."
+  (let [in-chan  (chan 10)
+        out-chan (chan 10)]
+    {:in in-chan
+     :out out-chan}))
+
 (defn make-machine
   "Create a machine of specified type."
   [type spark-ctx]
-  (let [in-chan  (chan (a/sliding-buffer 10))
-        out-chan (chan 10)]
-    (condp = type
-      :tda (let [bla "TDA"]
-             {:in in-chan
-              :out out-chan}))))
+  (condp = type
+    :tda    (make-tda-machine spark-ctx)
+    :loop   (make-loop-machine)
+    :star   (make-star-machine)
+    :random (make-random-machine)))
 
 (defn put-params!
   "Put the params to the machine in-chan.

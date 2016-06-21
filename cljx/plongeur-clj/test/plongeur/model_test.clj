@@ -61,8 +61,14 @@
 
     (m/drive-machine config-2 state) => state
 
-    )
+    ))
 
+(facts
+  "about xf*diff-ops transducer"
 
+  (->> [[] [1] [1 2] [1 3]]
+       (sequence m/xf*diff-ops)) => [{:added #{1} :removed nil}
+                                     {:added #{2} :removed nil}
+                                     {:added #{3} :removed #{2}}]
 
   )
