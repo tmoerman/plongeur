@@ -27,7 +27,8 @@
                  [com.taoensso/sente "1.8.1"]
                  [com.taoensso/timbre "4.3.1"]
 
-                 [environ "1.0.2"]
+                 [environ "1.0.3"]
+                 [me.raynes/fs "1.4.5"]
 
                  [gorillalabs/sparkling "1.2.5"]
 
@@ -36,23 +37,28 @@
 
                  ]
 
-  :plugins [[lein-environ "1.0.2"]]
+  :plugins [[lein-environ "1.0.3"]]
 
-  :profiles {:uberjar {:aot :all}
+  :profiles {:uberjar  {:aot :all}
 
              :provided {:dependencies [[org.apache.spark/spark-core_2.10 "1.6.1"]]}
 
-             :dev     {:source-paths ["dev"]
-                       :repl-options {:port 8666}
-                       :dependencies [[org.clojure/tools.namespace "0.2.11"]
-                                      [org.clojure/java.classpath "0.2.3"]
-                                      [org.clojure/tools.nrepl "0.2.11"]
-                                      [midje "1.9.0-alpha2"]
-                                      [aprint "0.1.3"]
-                                      [org.clojure/tools.trace "0.7.9"]]
-                       :plugins [[lein-midje "3.2"]
-                                 [lein-kibit "0.1.2"]]
-                       :main user }}
+             :dev      {:env          {:data-path  "resources"
+                                       :spark-conf {:master     "local[*]"
+                                                    :app-name   "Plongeur"
+                                                    :properties {:spark-serializer "org.apache.spark.serializer.KryoSerializer"}}}
+                        :source-paths ["dev"]
+                        :repl-options {:port 8666}
+                        :dependencies [[org.clojure/tools.namespace "0.2.11"]
+                                       [org.clojure/java.classpath "0.2.3"]
+                                       [org.clojure/tools.nrepl "0.2.11"]
+                                       [midje "1.9.0-alpha2"]
+                                       [aprint "0.1.3"]
+                                       [org.clojure/tools.trace "0.7.9"]]
+                        :plugins      [[lein-midje "3.2"]
+                                       [lein-kibit "0.1.2"]]
+                        :main         user}
+             }
 
   :aliases {"dive" ["with-profile" "+dev" "repl"]}
 
