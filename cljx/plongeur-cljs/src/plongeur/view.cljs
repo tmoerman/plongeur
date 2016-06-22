@@ -1,5 +1,8 @@
 (ns plongeur.view
-  "See https://github.com/CreativeIT/material-dashboard-lite"
+  "Quiescent/React powered front end.
+
+  Template: https://github.com/CreativeIT/material-dashboard-lite
+  Icons:    https://design.google.com/icons/"
   (:require [cljs.core.async :as a :refer [<! >! timeout alts! tap chan pipe close!]]
             [quiescent.core :as q :include-macros true :refer-macros [defcomponent]]
             [sablono.core :refer-macros [html]]
