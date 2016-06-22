@@ -27,6 +27,17 @@
               (rf result v))
             result)))))))
 
+(defn deep-merge
+  "Deep merge a heterogeneous nested data structure.
+  Different merge semantics apply:
+  - maps   : deep-merge the maps recursively
+  - vector : concat the vectors
+  - other  : last of the entries"
+  [& entries]
+  (cond (every? map?    entries) (apply merge-with deep-merge entries)
+        (every? vector? entries) (apply concat entries)
+        :else                    (last entries)))
+
 (defn echo
   ([x] (echo "echo" x))
   ([prefix x] (prn (str prefix ": " x) x)))
