@@ -7,6 +7,22 @@
             [sparkling.core :as s]))
 
 (facts
+  "about transforming idiomatic clj keys to spark property keys"
+
+  (format-property-key :spark-serializer) => "spark.serializer"
+
+  (format-property-key "spark.serializer") => "spark.serializer"
+
+  (format-properties {:properties {:spark-prop        1
+                                         "spark.test" "2"}}) => {:properties {"spark.prop" "1"
+                                                                              "spark.test" "2"}}
+
+  (default+format {}) => {:master   "local[*]"
+                          :app-name "Plongeur"
+                          :properties {"spark.serializer" "org.apache.spark.serializer.KryoSerializer"}}
+  )
+
+(facts
 
   "about turning an edn data structure into a SparkConf instance."
 
