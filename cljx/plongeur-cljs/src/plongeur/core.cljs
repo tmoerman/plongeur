@@ -18,14 +18,14 @@
 (defonce history-mult (mult (h/init-history)))
 
 (defn plongeur-client-main
-  "Main function cfr. Cycle.js architecture."
+  "Main function inspired by the Cycle.js architecture."
   [{dom-event-chan    :DOM
     saved-state-chan  :STORAGE
     web-response-chan :WEB}]
 
   (let [intent-chans              (i/intents)
 
-        _ (a/untap-all history-mult) ;; simply piping makes tokens get lost to obsolete channels.
+        _ (a/untap-all history-mult)
         _ (tap  history-mult      (:handle-navigation   intent-chans))
 
         _ (pipe web-response-chan (:handle-web-response intent-chans))
@@ -45,9 +45,9 @@
 
         cmd-chans              (assoc intent-chans
                                  ; temporary hack to simulate web responses.
-                                 :web-response-chan web-response-chan
-                                 :dom-event-chan    dom-event-chan
-                                 :post-request-chan post-request-chan)
+                                 :web-response web-response-chan
+                                 :dom-event    dom-event-chan
+                                 :post-request post-request-chan)
 
         views-chan             (v/view view-states-chan cmd-chans)]
 

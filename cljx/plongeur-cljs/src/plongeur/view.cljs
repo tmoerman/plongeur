@@ -8,6 +8,7 @@
             [sablono.core :refer-macros [html]]
             [foreign.sigma]
             [foreign.linkurious]
+            [plongeur.activity :as nav]
             [plongeur.model :as m]
             [plongeur.sigma :as s]
             [plongeur.config :as c]
@@ -17,13 +18,6 @@
 (defn ascii [c] (-> c {\f 70
                        \l 76
                        \s 83} str))
-
-(defn nav! [url] (set! (.-location js/window) url))
-
-(defn ->browse-scenes [] (nav! "#/browse"))
-(defn ->create-scene  [] (nav! "#/create"))
-(defn ->edit-scene    [] (nav! "#/scene"))
-(defn ->edit-config   [] (nav! "#/config"))
 
 ;; Set MDL upgrade interval
 
@@ -171,7 +165,7 @@
                :sigma (Sigma [plot-state id idx] cmd-chans)))]]]))
 
 (defcomponent Menu
-  [state {:keys [debug post-request-chan]}]
+  [state {:keys [debug post-request]}]
   (html [:ul {:class-name "mdl-menu mdl-list mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect mdl-shadow--2dp account-dropdown"
               :for "more-vert-btn"}
 
@@ -183,7 +177,7 @@
            [:i {:class-name "material-icons mdl-list__item-icon"} "bug_report"] "Write app state to console"]]
 
          [:li {:class-name "mdl-menu__item mdl-list__item"}
-          [:span {:on-click #(go (>! post-request-chan [:plongeur/ping {}]))
+          [:span {:on-click #(go (>! post-request [:plongeur/ping {}]))
                   :class-name "mdl-list__item-primary-content"}
            [:i {:class-name "material-icons mdl-list__item-icon"} "priority_high"] "Ping server"]]
 
@@ -210,7 +204,7 @@
                       :class-name (if disabled
                                     "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
                                     "mdl-button mdl-js-button mdl-button--icon")
-                      :on-click   #(->browse-scenes)}
+                      :on-click   #(nav/->browse-scenes cmd-chans)}
              [:i {:class-name "material-icons"} (if disabled "folder" "folder_open")]])
 
           (let [disabled (= :view/create-scene (m/current-view state))]
@@ -218,15 +212,15 @@
                       :class-name (if disabled
                                     "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
                                     "mdl-button mdl-js-button mdl-button--icon")
-                      :on-click   #(->create-scene)}
+                      :on-click   #(nav/->create-scene cmd-chans)}
              [:i {:class-name "material-icons"} (if disabled "insert_drive_file" "note_add")]])
-          
+
           (let [disabled (= :view/edit-config (m/current-view state))]
             [:button {:title      "Configuration"
                       :class-name (if disabled
                                     "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
                                     "mdl-button mdl-js-button mdl-button--icon")
-                      :on-click   #(->edit-config)}
+                      :on-click   #(nav/->edit-config)}
              [:i {:class-name "material-icons"} "settings"]])
 
           [:div {:class-name "mdl-layout-spacer"}]
@@ -243,6 +237,14 @@
            [:i {:class-name "material-icons"} "more_vert"]]
 
           (Menu state cmd-chans)]]))
+
+(defcomponent Drawer
+              [state cmd-chans]
+              (html [:div {:class-name "mdl-layout__drawer"}
+
+                     ;; TODO Perhaps display some connection status info
+
+                     "hello"]))
 
 (defcomponent Root
   [state cmd-chans]
