@@ -41,9 +41,9 @@
 (testing "intent handlers"
 
   (deftest handle-navigation-test
-    (is (= (m/handle-navigation "browse" {})
+    (is (= (m/handle-navigation "/browse" {})
            {:current-view :view/browse-scenes}))
-    (is (= (m/handle-navigation "browse" {:current-view :some-view})
+    (is (= (m/handle-navigation "/browse" {:current-view :some-view})
            {:current-view :view/browse-scenes})))
 
   (deftest add-plot-test
