@@ -55,6 +55,6 @@
              {:DOM     (dom/make-dom-driver "plongeur-app")
               :WEB     (ws/make-sente-client-driver {:path "/chsk"
                                                      :host "localhost:3000"}
-                                                    ;:dummy
+                                                    :disable
                                                     )
               :STORAGE (st/make-storage-driver "plongeur" m/default-state)}))
