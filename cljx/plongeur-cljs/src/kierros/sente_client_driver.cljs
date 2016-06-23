@@ -14,6 +14,7 @@
       (prn "Sente client driver :disabled flag was set, creating dummy channel...")
       (chan 10))
     (fn [request-chan]
+      (prn "Sente client driver initializing...")
       (let [{:keys [chsk ch-recv send-fn]} (s/make-channel-socket-client! path {:host host})
             server-response-chan (chan 10)
             router-shutdown-fn (s/start-chsk-router! ch-recv #(go (>! server-response-chan %)))]
