@@ -237,11 +237,11 @@
           #_(Drawer state cmd-chans)
 
           (case (m/current-view state)
-            :view/browse-scenes [:div {} "browse-scenes"]
-            :view/create-scene  [:div {} "create-scene"]
+            :view/browse-scenes [:h1 {} "browse-scenes"]
+            :view/create-scene  [:h1 {} "create-scene"]
             :view/edit-scene    (Grid state cmd-chans)
-            :view/edit-config   [:div {} "edit-config"]
-            [:div {} "uh-oh"]
+            :view/edit-config   [:h1 {} "edit-config"]
+            [:h1 {} "uh-oh"]
             )
 
           ]]))

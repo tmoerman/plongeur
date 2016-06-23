@@ -6,8 +6,8 @@
 (testing "state queries"
 
   (deftest test-current-view
-    (is (= (m/current-view {:current-view :browse-scenes})
-           :browse-scenes)))
+    (is (= (m/current-view {:current-view :view/browse-scenes})
+           :view/browse-scenes)))
 
   (deftest plot-test
     (let [state {:plots {1 {:k1 :v1}
@@ -42,9 +42,9 @@
 
   (deftest handle-navigation-test
     (is (= (m/handle-navigation "browse" {})
-           {:current-view :browse-scenes}))
+           {:current-view :view/browse-scenes}))
     (is (= (m/handle-navigation "browse" {:current-view :some-view})
-           {:current-view :browse-scenes})))
+           {:current-view :view/browse-scenes})))
 
   (deftest add-plot-test
     (let [old-state {:seq    1

@@ -11,7 +11,7 @@
 ;; All navigation should be done by means of the state queries specified here.
 
 (def current-view-path [:current-view])
-(defn current-view [state] (select-one! current-view-path state))
+(defn current-view [state] (select-one current-view-path state))
 
 (defn seq-val [state] (select-one [:seq] state))
 
@@ -38,16 +38,20 @@
 ;; all necessary data for handling the intent, and state is the entire application state.
 
 (defn view-key [token] (case token
-                         "browse" :browse-scenes
-                         "create" :create-scene
-                         "scene"  :view-scene
-                         "config" :edit-config
-                         :browse-scenes))
+                         "/browse" :view/browse-scenes
+                         "/create" :view/create-scene
+                         "/scene"  :view/edit-scene
+                         "/config" :view/edit-config
+                                   :view/home))
 
 (defn handle-navigation
   "Accepts a history token. Updates the :current-view in the state map."
   [token state]
-  (setval current-view-path (view-key token) state))
+  (let [view-key (if (keyword? token)
+                   token
+                   (view-key token))]
+    (prn (str "navigating -> " view-key))
+    (setval current-view-path view-key state)))
 
 (defn handle-web-response
   "Handle a websocket response."
@@ -171,10 +175,10 @@
 (def default-state
   "Returns a new initial application state."
 
-  {:current-view :browse-scenes     ;; valid keywords [:browse-scenes :create-scene :scene]
-   :seq          1                  ;; database sequence-like
-   :plots        {}                 ;; contains the visualization properties
-   :config       c/default-config}) ;; the default config
+  {:current-view :view/browse-scenes ;; valid keywords [:browse-scenes :create-scene :scene]
+   :seq          1                   ;; database sequence-like
+   :plots        {}                  ;; contains the visualization properties
+   :config       c/default-config})  ;; the default config
 
 (defn model
   [init-state-chan intent-chans]
