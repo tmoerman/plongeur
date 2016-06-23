@@ -14,12 +14,16 @@
             [kierros.async :refer [debounce]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-
 (defn ascii [c] (-> c {\f 70
                        \l 76
                        \s 83} str))
 
-(defn nav! [url] #(set! (.-location js/window) url))
+(defn nav! [url] (set! (.-location js/window) url))
+
+(defn ->browse-scenes [] (nav! "#/browse"))
+(defn ->create-scene  [] (nav! "#/create"))
+(defn ->edit-scene    [] (nav! "#/scene"))
+(defn ->edit-config   [] (nav! "#/config"))
 
 ;; Set MDL upgrade interval
 
@@ -171,12 +175,7 @@
   (html [:ul {:class-name "mdl-menu mdl-list mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect mdl-shadow--2dp account-dropdown"
               :for "more-vert-btn"}
 
-         [:li {:class-name "mdl-menu__item mdl-list__item"}
-          [:span {:class-name "mdl-list__item-primary-content"
-                  :on-click   (nav! "#/config")}
-           [:i {:class-name "material-icons mdl-list__item-icon"} "settings"] "Configuration"]]
-
-         [:li {:class-name "list__item--border-top"}]
+         #_[:li {:class-name "list__item--border-top"}]
 
          [:li {:class-name "mdl-menu__item mdl-list__item"}
           [:span {:on-click #(go (>! debug :click))
@@ -190,11 +189,12 @@
 
          [:li {:class-name "list__item--border-top"}]
 
-         [:li {:class-name "mdl-menu__item mdl-list__item"}
+         [:a {:class-name "mdl-menu__item mdl-list__item"}
           [:span {:class-name "mdl-list__item-primary-content"}
            [:i {:class-name "material-icons mdl-list__item-icon"} "attach_file"] "Publication"]]
 
-         [:li {:class-name "mdl-menu__item mdl-list__item"}
+         [:a {:class-name "mdl-menu__item mdl-list__item"
+              :href       "https://github.com/tmoerman/plongeur"}
           [:span {:class-name "mdl-list__item-primary-content"}
            [:i {:class-name "material-icons mdl-list__item-icon"} "link"] "Github"]]]))
 
@@ -203,15 +203,33 @@
   (html [:header {:class-name "mdl-layout__header"}
          [:div {:class-name "mdl-layout__header-row"}
 
-          [:div {} (-> state m/current-view str)]
+          ;; Nav buttons
 
-          [:button {:title "Browse scenes"
-                    :class-name "mdl-button mdl-js-button mdl-button--icon"
-                    :on-click   (nav! "#/browse")}
-           [:i {:class-name "material-icons"} "folder_open"]]
+          (let [disabled (= :view/browse-scenes (m/current-view state))]
+            [:button {:title      "Browse scenes"
+                      :class-name (if disabled
+                                    "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
+                                    "mdl-button mdl-js-button mdl-button--icon")
+                      :on-click   #(->browse-scenes)}
+             [:i {:class-name "material-icons"} (if disabled "folder" "folder_open")]])
+
+          (let [disabled (= :view/create-scene (m/current-view state))]
+            [:button {:title      "Create scene"
+                      :class-name (if disabled
+                                    "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
+                                    "mdl-button mdl-js-button mdl-button--icon")
+                      :on-click   #(->create-scene)}
+             [:i {:class-name "material-icons"} (if disabled "insert_drive_file" "note_add")]])
+          
+          (let [disabled (= :view/edit-config (m/current-view state))]
+            [:button {:title      "Configuration"
+                      :class-name (if disabled
+                                    "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
+                                    "mdl-button mdl-js-button mdl-button--icon")
+                      :on-click   #(->edit-config)}
+             [:i {:class-name "material-icons"} "settings"]])
 
           [:div {:class-name "mdl-layout-spacer"}]
-
 
           (when (= :view/edit-scene (m/current-view state))
             [:div {:on-click   #(go (>! add-plot :sigma))
@@ -241,8 +259,8 @@
             :view/create-scene  [:h1 {} "create-scene"]
             :view/edit-scene    (Grid state cmd-chans)
             :view/edit-config   [:h1 {} "edit-config"]
-            [:h1 {} "uh-oh"]
-            )
+
+                                [:h1 {} "uh-oh"])
 
           ]]))
 
