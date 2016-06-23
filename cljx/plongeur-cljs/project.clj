@@ -9,18 +9,18 @@
                  [quiescent "0.3.1"]
                  [sablono "0.6.3"]
                  [cljsjs/material "1.1.3-1"]
-                 [com.rpl/specter "0.9.3"]
+                 [com.rpl/specter "0.11.2"]
                  [prismatic/dommy "1.1.0"]]
   
-  :plugins [[lein-figwheel "0.5.3-2"]
+  :plugins [[lein-figwheel "0.5.4-4"]
             [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]
             [lein-npm "0.6.2"]]
 
   :hooks [leiningen.cljsbuild]
 
-  :clean-targets ^{:protect false} ["resources/public/js/compiled"
-                                    "resources/public/js/node_modules"
-                                    "resources/private/js/compiled"
+  :clean-targets ^{:protect false} [;"resources/public/js/compiled"
+                                    ;"resources/public/js/node_modules"
+                                    ;"resources/private/js/compiled"
                                     "target"]
 
   :cljsbuild {:builds {:dev {:source-paths ["src" "test"]

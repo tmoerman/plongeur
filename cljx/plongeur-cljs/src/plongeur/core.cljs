@@ -1,6 +1,7 @@
 (ns plongeur.core
   (:require [cljs.core.async :as a :refer [<! >! timeout mult tap chan pipe sliding-buffer]]
             [kierros.core :as cycle]
+            [kierros.history :as h]
             [plongeur.intent :as i]
             [plongeur.model  :as m]
             [plongeur.view   :as v]
@@ -14,6 +15,8 @@
 
 (v/upgrade-mdl-components)
 
+(defonce history-mult (mult (h/init-history)))
+
 (defn plongeur-client-main
   "Main function cfr. Cycle.js architecture."
   [{dom-event-chan    :DOM
@@ -21,6 +24,9 @@
     web-response-chan :WEB}]
 
   (let [intent-chans              (i/intents)
+
+        _ (a/untap-all history-mult) ;; simply piping makes tokens get lost to obsolete channels.
+        _ (tap  history-mult      (:handle-navigation   intent-chans))
 
         _ (pipe web-response-chan (:handle-web-response intent-chans))
         _ (pipe dom-event-chan    (:handle-dom-event    intent-chans))
@@ -50,11 +56,12 @@
      :STORAGE  pickle-states-chan
      :WEB      post-request-chan}))
 
+
 (defn launch-client []
   (cycle/run plongeur-client-main
              {:DOM     (dom/make-dom-driver "plongeur-app")
               :WEB     (ws/make-sente-client-driver {:path "/chsk"
                                                      :host "localhost:3000"}
-                                                    ;:dummy
+                                                    :disable
                                                     )
               :STORAGE (st/make-storage-driver "plongeur" m/default-state)}))

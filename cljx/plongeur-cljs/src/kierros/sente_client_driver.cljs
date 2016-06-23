@@ -9,11 +9,12 @@
   "Accepts a path and options.
   Returns a websocket client driver powered by Sente."
   [{:keys [path host]} & options]
-  (if (-> options set :dummy)
+  (if (-> options set :disable)
     (fn [_]
-      (prn "dummy sente client driver")
+      (prn "Sente client driver :disabled flag was set, creating dummy channel...")
       (chan 10))
     (fn [request-chan]
+      (prn "Sente client driver initializing...")
       (let [{:keys [chsk ch-recv send-fn]} (s/make-channel-socket-client! path {:host host})
             server-response-chan (chan 10)
             router-shutdown-fn (s/start-chsk-router! ch-recv #(go (>! server-response-chan %)))]
@@ -24,6 +25,4 @@
                    (do (some-> chsk s/chsk-disconnect!)
                        (router-shutdown-fn)
                        (prn "sente client driver stopped"))))
-        server-response-chan)))
-
-  )
+        server-response-chan))))

@@ -3,9 +3,13 @@
             [kierros.core-test]
             [kierros.model-test]
             [kierros.util-test]
+
+            [lab.async-lab]
+
             [plongeur.model-test]
             [plongeur.sigma-test]
             [plongeur.view-test]
+
             [cljs.test :refer-macros [run-tests]]))
 
 ; Run both builds simultaneously!
@@ -17,7 +21,9 @@
            'kierros.model-test
            'kierros.util-test
 
+           'lab.async-lab
+
            'plongeur.model-test
-           'plongeur.sigma-test
+           ;'plongeur.sigma-test TODO fix me
            'plongeur.view-test
            )

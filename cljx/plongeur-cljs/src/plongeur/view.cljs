@@ -14,9 +14,12 @@
             [kierros.async :refer [debounce]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
+
 (defn ascii [c] (-> c {\f 70
                        \l 76
                        \s 83} str))
+
+(defn nav! [url] #(set! (.-location js/window) url))
 
 ;; Set MDL upgrade interval
 
@@ -169,7 +172,8 @@
               :for "more-vert-btn"}
 
          [:li {:class-name "mdl-menu__item mdl-list__item"}
-          [:span {:class-name "mdl-list__item-primary-content"}
+          [:span {:class-name "mdl-list__item-primary-content"
+                  :on-click   (nav! "#/config")}
            [:i {:class-name "material-icons mdl-list__item-icon"} "settings"] "Configuration"]]
 
          [:li {:class-name "list__item--border-top"}]
@@ -199,14 +203,23 @@
   (html [:header {:class-name "mdl-layout__header"}
          [:div {:class-name "mdl-layout__header-row"}
 
+          [:div {} (-> state m/current-view str)]
+
+          [:button {:title "Browse scenes"
+                    :class-name "mdl-button mdl-js-button mdl-button--icon"
+                    :on-click   (nav! "#/browse")}
+           [:i {:class-name "material-icons"} "folder_open"]]
+
           [:div {:class-name "mdl-layout-spacer"}]
 
-          [:div {:on-click   #(go (>! add-plot :sigma))
-                 :title      "Add plot"
-                 :hidden     (>= (m/plot-count state) 4)
-                 :class-name "material-icons mdl-badge mdl-button--icon"} "add"]
 
-          [:button {:id "more-vert-btn"
+          (when (= :view/edit-scene (m/current-view state))
+            [:div {:on-click   #(go (>! add-plot :sigma))
+                   :title      "Add plot"
+                   :hidden     (>= (m/plot-count state) 4)
+                   :class-name "material-icons mdl-badge mdl-button--icon"} "add"])
+
+          [:button {:id         "more-vert-btn"
                     :title      "More options"
                     :class-name "mdl-button mdl-js-button mdl-button--icon"}
            [:i {:class-name "material-icons"} "more_vert"]]
@@ -218,9 +231,20 @@
   (html [:div {:id "plongeur-main"}
          [:div {:id         "layout"
                 :class-name "mdl-layout mdl-js-layout mdl-layout--fixed-header"}
+
           (Header state cmd-chans)
+
           #_(Drawer state cmd-chans)
-          (Grid   state cmd-chans)]]))
+
+          (case (m/current-view state)
+            :view/browse-scenes [:h1 {} "browse-scenes"]
+            :view/create-scene  [:h1 {} "create-scene"]
+            :view/edit-scene    (Grid state cmd-chans)
+            :view/edit-config   [:h1 {} "edit-config"]
+            [:h1 {} "uh-oh"]
+            )
+
+          ]]))
 
 (defn view
   "Returns a stream of view trees, represented as a core.async channel."
