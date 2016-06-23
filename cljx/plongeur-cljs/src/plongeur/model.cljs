@@ -1,13 +1,17 @@
 (ns plongeur.model
   (:require [cljs.core.async :as a :refer [<! chan to-chan pipe]]
-            [com.rpl.specter :as sp :refer [select select-one transform keypath ALL VAL FIRST]]
+            [com.rpl.specter :as sp :refer [keypath ALL VAL FIRST]]
             [kierros.model :refer [scan-to-states]]
             [plongeur.config :as c]
-            [plongeur.sigma :as s]))
+            [plongeur.sigma :as s])
+  (:require-macros [com.rpl.specter.macros :refer [select select-one select-one! transform setval]]))
 
 ;; State queries
 ;; The developer should never navigate the state map in another namespace.
 ;; All navigation should be done by means of the state queries specified here.
+
+(def current-view-path [:current-view])
+(defn current-view [state] (select-one! current-view-path state))
 
 (defn seq-val [state] (select-one [:seq] state))
 
@@ -30,9 +34,20 @@
 
 (defn lasso-tool-active?   [plot-state] (select-one [:props :lasso-tool-active] plot-state))
 
-
 ;; Intent handler functions have signature [param state], where param is a data structure that captures
 ;; all necessary data for handling the intent, and state is the entire application state.
+
+(defn view-key [token] (case token
+                         "browse" :browse-scenes
+                         "create" :create-scene
+                         "scene"  :view-scene
+                         "config" :edit-config
+                         :browse-scenes))
+
+(defn handle-navigation
+  "Accepts a history token. Updates the :current-view in the state map."
+  [token state]
+  (setval current-view-path (view-key token) state))
 
 (defn handle-web-response
   "Handle a websocket response."
@@ -134,7 +149,9 @@
 ;; Model machinery
 
 (def intent-handlers
-  {:handle-web-response handle-web-response
+  {:handle-navigation   handle-navigation
+
+   :handle-web-response handle-web-response
    :handle-dom-event    handle-dom-event
    :add-plot            add-plot
    :drop-plot           drop-plot
@@ -153,9 +170,11 @@
 
 (def default-state
   "Returns a new initial application state."
-  {:seq    1                  ;; database sequence-like
-   :plots  {}                 ;; contains the visualization properties
-   :config c/default-config}) ;; the default config
+
+  {:current-view :browse-scenes     ;; valid keywords [:browse-scenes :create-scene :scene]
+   :seq          1                  ;; database sequence-like
+   :plots        {}                 ;; contains the visualization properties
+   :config       c/default-config}) ;; the default config
 
 (defn model
   [init-state-chan intent-chans]
