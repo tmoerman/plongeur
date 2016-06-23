@@ -1,6 +1,7 @@
 (ns plongeur.core
   (:require [cljs.core.async :as a :refer [<! >! timeout mult tap chan pipe sliding-buffer]]
             [kierros.core :as cycle]
+            [kierros.history :as h]
             [plongeur.intent :as i]
             [plongeur.model  :as m]
             [plongeur.view   :as v]
@@ -14,6 +15,8 @@
 
 (v/upgrade-mdl-components)
 
+(defonce history-chan (h/init-history)) ; because of Figwheel reloading.
+
 (defn plongeur-client-main
   "Main function cfr. Cycle.js architecture."
   [{dom-event-chan    :DOM
@@ -22,6 +25,7 @@
 
   (let [intent-chans              (i/intents)
 
+        _ (pipe history-chan      (:handle-navigation   intent-chans))
         _ (pipe web-response-chan (:handle-web-response intent-chans))
         _ (pipe dom-event-chan    (:handle-dom-event    intent-chans))
 

@@ -9,7 +9,7 @@
   Returns a channel on which history tokens are put."
   []
   (let [history    (goog.History.)
-        token-chan (chan)
+        token-chan (chan 10)
         callback   (fn [evt]
                      (let [token (.-token evt)]
                        (.setToken history token)
