@@ -15,7 +15,7 @@
 
 (v/upgrade-mdl-components)
 
-(defonce history-chan (h/init-history)) ; because of Figwheel reloading.
+(defonce history-mult (mult (h/init-history)))
 
 (defn plongeur-client-main
   "Main function cfr. Cycle.js architecture."
@@ -25,7 +25,9 @@
 
   (let [intent-chans              (i/intents)
 
-        _ (pipe history-chan      (:handle-navigation   intent-chans))
+        _ (a/untap-all history-mult) ;; simply piping makes tokens get lost to obsolete channels.
+        _ (tap  history-mult      (:handle-navigation   intent-chans))
+
         _ (pipe web-response-chan (:handle-web-response intent-chans))
         _ (pipe dom-event-chan    (:handle-dom-event    intent-chans))
 
@@ -53,6 +55,7 @@
      ;:STORAGE  (chan (a/sliding-buffer 10))
      :STORAGE  pickle-states-chan
      :WEB      post-request-chan}))
+
 
 (defn launch-client []
   (cycle/run plongeur-client-main
