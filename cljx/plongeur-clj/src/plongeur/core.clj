@@ -3,8 +3,7 @@
             [kierros.core :as cycle]
             [kierros.sente-server-driver :as web]
             [plongeur.spark-driver :as spark]
-            [plongeur.util :as u])
-  )
+            [plongeur.util :as u]))
 
 (defn plongeur-server-main
   "Main function cfr. Cycle.js architecture."
@@ -14,8 +13,6 @@
 
   (let [push-response-chan (chan 10)
         spark-cfg-chan     (chan 10)
-
-
 
         ]
 
@@ -28,7 +25,7 @@
 (defn launch []
   (cycle/run plongeur-server-main
              {:SPARK (spark/make-spark-context-driver)
-              :WEB   (web/make-sente-server-driver {:sente    {}
+              :WEB   (web/make-sente-server-driver {:sente    {} ;; TODO add :user-id-fn (fn [req] user-id-str)
                                                     :http-kit {:port 3000}})
               :REPL  (fn [_] (chan 10)) ;; a REPL message channel
               }))

@@ -19,8 +19,8 @@
             server-response-chan (chan 10)
             router-shutdown-fn (s/start-chsk-router! ch-recv #(go (>! server-response-chan %)))]
         (go-loop []
-                 (if-let [request->server (<! request-chan)]
-                   (do (send-fn request->server)
+                 (if-let [request (<! request-chan)]
+                   (do (send-fn request) ;; send-fn signature: (fn [event & [?timeout-ms ?cb-fn]])
                        (recur))
                    (do (some-> chsk s/chsk-disconnect!)
                        (router-shutdown-fn)
