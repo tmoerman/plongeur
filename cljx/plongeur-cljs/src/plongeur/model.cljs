@@ -13,6 +13,9 @@
 (def current-view-path [:current-view])
 (defn current-view [state] (select-one current-view-path state))
 
+(def user-id-path [:user-id])
+(defn user-id [state] (select-one user-id-path state))
+
 (defn seq-val [state] (select-one [:seq] state))
 
 (def plots-path [:plots])
@@ -37,21 +40,21 @@
 ;; Intent handler functions have signature [param state], where param is a data structure that captures
 ;; all necessary data for handling the intent, and state is the entire application state.
 
-(defn view-key [token] (case token
-                         "/browse" :view/browse-scenes
-                         "/create" :view/create-scene
-                         "/scene"  :view/edit-scene
-                         "/config" :view/edit-config
-                                   :view/home))
+(defn login-user
+  "Accepts a user-id. Registers the user-id in the state map."
+  [[user-id password] state]
+  (->> state
+       (setval user-id-path user-id)))
 
-(defn handle-navigation
-  "Accepts a history token. Updates the :current-view in the state map."
-  [token state]
-  (let [view-key (if (keyword? token)
-                   token
-                   (view-key token))]
-    (prn (str "navigating -> " view-key))
-    (setval current-view-path view-key state)))
+(defn logout-user
+  [_ state]
+  (->> state
+       (setval user-id-path nil)))
+
+(defn set-view
+  [view state]
+  (setval current-view-path view state))
+
 
 (defn handle-web-response
   "Handle a websocket response."
@@ -66,8 +69,11 @@
 (defn handle-dom-event
   "Handle a DOM event."
   [event state]
-  #_(prn (str "received DOM event: " event))
+
+  (prn (str "received DOM event: " event))
+
   state)
+
 
 (defn make-sigma-plot
   [state]
@@ -153,10 +159,9 @@
 ;; Model machinery
 
 (def intent-handlers
-  {:handle-navigation   handle-navigation
+  {:login-user          login-user
+   :set-view            set-view
 
-   :handle-web-response handle-web-response
-   :handle-dom-event    handle-dom-event
    :add-plot            add-plot
    :drop-plot           drop-plot
    :fill-plots          fill-plots
@@ -168,15 +173,16 @@
 
    :merge-plot-data     merge-plot-data
 
-   :debug               prn-state})
+   :debug               prn-state
+
+   :handle-web-response handle-web-response
+   :handle-dom-event    handle-dom-event})
 
 ;; The model is a channel of application states.
 
 (def default-state
   "Returns a new initial application state."
-
-  {:current-view :view/browse-scenes ;; valid keywords [:browse-scenes :create-scene :scene]
-   :seq          1                   ;; database sequence-like
+  {:seq          1                   ;; database sequence-like
    :plots        {}                  ;; contains the visualization properties
    :config       c/default-config})  ;; the default config
 
