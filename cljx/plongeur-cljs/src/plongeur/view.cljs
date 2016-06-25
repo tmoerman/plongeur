@@ -8,11 +8,12 @@
             [sablono.core :refer-macros [html]]
             [foreign.sigma]
             [foreign.linkurious]
-            [plongeur.activity :as nav]
+            [plongeur.route :as r]
             [plongeur.model :as m]
             [plongeur.sigma :as s]
             [plongeur.config :as c]
-            [kierros.async :refer [debounce]])
+            [kierros.async :refer [debounce]]
+            [dommy.core :as d :refer-macros [sel sel1]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn ascii [c] (-> c {\f 70
@@ -154,7 +155,7 @@
                :class-name "mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab"}
          [:i {:class-name "material-icons"} "delete"]]]]])))
 
-(defcomponent Grid
+(defcomponent Scene-grid
   [state cmd-chans]
   (html [:main {:class-name "mdl-layout__content"}
          [:div {:class-name "mdl-grid mdl-grid--no-spacing"}
@@ -192,6 +193,44 @@
           [:span {:class-name "mdl-list__item-primary-content"}
            [:i {:class-name "material-icons mdl-list__item-icon"} "link"] "Github"]]]))
 
+(defcomponent Nav-buttons
+  [[current-view user-id] {:keys [navigate]}]
+  (html [:span {}
+         (let [disabled (= :view/login-user current-view)]
+           [:button {:title      "User login"
+                     :class-name (if disabled
+                                   "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
+                                   "mdl-button mdl-js-button mdl-button--icon")
+                     :on-click   #(when-not disabled (go (>! navigate :view/login-user)))}
+            [:i {:class-name "material-icons"} (if disabled "person" "person_outline")]])
+
+         (let [disabled (or (= :view/browse-scenes current-view)
+                            (nil? user-id))]
+           [:button {:title      "Browse scenes"
+                     :class-name (if disabled
+                                   "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
+                                   "mdl-button mdl-js-button mdl-button--icon")
+                     :on-click   #(when-not disabled (go (>! navigate :view/browse-scenes)))}
+            [:i {:class-name "material-icons"} (if disabled "folder" "folder_open")]])
+
+         (let [disabled (or (= :view/create-scene current-view)
+                            (nil? user-id))]
+           [:button {:title      "Create scene"
+                     :class-name (if disabled
+                                   "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
+                                   "mdl-button mdl-js-button mdl-button--icon")
+                     :on-click   #(when-not disabled (go (>! navigate :view/create-scene)))}
+            [:i {:class-name "material-icons"} (if disabled "insert_drive_file" "note_add")]])
+
+         (let [disabled (or (= :view/edit-config current-view)
+                            (nil? user-id))]
+           [:button {:title      "Configuration"
+                     :class-name (if disabled
+                                   "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
+                                   "mdl-button mdl-js-button mdl-button--icon")
+                     :on-click   #(when-not disabled (go (>! navigate :view/edit-config)))}
+            [:i {:class-name "material-icons"} "settings"]])]))
+
 (defcomponent Header
   [state {:keys [add-plot fill-plots] :as cmd-chans}]
   (html [:header {:class-name "mdl-layout__header"}
@@ -199,31 +238,27 @@
 
           ;; Nav buttons
 
-          (let [disabled (= :view/browse-scenes (m/current-view state))]
-            [:button {:title      "Browse scenes"
-                      :class-name (if disabled
-                                    "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
-                                    "mdl-button mdl-js-button mdl-button--icon")
-                      :on-click   #(nav/->browse-scenes cmd-chans)}
-             [:i {:class-name "material-icons"} (if disabled "folder" "folder_open")]])
+          (Nav-buttons ((juxt m/current-view m/user-id) state) cmd-chans)
 
-          (let [disabled (= :view/create-scene (m/current-view state))]
-            [:button {:title      "Create scene"
-                      :class-name (if disabled
-                                    "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
-                                    "mdl-button mdl-js-button mdl-button--icon")
-                      :on-click   #(nav/->create-scene cmd-chans)}
-             [:i {:class-name "material-icons"} (if disabled "insert_drive_file" "note_add")]])
-
-          (let [disabled (= :view/edit-config (m/current-view state))]
-            [:button {:title      "Configuration"
-                      :class-name (if disabled
-                                    "mdl-button mdl-js-button mdl-button--icon mdl-button--disabled"
-                                    "mdl-button mdl-js-button mdl-button--icon")
-                      :on-click   #(nav/->edit-config)}
-             [:i {:class-name "material-icons"} "settings"]])
+          ; TODO display logged in user + logout button
 
           [:div {:class-name "mdl-layout-spacer"}]
+
+          (when-let [user-id (m/user-id state)]
+            [:span {}
+             [:div {:class-name "avatar-dropdown"
+                    :id         "user-menu"}
+              [:span {} user-id]]
+
+             [:ul {:class-name "mdl-menu mdl-list mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect mdl-shadow--2dp account-dropdown"
+                   :for        "user-menu"}
+
+              [:li {:class-name ""}]
+
+              ]]
+
+
+            )
 
           (when (= :view/edit-scene (m/current-view state))
             [:div {:on-click   #(go (>! add-plot :sigma))
@@ -246,6 +281,74 @@
 
                      "hello"]))
 
+(defn select-val  [el-id] (some-> js/document (sel1 [el-id]) .-value))
+(defn select-vals [el-ids] (->> el-ids (map select-val) vec))
+
+(defn submit-login-form
+  [{:keys [login-user] :as cmd-chans}]
+  (fn [_]
+    (let [credentials (select-vals [:#user-id :#password])]
+      (prn credentials)
+
+      (go (>! login-user credentials)))))
+
+(defcomponent Login-box
+  [state cmd-chans]
+  (let [user-id (m/user-id state)]
+    (html [:main {class-name "mdl-layout__content mdl-color--grey-100"}
+           [:div {:class-name "mdl-card mdl-shadow--2dp employer-form"}
+            [:div {:class-name "mdl-card__title"}
+             [:h2 {} "Sign in"]
+             [:div {:class-name "mdl-card__subtitle"} "Please provide your user credentials"]]
+            [:div {:class-name "mdl-card__supporting-text"}
+             [:div {:class-name "form"}
+
+              [:div {:class-name "form__article"}
+               [:div {:class-name "mdl-grid"}
+
+                [:div {:class-name "mdl-cell mdl-cell--6-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label"}
+                 [:input {:class-name "mdl-textfield__input"
+                          :type       "text"
+                          :id         "user-id"
+                          :default-value user-id}]
+                 [:label {:class-name "mdl-textfield__label" :for "user-id"} "User name"]]
+
+                [:div {:class-name "mdl-cell mdl-cell--6-col mdl-textfield mdl-js-textfield mdl-textfield--floating-label"}
+                 [:input {:class-name "mdl-textfield__input"
+                          :type       "password"
+                          :id         "password"}]
+                 [:label {:class-name "mdl-textfield__label" :for "password"} "Password"]]]]
+
+              [:div {:class-name "form__action"}
+               [:div {:class-name "mdl-layout-spacer"}]
+               [:button {:class-name "mdl-button mdl-js-button mdl-button--raised mdl-button--colored"
+                         :on-click   (submit-login-form cmd-chans)} "Submit"]]]]]])))
+
+(defcomponent Scene-browser
+  [state cmd-chans]
+  (html [:h1 {} "scene-browser"]))
+
+(defcomponent
+  Scene-form
+  [state cmd-chans]
+  (html [:h1 {} "create-scene"]))
+
+(defcomponent
+  Edit-config
+  [state cmd-chans]
+  (html [:h1 {} "edit-config"]))
+
+(defcomponent
+  Splash-screen
+  :on-mount (fn [node state {:keys [navigate]}]
+              (go (<! (timeout 5000))
+                  (>! navigate :view/login-user)))
+  [state {:keys [navigate] :as cmd-chans}]
+  (html [:main {:class-name "mdl-layout__content mdl-color--grey-100"}
+         [:div {:class-name "mdl-card mdl-shadow--2dp employer-form"
+                :on-click   #(go (>! navigate :view/login-user))}
+          [:h1 {:style {:background-color "yellow"}} "<<< Plongeur >>>"]]]))
+
 (defcomponent Root
   [state cmd-chans]
   (html [:div {:id "plongeur-main"}
@@ -257,14 +360,12 @@
           #_(Drawer state cmd-chans)
 
           (case (m/current-view state)
-            :view/browse-scenes [:h1 {} "browse-scenes"]
-            :view/create-scene  [:h1 {} "create-scene"]
-            :view/edit-scene    (Grid state cmd-chans)
-            :view/edit-config   [:h1 {} "edit-config"]
-
-                                [:h1 {} "uh-oh"])
-
-          ]]))
+            :view/login-user    (Login-box     state cmd-chans)
+            :view/browse-scenes (Scene-browser state cmd-chans)
+            :view/create-scene  (Scene-form    state cmd-chans)
+            :view/edit-scene    (Scene-grid    state cmd-chans)
+            :view/edit-config   (Edit-config   state cmd-chans)
+                                (Splash-screen state cmd-chans))]]))
 
 (defn view
   "Returns a stream of view trees, represented as a core.async channel."
