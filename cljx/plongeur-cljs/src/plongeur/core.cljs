@@ -5,6 +5,7 @@
             [plongeur.intent :as i]
             [plongeur.model  :as m]
             [plongeur.view   :as v]
+            [plongeur.route  :as r]
             [kierros.quiescent-dom-driver :as dom]
             [kierros.sente-client-driver :as ws]
             [kierros.local-storage-driver :as st]
@@ -15,7 +16,7 @@
 
 (v/upgrade-mdl-components)
 
-(defonce history-mult (mult (h/init-history)))
+(defonce history-multiples (h/init-history))
 
 (defn plongeur-client-main
   "Main function inspired by the Cycle.js architecture."
@@ -23,10 +24,15 @@
     saved-state-chan  :STORAGE
     web-response-chan :WEB}]
 
-  (let [intent-chans              (i/intents)
+  (let [intent-chans           (i/intents)
 
-        _ (a/untap-all history-mult)
-        _ (tap  history-mult      (:handle-navigation   intent-chans))
+        navigate-chan          (chan 10 (map r/view->token))
+        history-event-chan     (chan 10)
+        _                      (h/connect-chans! history-multiples navigate-chan history-event-chan)
+        _                      (go-loop []
+                                        (when-let [evt (<! history-event-chan)]
+                                          (r/handle-url-change! evt intent-chans)
+                                          (recur)))
 
         _ (pipe web-response-chan (:handle-web-response intent-chans))
         _ (pipe dom-event-chan    (:handle-dom-event    intent-chans))
@@ -34,7 +40,9 @@
         states-chan            (m/model saved-state-chan intent-chans)
         states-mult            (mult states-chan)
 
-        pickle-states-chan     (->> (map #(dissoc % :transient))
+        pickle-states-chan     (->> (comp
+                                      (map #(dissoc % :transient))
+                                      (map #(dissoc % :current-view)))
                                     (chan 10)
                                     (tap states-mult))
 
@@ -44,9 +52,7 @@
         post-request-chan      (chan 10)
 
         cmd-chans              (assoc intent-chans
-                                 ; temporary hack to simulate web responses.
-                                 :web-response web-response-chan
-                                 :dom-event    dom-event-chan
+                                 :navigate     navigate-chan
                                  :post-request post-request-chan)
 
         views-chan             (v/view view-states-chan cmd-chans)]
