@@ -1,6 +1,7 @@
 (ns plongeur.core
   (:require [cljs.core.async :as a :refer [<! >! timeout mult tap chan pipe sliding-buffer]]
             [kierros.core :as cycle]
+            [kierros.async :refer [drain!]]
             [kierros.history :as h]
             [plongeur.intent :as i]
             [plongeur.model  :as m]
@@ -26,13 +27,14 @@
 
   (let [intent-chans           (i/intents)
 
-        navigate-chan          (chan 10 (map r/view->token))
-        history-event-chan     (chan 10)
+        navigate-chan          (->> (map r/view->token)
+                                    (chan 10))
+
+        history-event-chan     (->> (map #(r/handle-url-change % intent-chans))
+                                    (chan 10)
+                                    (drain!))
+
         _                      (h/connect-chans! history-multiples navigate-chan history-event-chan)
-        _                      (go-loop []
-                                        (when-let [evt (<! history-event-chan)]
-                                          (r/handle-url-change! evt intent-chans)
-                                          (recur)))
 
         _ (pipe web-response-chan (:handle-web-response intent-chans))
         _ (pipe dom-event-chan    (:handle-dom-event    intent-chans))

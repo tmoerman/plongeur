@@ -20,6 +20,12 @@
           (close! out))) ;; close out channel when all input channels are consumed
      out)))
 
+(defn drain!
+  "Drain the specified channel until it is closed. Returns the channel."
+  [ch]
+  (go-loop [] (when (<! ch) (recur)))
+  ch)
+
 (defn debounce
   "!!! UNTESTED !!!
   See: https://gist.github.com/scttnlsn/9744501"
