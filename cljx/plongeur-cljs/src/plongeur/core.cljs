@@ -11,7 +11,7 @@
             [kierros.sente-client-driver :as ws]
             [kierros.local-storage-driver :as st]
             [cljsjs.material])
-  (:require-macros [cljs.core.async.macros :refer [go-loop]]))
+  (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (enable-console-print!)
 
@@ -34,8 +34,7 @@
                                     (chan 10)
                                     (drain!))
 
-        _                      (h/connect-chans! history-multiples navigate-chan history-event-chan)
-
+        _ (h/connect-chans! history-multiples navigate-chan history-event-chan)
         _ (pipe web-response-chan (:handle-web-response intent-chans))
         _ (pipe dom-event-chan    (:handle-dom-event    intent-chans))
 
@@ -43,8 +42,7 @@
         states-mult            (mult states-chan)
 
         pickle-states-chan     (->> (comp
-                                      (map #(dissoc % :transient))
-                                      (map #(dissoc % :current-view)))
+                                      (map #(dissoc % :transient)))
                                     (chan 10)
                                     (tap states-mult))
 
@@ -57,7 +55,12 @@
                                  :navigate     navigate-chan
                                  :post-request post-request-chan)
 
-        views-chan             (v/view view-states-chan cmd-chans)]
+        views-chan             (v/view view-states-chan cmd-chans)
+
+        ;; _ (go (>! navigate-chan :view/browse-scenes))
+
+        ;; TODO periodically post a req to the server to verify whether the session is still available.
+        ]
 
     {:DOM      views-chan
      ;:STORAGE  (chan (a/sliding-buffer 10))

@@ -24,10 +24,9 @@
         evt-mult   (mult evt-chan)
         token-mix  (mix token-chan)]
 
-
     (go-loop []
              (when-let [token (<! token-chan)]
-               (prn (str "received token: " token)) ;; TODO logging lib
+               (prn (str "kierros.history - received token: " token)) ;; TODO logging lib
                (.setToken history token)
                (recur)))
 
@@ -39,4 +38,5 @@
   (unmix-all token-mix)
   (admix     token-mix token-chan)
   (untap-all evt-mult)
-  (tap       evt-mult hist-evt-chan))
+  (tap       evt-mult hist-evt-chan)
+  [token-chan hist-evt-chan])

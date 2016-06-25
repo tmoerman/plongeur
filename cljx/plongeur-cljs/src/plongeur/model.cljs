@@ -27,7 +27,7 @@
 (defn plot-count [state] (-> state plots count))
 
 (defn init-sigma-settings [state] (select-one [:config :sigma :settings] state))
-(defn init-sigma-props    [state] (select-one [:config :sigma :props] state))
+(defn init-sigma-props    [state] (select-one [:config :sigma :props]    state))
 
 (defn force-layout-active? [plot-state] (select-one [:props :force-layout-active] plot-state))
 (defn sync-interval-ms     [plot-state] (select-one [:props :sync-interval-ms] plot-state))
@@ -160,6 +160,7 @@
 
 (def intent-handlers
   {:login-user          login-user
+   :logout-user         logout-user
    :set-view            set-view
 
    :add-plot            add-plot

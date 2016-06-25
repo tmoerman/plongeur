@@ -1,6 +1,6 @@
 (ns kierros.async
   (:require [cljs.core.async :as a :refer [<! >! chan close! timeout alts!]])
-  (:require-macros [cljs.core.async.macros :refer [go-loop]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn chain
   "Core.async equivalent of Rx.concat(observables).
@@ -25,6 +25,16 @@
   [ch]
   (go-loop [] (when (<! ch) (recur)))
   ch)
+
+(defn val-timeout
+  "Returns a channel that returns a value after the specified timeout ms."
+  ([ms] (val-timeout ms :-D))
+  ([ms v]
+   (let [out (chan)]
+     (go
+       (<! (timeout ms))
+       (>! out v))
+     out)))
 
 (defn debounce
   "!!! UNTESTED !!!
