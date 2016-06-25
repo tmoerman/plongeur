@@ -2,9 +2,9 @@
 
   :description "Plongeur frontend: Kierros/Cycle architecture."
   
-  :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.8.34"]
-                 [org.clojure/core.async "0.2.374" :exclusions [org.clojure/tools.reader]]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha7"]
+                 [org.clojure/clojurescript "1.9.89"]
+                 [org.clojure/core.async "0.2.385" :exclusions [org.clojure/tools.reader]]
                  [com.taoensso/sente "1.8.1"]
                  [quiescent "0.3.1"]
                  [sablono "0.6.3"]
