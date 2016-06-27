@@ -13,7 +13,8 @@
             [cljs.core.async :as a :refer [<! chan mult tap untap close! sliding-buffer]]
             [sablono.util :refer [camel-case]]
             [clojure.string :refer [starts-with?]])
-  (:require-macros [cljs.core.async.macros :refer [go-loop]]))
+  (:require-macros [cljs.core.async.macros :refer [go-loop]]
+                   [taoensso.timbre :refer [log debug info warn error fatal]]))
 
 (defn sigma-key
   [str-or-kw]
@@ -165,7 +166,7 @@
   "Sigma instance contructor.
   The bindings are functions with signature (sigma-inst, payload) -> unit"
   ([dom-container-id sigma-settings]
-   (prn (str "settings " sigma-settings))
+   (debug "settings " sigma-settings)
    (try
      (some-> (new js/sigma (clj->js {:id       dom-container-id
                                      :settings sigma-settings
@@ -173,7 +174,7 @@
                                                 :container dom-container-id}}))
              (refresh))
      (catch :default e
-       (prn (str e " " dom-container-id)))))
+       (debug e " " dom-container-id))))
   ([dom-container-id sigma-settings bindings-map]
    (when-let [sigma-inst (make-sigma-instance dom-container-id sigma-settings)]
      (doseq [[k fn] bindings-map]
@@ -212,21 +213,21 @@
   [sigma-inst node]
   (try
     (.addNode (graph sigma-inst) (clj->js node))
-    (catch :default e (prn (str e node))))
+    (catch :default e (debug e node)))
   sigma-inst)
 
 (defn add-edge
   [sigma-inst edge]
   (try
     (.addEdge (graph sigma-inst) (clj->js edge))
-    (catch :default e (prn (str e edge))))
+    (catch :default e (debug e edge)))
   sigma-inst)
 
 (defn read
   [sigma-inst network]
   (try
     (.read (graph sigma-inst) (clj->js network))
-    (catch :default e (prn (str e network))))
+    (catch :default e (debug e network)))
   sigma-inst)
 
 (defn clear

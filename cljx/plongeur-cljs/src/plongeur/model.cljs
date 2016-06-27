@@ -4,7 +4,8 @@
             [kierros.model :refer [scan-to-states]]
             [plongeur.config :as c]
             [plongeur.sigma :as s])
-  (:require-macros [com.rpl.specter.macros :refer [select select-one select-one! transform setval]]))
+  (:require-macros [com.rpl.specter.macros :refer [select select-one select-one! transform setval]]
+                   [taoensso.timbre :refer [log debug info warn error fatal]]))
 
 ;; State queries
 ;; The developer should never navigate the state map in another namespace.
@@ -44,6 +45,7 @@
   "Accepts a user-id. Registers the user-id in the state map."
   [[user-id password] state]
   (->> state
+       (debug "logging in" user-id)
        (setval user-id-path user-id)))
 
 (defn logout-user
@@ -59,18 +61,19 @@
 (defn handle-web-response
   "Handle a websocket response."
   [response state]
-  (prn (str "received websocket response: " response))
+  (debug "received websocket response: " response)
 
   ;; TODO merge the received data into the state's plots map.
   ;; OR: perhaps allow the Sigma graphs to periodically (while running the force algorithm)
 
   state)
 
+
 (defn handle-dom-event
   "Handle a DOM event."
   [event state]
 
-  (prn (str "received DOM event: " event))
+  (debug "received DOM event: " event)
 
   state)
 
@@ -136,7 +139,7 @@
   (->> state
        (transform [:plots (keypath id) :props]
                   (fn [plot-props]
-                    (prn (str "lasso? "(lasso-tool-active? plot-props)))
+                    (debug "lasso? "(lasso-tool-active? plot-props))
                     (if (lasso-tool-active? plot-props)
                       (-> plot-props ; deactivating lasso.
                           (update :lasso-tool-active not))
@@ -152,9 +155,9 @@
        (transform [:plots (keypath id) :data]
                   (constantly data))))
 
-(defn prn-state
+(defn log-state
   "Print the current application state to the console."
-  [_ state] (prn state) state)
+  [_ state] (debug state) state)
 
 ;; Model machinery
 
@@ -174,7 +177,7 @@
 
    :merge-plot-data     merge-plot-data
 
-   :debug               prn-state
+   :debug               log-state
 
    :handle-web-response handle-web-response
    :handle-dom-event    handle-dom-event})

@@ -2,19 +2,23 @@
 
   :description "Plongeur frontend: Kierros/Cycle architecture."
   
-  :dependencies [[org.clojure/clojure "1.9.0-alpha7"]
+  :dependencies [[org.clojure/clojure       "1.9.0-alpha7"]
                  [org.clojure/clojurescript "1.9.89"]
-                 [org.clojure/core.async "0.2.385" :exclusions [org.clojure/tools.reader]]
-                 [com.taoensso/sente "1.8.1"]
-                 [quiescent "0.3.1"]
-                 [sablono "0.6.3"]
+                 [org.clojure/core.async    "0.2.385" :exclusions [org.clojure/tools.reader]]
+                 [com.rpl/specter           "0.11.2"]
+
+                 [com.taoensso/encore "2.58.0"]
+                 [com.taoensso/sente  "1.9.0-RC1"]
+                 [com.taoensso/timbre "4.5.0"]
+
+                 [quiescent       "0.3.1"]
+                 [sablono         "0.6.3"]
                  [cljsjs/material "1.1.3-1"]
-                 [com.rpl/specter "0.11.2"]
                  [prismatic/dommy "1.1.0"]]
   
-  :plugins [[lein-figwheel "0.5.4-4"]
+  :plugins [[lein-figwheel  "0.5.4-4"]
             [lein-cljsbuild "1.1.3" :exclusions [[org.clojure/clojure]]]
-            [lein-npm "0.6.2"]]
+            [lein-npm       "0.6.2"]]
 
   :hooks [leiningen.cljsbuild]
 

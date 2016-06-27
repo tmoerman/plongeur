@@ -1,7 +1,8 @@
 (ns kierros.local-storage-driver
   (:require [cljs.core.async :as a :refer [<! chan]]
             [cljs.reader :as r])
-  (:require-macros [cljs.core.async.macros :refer [go-loop]]))
+  (:require-macros [cljs.core.async.macros :refer [go-loop]]
+                   [taoensso.timbre :refer [log debug info warn error fatal]]))
 
 (defn store!
   [storage-key state]
@@ -26,5 +27,5 @@
                (if-let [state (<! state-chan)]
                  (do (store! storage-key state)
                      (recur))
-                 (prn "local storage driver stopped")))
+                 (info "local storage driver stopped")))
       (a/to-chan [return-state]))))

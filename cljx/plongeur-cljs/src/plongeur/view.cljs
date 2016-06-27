@@ -1,6 +1,5 @@
 (ns plongeur.view
   "Quiescent/React powered front end.
-
   Template: https://github.com/CreativeIT/material-dashboard-lite
   Icons:    https://design.google.com/icons/"
   (:require [cljs.core.async :as a :refer [<! >! timeout alts! tap chan pipe close!]]
@@ -14,7 +13,8 @@
             [plongeur.config :as c]
             [kierros.async :refer [debounce val-timeout]]
             [dommy.core :as d :refer-macros [sel sel1]])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]
+                   [taoensso.timbre :refer [log debug info warn error fatal]]))
 
 (defn ascii [c] (-> c {\f 70
                        \l 76
@@ -41,7 +41,7 @@
                                                     toggle-force
                                                     toggle-lasso
                                                     merge-plot-data]}]
-                (prn "on-mount")
+                (debug "on-mount")
 
                 (let [sigma-instance   (-> (s/make-sigma-instance (plot-container-id id)
                                                                   (-> c/default-config :sigma :settings)
@@ -86,11 +86,11 @@
                                  [v ch]      (alts! [timeout-ch ctrl-ch])]
                              (condp = ch
                                timeout-ch (do
-                                            (prn (str "merging plot " id))
+                                            (debug "merging plot " id)
                                             (>! merge-plot-data [id (s/data sigma-instance)])
                                             (recur))
                                ctrl-ch    (when v
-                                            (prn (str "merging plot " id))
+                                            (debug "merging plot " id)
                                             (>! merge-plot-data [id (s/data sigma-instance)])
                                             (recur)))))
 
@@ -102,7 +102,7 @@
 
     :on-unmount (fn [node [plot-state id idx] cmd-chans]
 
-                  (prn "on-unmount")
+                  (debug "on-unmount")
 
                   (swap! sigma-state
                          (fn [m]
@@ -240,9 +240,9 @@
          [:ul {:class-name "mdl-menu mdl-list mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect mdl-shadow--2dp account-dropdown"
                :for        "user-menu"
                :on-click   #(go
-                             (prn "logout clicked")
+                             (debug "logout clicked")
                              (>! logout-user :-P)
-                             ;(>! navigate    :view/login-user)
+                             ;(>! navigate    :view/login-user) ;; TODO wut?
                              (>! navigate    :view/none)
                              )}
           [:li {}]
@@ -342,7 +342,7 @@
                   (swap! a (fn [c] (some-> c close!) t))
                   (go (when (<! t)
                         (do
-                          (prn "splash timeout fired!")
+                          (debug "splash timeout fired!")
                           (>! navigate :view/login-user))))))
     [state {:keys [navigate] :as cmd-chans}]
     (html [:main {:class-name "mdl-layout__content mdl-color--grey-100"}

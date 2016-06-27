@@ -3,7 +3,8 @@
             [goog.events :as e]
             [goog.History])
   (:import [goog.history EventType])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]
+                   [taoensso.timbre :refer [log debug info warn error fatal]]))
 
 (defn evt->clj
   "Turns a google history event into a clojure map."
@@ -26,7 +27,7 @@
 
     (go-loop []
              (when-let [token (<! token-chan)]
-               (prn (str "kierros.history - received token: " token)) ;; TODO logging lib
+               (debug "received token:" token)
                (.setToken history token)
                (recur)))
 
