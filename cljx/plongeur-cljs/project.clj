@@ -13,6 +13,7 @@
 
                  [quiescent       "0.3.1"]
                  [sablono         "0.6.3"]
+                 [secretary       "1.2.3"]
                  [cljsjs/material "1.1.3-1"]
                  [prismatic/dommy "1.1.0"]]
   

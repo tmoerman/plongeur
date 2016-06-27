@@ -324,8 +324,7 @@
   [state cmd-chans]
   (html [:h1 {} "scene-browser"]))
 
-(defcomponent
-  Scene-form
+(defcomponent Scene-form
   [state cmd-chans]
   (html [:h1 {} "create-scene"]))
 
@@ -334,9 +333,18 @@
   [state cmd-chans]
   (html [:h1 {} "edit-config"]))
 
+(defcomponent Route-404
+  [state cmd-chans]
+  (html [:main {:class-name "mdl-layout__content mdl-color--grey-100"}
+         [:div {:class-name "mdl-card mdl-shadow--2dp employer-form"}
+          [:div {:class-name "mdl-card__title"}
+           [:h2 {} "Nope!"]
+           [:div {:class-name "mdl-card__subtitle"} "That's a 404..."]]
+          [:div {:class-name "mdl-card__supporting-text"}
+           [:img {:src "img/404.jpg"}]]]]))
+
 (let [a (atom nil)]
-  (defcomponent
-    Splash-screen
+  (defcomponent Splash-screen
     :on-mount (fn [_ _ {:keys [navigate]}]
                 (let [t (val-timeout 3000)]
                   (swap! a (fn [c] (some-> c close!) t))
@@ -369,6 +377,7 @@
             :view/create-scene  (Scene-form    state cmd-chans)
             :view/edit-scene    (Scene-grid    state cmd-chans)
             :view/edit-config   (Edit-config   state cmd-chans)
+            :view/route-404     (Route-404     state cmd-chans)
                                 (Splash-screen state cmd-chans))]]))
 
 (defn view
