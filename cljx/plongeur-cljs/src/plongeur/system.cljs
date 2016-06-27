@@ -6,5 +6,5 @@
 (defonce app (-> (plongeur/launch-client) (atom)))
 
 (defn on-js-reload []
-  (warn "reloading app")
+  (info "reloading app")
   (swap! app (fn [shutdown-fn] (shutdown-fn) (plongeur/launch-client))))

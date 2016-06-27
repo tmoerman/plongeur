@@ -12,7 +12,7 @@
   [{:keys [path host]} & options]
   (if (-> options set :disable)
     (fn [_]
-      (warn "Sente client driver :disabled flag was set, creating dummy channel...")
+      (info "Sente client driver :disabled flag was set, creating dummy channel...")
       (chan 10))
     (fn [request-chan]
       (info "Sente client driver initializing...")
