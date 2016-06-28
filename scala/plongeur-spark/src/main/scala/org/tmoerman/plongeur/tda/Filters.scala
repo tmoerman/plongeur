@@ -117,7 +117,7 @@ object Filters extends Serializable {
                                     val v = pow(d, n)
                                     Map(a.index -> v, b.index -> v).merge(_ + _)(acc) },
             { case (acc1, acc2) => acc1.merge(_ + _)(acc2) })
-          .mapValues(sum => pow(sum, 1. / n) / N)
+          .mapValues(sum => pow(sum, 1d / n) / N)
 
       case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$n'")
     }}
