@@ -12,11 +12,12 @@
   :source-paths ["src"]
   :test-paths   ["test"]
 
-  :dependencies [[org.clojure/clojure "1.9.0-alpha5"]
+  :dependencies [[org.clojure/clojure    "1.9.0-alpha5"]
                  [org.clojure/core.async "0.2.385"]
                  [org.clojure/core.match "0.3.0-alpha4"]
+                 [com.rpl/specter        "0.11.2"]
+
                  [com.netflix.rxjava/rxjava-clojure "0.20.7"]
-                 [com.rpl/specter "0.11.2"]
 
                  [ring "1.4.0"]
                  [ring/ring-defaults "0.2.0" :exclusions [[javax.servlet/*]]]
@@ -24,8 +25,10 @@
                  [clojurewerkz/route-one "1.2.0"]
                  [http-kit "2.1.18"]
                  [hiccup "1.0.5"]
-                 [com.taoensso/sente "1.8.1"]
-                 [com.taoensso/timbre "4.3.1"]
+
+                 [com.taoensso/encore "2.58.0"]
+                 [com.taoensso/sente  "1.9.0-RC1"]
+                 [com.taoensso/timbre "4.5.0"]
 
                  [environ "1.0.3"]
                  [me.raynes/fs "1.4.5"]

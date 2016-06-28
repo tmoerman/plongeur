@@ -13,7 +13,7 @@ resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots")
 )
 
-val sparkVersion  = "1.6.0"
+val sparkVersion  = "1.6.1"
 
 publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath + "/.m2/repository")))
 
