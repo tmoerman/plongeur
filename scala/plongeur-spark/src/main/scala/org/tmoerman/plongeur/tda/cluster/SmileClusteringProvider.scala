@@ -23,7 +23,7 @@ object SmileClusteringProvider extends LocalClusteringProvider with Serializable
 
     import params._
 
-    lazy val distanceFunction = toFunction(distanceSpec)
+    lazy val distanceFunction = parseDistance(distanceSpec)
 
     lazy val distances = distanceMatrix(dataPoints, distanceFunction)
 
