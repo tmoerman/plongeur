@@ -3,7 +3,7 @@ package org.tmoerman.plongeur.tda
 import breeze.linalg.{Vector => MLVector}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.feature.PCA
-import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, EuclideanDistance}
+import org.tmoerman.plongeur.tda.Distance.{toFunction, DistanceFunction, EuclideanDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
 import shapeless._
@@ -52,7 +52,7 @@ object Filters extends Serializable {
     spec match {
       case "PCA"          :: _ :: HNil         => Some(key -> new PCA(MAX_PCs).fit(ctx.dataPoints.map(_.features)))
 
-      case "eccentricity" :: n :: distanceSpec => Some(key -> eccentricityMap(n, ctx, toDistanceFunction(distanceSpec)))
+      case "eccentricity" :: n :: distanceSpec => Some(key -> eccentricityMap(n, ctx, toFunction(distanceSpec)))
 
       case _                                   => None
     }
@@ -65,12 +65,6 @@ object Filters extends Serializable {
   }
 
   def makeFn(bc: Broadcast[Map[Index, Double]]) = (d: DataPoint) => bc.value.apply(d.index)
-
-  def toDistanceFunction(distanceSpec: HList): DistanceFunction = distanceSpec match {
-    case (name: String) :: HNil               => Distance.from(name)(Nil)
-    case (name: String) :: (arg: Any) :: HNil => Distance.from(name)(arg)
-    case _                                    => EuclideanDistance
-  }
 
   /**
     * @param n The exponent
