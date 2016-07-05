@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import java.io.Serializable
 import java.util.UUID
 
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
@@ -18,11 +19,14 @@ object Model {
   type Index = Long
 
   trait DataPoint {
-    def features: MLVector
     def index: Index
+    def features: MLVector
+    def meta: Option[Map[String, _ <: Serializable]]
   }
 
-  case class IndexedDataPoint(val index: Long, val features: MLVector) extends DataPoint with Serializable
+  case class IndexedDataPoint(val index: Long,
+                              val features: MLVector,
+                              val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable
 
   type LevelSetID = Vector[BigDecimal]
 
