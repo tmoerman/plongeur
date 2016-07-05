@@ -6,7 +6,7 @@ import org.tmoerman.plongeur.tda.Covering.uniformCoveringIntervals
 /**
   * @author Thomas Moerman
   */
-class CoveringIntervalsSpec extends FlatSpec with Matchers {
+class CoveringSpec extends FlatSpec with Matchers {
 
   def bdSeq(d: Double *) = d.map(BigDecimal(_))
 
@@ -50,6 +50,25 @@ class CoveringIntervalsSpec extends FlatSpec with Matchers {
     f(17) shouldBe bdSeq(16)
 
     f(22) shouldBe bdSeq(22)
+  }
+
+  it should "be correct with 50% overlap" in {
+
+    val f = uniformCoveringIntervals(0, 8, 3, 0.50) _
+
+    f(0) shouldBe bdSeq(-2, 0)
+    f(1) shouldBe bdSeq(-2, 0)
+
+    f(2) shouldBe bdSeq(0, 2)
+    f(3) shouldBe bdSeq(0, 2)
+
+    f(4) shouldBe bdSeq(2, 4)
+    f(5) shouldBe bdSeq(2, 4)
+
+    f(6) shouldBe bdSeq(4, 6)
+    f(7) shouldBe bdSeq(4, 6)
+
+    f(8) shouldBe bdSeq(6, 8)
   }
 
   // TODO extend tests
