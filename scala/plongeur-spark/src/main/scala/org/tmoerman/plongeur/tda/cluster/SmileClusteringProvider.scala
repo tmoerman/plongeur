@@ -19,38 +19,41 @@ object SmileClusteringProvider extends LocalClusteringProvider with Serializable
     * @see LocalClusteringProvider
     */
   def apply(dataPoints: Seq[DataPoint],
-            distanceFunction: DistanceFunction = EuclideanDistance,
-            clusteringMethod: ClusteringMethod = SINGLE) = new LocalClustering {
+            params: ClusteringParams = ClusteringParams()) = new LocalClustering {
 
-      lazy val distances = distanceMatrix(dataPoints, distanceFunction)
+    import params._
 
-      lazy val linkage = createLinkage(clusteringMethod, distances)
+    lazy val distanceFunction = toFunction(distanceSpec)
 
-      lazy val hierarchicalClustering = new HierarchicalClustering(linkage)
+    lazy val distances = distanceMatrix(dataPoints, distanceFunction)
 
-      override def heights(includeDiameter: Boolean = true): Seq[Double] =
-        if (includeDiameter)
-          hierarchicalClustering.getHeight :+ distances.flatten.max
-        else
-          hierarchicalClustering.getHeight
+    lazy val linkage = createLinkage(clusteringMethod, distances)
 
-      override def labels(scaleSelection: ScaleSelection): Seq[Any] =
-        dataPoints match {
-          case      Nil => Nil
-          case _ :: Nil => 0 :: Nil
-          case _        =>
-            val cutoff = scaleSelection(heights(true))
+    lazy val hierarchicalClustering = new HierarchicalClustering(linkage)
 
-            lazy val attempt = hierarchicalClustering.partition(cutoff).toSeq
-            lazy val backup  = Stream.fill(dataPoints.size)(0)
+    override def heights(includeDiameter: Boolean = true): Seq[Double] =
+      if (includeDiameter)
+        hierarchicalClustering.getHeight :+ distances.flatten.max
+      else
+        hierarchicalClustering.getHeight
 
-            Try(attempt).getOrElse(backup)
-        }
+    override def labels(scaleSelection: ScaleSelection): Seq[Any] =
+      dataPoints match {
+        case      Nil => Nil
+        case _ :: Nil => 0 :: Nil
+        case _        =>
+          val cutoff = scaleSelection(heights(true))
+
+          lazy val attempt = hierarchicalClustering.partition(cutoff).toSeq
+          lazy val backup  = Stream.fill(dataPoints.size)(0)
+
+          Try(attempt).getOrElse(backup)
+      }
 
     }
 
-  def createLinkage(method: ClusteringMethod, distanceMatrix: DistanceMatrix) =
-    method.toString.toLowerCase match {
+  def createLinkage(method: String, distanceMatrix: DistanceMatrix) =
+    method.toLowerCase match {
       case "complete" => new CompleteLinkage(distanceMatrix)
       case "single"   => new SingleLinkage(distanceMatrix)
       case "ward"     => new WardLinkage(distanceMatrix)

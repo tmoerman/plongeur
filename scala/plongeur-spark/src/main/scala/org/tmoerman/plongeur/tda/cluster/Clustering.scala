@@ -6,6 +6,7 @@ import java.util.UUID._
 import org.tmoerman.plongeur.tda.Distance._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Scale._
+import shapeless.{HNil, HList}
 
 import scalaz.Memo.mutableHashMapMemo
 
@@ -39,17 +40,12 @@ object Clustering extends Serializable {
     
   }
 
-  sealed trait ClusteringMethod
-  case object COMPLETE extends ClusteringMethod
-  case object SINGLE   extends ClusteringMethod
-  case object WARD     extends ClusteringMethod
-
   /**
-    * @param distanceFunction Distance function in the hierarchical clustering effort.
+    * @param distanceSpec Distance function in the hierarchical clustering effort.
     * @param clusteringMethod Single, Complete, etc...
     */
-  case class ClusteringParams(distanceFunction: DistanceFunction = EuclideanDistance,
-                              clusteringMethod: ClusteringMethod = SINGLE) extends Serializable
+  case class ClusteringParams(distanceSpec:     HList  = "euclidean" :: HNil,
+                              clusteringMethod: String = "single") extends Serializable
 
   /**
     * Protocol for constructing Clustering instances.
@@ -57,8 +53,7 @@ object Clustering extends Serializable {
   trait LocalClusteringProvider {
 
     def apply(dataPoints: Seq[DataPoint],
-              distanceFunction: DistanceFunction = EuclideanDistance,
-              clusteringMethod: ClusteringMethod = SINGLE): LocalClustering
+              params: ClusteringParams): LocalClustering
 
   }
 

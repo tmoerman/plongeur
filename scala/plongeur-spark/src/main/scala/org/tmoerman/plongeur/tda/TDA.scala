@@ -48,8 +48,7 @@ object TDA {
     val tripletsRDD =
       byLevelSet
         .map{ case (levelSetID, levelSetPoints) =>
-          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, tdaParams.clusteringParams.distanceFunction,
-                                                                                    tdaParams.clusteringParams.clusteringMethod)) }
+          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, tdaParams.clusteringParams)) }
         .cache
 
     val partitionedClustersRDD: RDD[List[Cluster]] =
@@ -83,6 +82,7 @@ object TDA {
 
 }
 
+@deprecated("disappears in the light of the meta machine!")
 case class TDAContext(val sc: SparkContext,
                       val dataPoints: RDD[DataPoint],
                       val memo: Map[Any, Any] = Map()) extends Serializable {
