@@ -29,7 +29,7 @@ object TDAMachine {
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
         .groupByKey
         .map { case (levelSetID, levelSetPoints) =>
-          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toList, distanceFunction, clusteringMethod)) }
+          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toList, clusteringParams)) }
         .cache
 
     (clusteringParams :: lens :: HNil, rdd)
