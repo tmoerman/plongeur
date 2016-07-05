@@ -1,4 +1,4 @@
-package org.tmoerman.plongeur.tda
+package org.tmoerman.plongeur.tda.cluster
 
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.cluster.Scale.histogram
