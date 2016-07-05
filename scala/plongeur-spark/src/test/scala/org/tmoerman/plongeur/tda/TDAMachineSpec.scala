@@ -29,7 +29,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   it should "work with one input" in {
     val inParams =
       TDAParams(
-        lens = TDALens(Filter("feature" :: 0 :: HNil, 0.10, 0.5)),
+        lens = TDALens(Filter("feature" :: 0 :: HNil, 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 

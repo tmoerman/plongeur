@@ -30,8 +30,8 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
     val tdaParams =
       TDAParams(
         lens = TDALens(
-          Filter("feature" :: 0 :: HNil, 1.0, 0.5),
-          Filter("feature" :: 1 :: HNil, 1.0, 0.5)),
+          Filter("feature" :: 0 :: HNil, 1, 0.5),
+          Filter("feature" :: 1 :: HNil, 1, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10),
         coveringBoundaries = Some(Array((0.0, 12.0), (0.0, 12.0))))
@@ -45,25 +45,10 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
     printInspections(result, "test2D")
   }
 
-//  it should "work with calculated boundaries" in {
-//
-//    val lens = Lens(FilterParams((p: DataPoint) => p.features(0), 1.0, 0.5),
-//                    FilterParams((p: DataPoint) => p.features(1), 1.0, 0.5))
-//
-//    val result =
-//      Skeleton.execute(
-//        lens = lens,
-//        data = test2DLabeledPointsRDD)
-//
-//    val intro = result.clusterPoints
-//
-//    println(result.dotGraph("test2Dc"))
-//  }
-
   it should "recover the 100 entries circle topology" in {
     val tdaParams =
       TDAParams(
-        lens = TDALens(Filter("feature" :: 0 :: HNil, 0.10, 0.5)),
+        lens = TDALens(Filter("feature" :: 0 :: HNil, 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
@@ -77,7 +62,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
   it should "pass smoke test with eccentricity filter" in {
     val tdaParams =
       TDAParams(
-        lens = TDALens(Filter("eccentricity" :: 1 :: HNil, 0.10, 0.5)),
+        lens = TDALens(Filter("eccentricity" :: 1 :: HNil, 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 

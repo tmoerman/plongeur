@@ -20,11 +20,7 @@ class ModelSpec extends FlatSpec with Matchers {
 
   "a FilterFunction" should "not be instantiable with an illegal overlap value" in {
     intercept[IllegalArgumentException] {
-      Filter(HNil, 100, -100)
-    }
-
-    intercept[IllegalArgumentException] {
-      Filter(HNil, 100, 0.8)
+      Filter(HNil, 0, -100)
     }
   }
 
