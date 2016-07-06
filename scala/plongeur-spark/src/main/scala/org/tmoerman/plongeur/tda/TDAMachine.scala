@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters.toFilterFunction
@@ -12,11 +13,12 @@ import shapeless._
 /**
   * @author Thomas Moerman
   */
-object TDAMachine {
+object TDAMachine extends Logging {
 
   private val clusterLevelSets = (clusterer: LocalClusteringProvider) => (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
-    import clusteringParams._
     import ctx._
+
+    logDebug(s">>> clusterLevelSets $lens")
 
     val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, ctx))
 
@@ -38,6 +40,8 @@ object TDAMachine {
   private val applyScale = (product: (HList, RDD[(LevelSetID, List[DataPoint], LocalClustering)]),
                             scaleSelection: ScaleSelection) => {
 
+    logDebug(s">>> applyScale $scaleSelection")
+
     val (hlist, levelSetClustersRDD) = product
 
     val rdd =
@@ -50,6 +54,8 @@ object TDAMachine {
 
   private val makeTDAResult = (product: (HList, RDD[List[Cluster]]),
                                collapseDuplicateClusters: Boolean) => {
+
+    logDebug(s">>> makeTDAResult - collapse duplicate clusters? $collapseDuplicateClusters")
 
     val (hlist, localClustersRDD) = product
 
@@ -77,14 +83,15 @@ object TDAMachine {
           lens                      = lens,
           clusteringParams          = clusteringParams,
           scaleSelection            = scaleSelection,
-          collapseDuplicateClusters = collapseDuplicateClusters) }
+          collapseDuplicateClusters = collapseDuplicateClusters)
+    }
 
     val result = TDAResult(clustersRDD, clusterEdgesRDD)
 
     (reconstructedParams, result)
   }
 
-  private def flattenTuple[A, B, C](t: ((A, B), C)) = t match {case ((a, b), c) => (a, b, c) }
+  private def flattenTuple[A, B, C](t: ((A, B), C)) = t match { case ((a, b), c) => (a, b, c) }
 
   def run(ctx: TDAContext, tdaParams$: Observable[TDAParams]): Observable[(TDAParams, TDAResult)] = {
 
@@ -92,14 +99,14 @@ object TDAMachine {
 
     // source observable with backpressure
 
-    val tdaParamsSource$ = tdaParams$.distinct.onBackpressureLatest
+    val tdaParamsSource$ = tdaParams$
 
     // deconstructing the parameters
 
-    val lens$               = tdaParamsSource$.map(_.lens                     ).distinct
-    val clusteringParams$   = tdaParamsSource$.map(_.clusteringParams         ).distinct
-    val scaleSelection$     = tdaParamsSource$.map(_.scaleSelection           ).distinct
-    val collapseDuplicates$ = tdaParamsSource$.map(_.collapseDuplicateClusters).distinct
+    val lens$               = tdaParamsSource$.map(_.lens                     ).distinctUntilChanged
+    val clusteringParams$   = tdaParamsSource$.map(_.clusteringParams         ).distinctUntilChanged
+    val scaleSelection$     = tdaParamsSource$.map(_.scaleSelection           ).distinctUntilChanged
+    val collapseDuplicates$ = tdaParamsSource$.map(_.collapseDuplicateClusters).distinctUntilChanged
 
     // TDA computation merges in parameter changes
 

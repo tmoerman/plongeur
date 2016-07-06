@@ -3,6 +3,8 @@ package org.tmoerman.plongeur.tda
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.TimeUnit.SECONDS
 
+import org.tmoerman.plongeur.tda.TDAMachine._
+
 import scala.concurrent.duration.Duration
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Inspections._
@@ -13,6 +15,7 @@ import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
 import rx.lang.scala.Observable
 import rx.lang.scala.subjects.PublishSubject
 import shapeless.HNil
+import org.tmoerman.plongeur.util.RxUtils._
 
 /**
   * @author Thomas Moerman
@@ -50,27 +53,86 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
 
   val secs_10 = Duration(10, SECONDS)
 
-  it should "bla" in {
-    val inParams =
-      TDAParams(
-        lens = TDALens(Filter("feature" :: 0 :: HNil, 10, 0.5)),
-        clusteringParams = ClusteringParams(),
-        scaleSelection = histogram(10))
+  val params_1 =
+    TDAParams(
+      lens = TDALens(
+        Filter("feature" :: 0 :: HNil, 10, 0.5)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(10))
 
+  val params_2 =
+    TDAParams(
+      lens = TDALens(
+        Filter("feature" :: 0 :: HNil, 10, 0.5),
+        Filter("feature" :: 1 :: HNil, 10, 0.5)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(10))
+
+  it should "work with repeated inputs" in {
     val in = PublishSubject[TDAParams]
 
     val ctx = TDAContext(sc, circle1kRDD)
 
-    val out = TDAMachine.run(ctx, in)
+    val out = TDAMachine.run(ctx, in).toVector
 
-    val latch = new CountDownLatch(1)
+    val out_sub = out.subscribe(_.size shouldBe 5)
 
-    val out_sub = out.subscribe(onNext = (t) => t match {case (p, r) => {
-      println(r.clusters.mkString("\n"))
-      latch.countDown()
-    }})
+    in.onNext(params_1)
+    in.onNext(params_2)
+    in.onNext(params_1)
+    in.onNext(params_2)
+    in.onNext(params_1)
+    in.onCompleted()
 
-    in.onNext(inParams)
+    waitFor(out)
   }
+
+//  it should "work in dryRun" in {
+//    val in = PublishSubject[TDAParams]
+//
+//    val out = dryRun(in).toVector
+//
+//    //val latch = new CountDownLatch(1)
+//
+//    val out_sub = out.subscribe(onNext = (t) => {
+//      println(t)
+//
+//      t.size shouldBe 5
+//      //latch.countDown()
+//    })
+//
+//    in.onNext(params_1)
+//    in.onNext(params_2)
+//    in.onNext(params_1)
+//    in.onNext(params_2)
+//    in.onNext(params_1)
+//    in.onCompleted()
+//
+//    waitFor(out)
+//  }
+//
+//  def dryRun(tdaParam$: Observable[TDAParams]) = {
+//
+//    // source observable with backpressure
+//
+//    val tdaParamsSource$ = tdaParam$//.distinct
+//
+//    // deconstructing the parameters
+//
+//    val lens$               = tdaParamsSource$.map(_.lens                     ).distinctUntilChanged
+//    val clusteringParams$   = tdaParamsSource$.map(_.clusteringParams         ).distinctUntilChanged
+//    val scaleSelection$     = tdaParamsSource$.map(_.scaleSelection           ).distinct//.map(bla)
+//    val collapseDuplicates$ = tdaParamsSource$.map(_.collapseDuplicateClusters).distinct//.map(bla)
+//
+//    // TDA computation merges in parameter changes
+//
+//    //val ctx$                 = Observable.just(TDAContext(null, null))
+//
+//    lens$
+//      //.combineLatestWith(ctx$)((lens, ctx) => (lens, lens.assocFilterMemos(ctx)) )
+//      //.combineLatest(clusteringParams$)
+//      //.combineLatest(scaleSelection$)
+//      //.combineLatest(collapseDuplicates$)
+//  }
 
 }
