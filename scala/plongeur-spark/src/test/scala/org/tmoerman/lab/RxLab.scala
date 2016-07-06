@@ -2,7 +2,6 @@ package org.tmoerman.lab
 
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.util.RxUtils._
-import rx.lang.scala.Observable
 import rx.lang.scala.subjects.PublishSubject
 
 /**
@@ -18,9 +17,9 @@ class RxLab extends FlatSpec with Matchers {
 
     val put = putFn(in)
 
-    val o = in.foldLeft(List[String]()){ (l, s) => s :: l }
+    val o = in.toVector
 
-    o.subscribe{ _ shouldBe List("bar", "gee", "foo") }
+    o.subscribe{ _ shouldBe List("foo", "gee", "bar") }
 
     put("foo")
     put("gee")
@@ -56,9 +55,15 @@ class RxLab extends FlatSpec with Matchers {
     val in1 = PublishSubject[String]()
     val in2 = PublishSubject[String]()
 
-    val o = mix.foldLeft(List[String]()){ (l, s) => s :: l }
+    val o = mix.toVector
 
-    o.subscribe{ _ shouldBe List("in1.bar", "in2.gee", "in2.foo", "in1.gee", "in1.foo") }
+    o.subscribe{ _ shouldBe Vector(
+      "in1.foo",
+      "in1.gee",
+      "in2.foo",
+      "in2.gee",
+      "in1.bar"
+    )}
 
     val s1 = in1.subscribe(mix)
     val s2 = in2.subscribe(mix)
@@ -76,5 +81,48 @@ class RxLab extends FlatSpec with Matchers {
 
     waitFor(o)
   }
+
+  behavior of "Data structure decomposition"
+
+  it should "only yield changes" in {
+
+    val in = PublishSubject[(Symbol, Symbol, Symbol)]
+
+    val source = in //.distinct -> doesn't make a difference...
+
+    val in1 = source.map(_._1).distinct
+    val in2 = source.map(_._2).distinct
+    val in3 = source.map(_._3).distinct
+
+    val combo =
+      in1
+        .combineLatest(in2)
+        .combineLatest(in3)
+        .toVector
+
+    combo.subscribe{ _ shouldBe Vector(
+      (('A,'B),'C),
+      (('X,'B),'C),
+      (('X,'B),'X),
+      (('X,'X),'X)
+    )}
+
+    in.onNext(('A, 'B, 'C))
+    in.onNext(('A, 'B, 'C))
+    in.onNext(('A, 'B, 'C))
+
+    in.onNext(('X, 'B, 'C))
+    in.onNext(('X, 'B, 'C))
+
+    in.onNext(('X, 'B, 'X))
+    in.onNext(('X, 'B, 'X))
+
+    in.onNext(('X, 'X, 'X))
+
+    in.onCompleted()
+
+    waitFor(combo)
+  }
+
 
 }
