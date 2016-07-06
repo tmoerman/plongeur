@@ -16,12 +16,12 @@ import scala.concurrent.duration._
 class MachineSpec extends FlatSpec with Matchers {
 
   val l10 = TDALens(
-    Filter("feature" :: 0 :: HNil, 1.0, 0.5),
-    Filter("feature" :: 1 :: HNil, 1.0, 0.5))
+    Filter("feature" :: 0 :: HNil, 10, 0.5),
+    Filter("feature" :: 1 :: HNil, 10, 0.5))
 
   val l05 = TDALens(
-    Filter("feature" :: 0 :: HNil, 0.5, 0.5),
-    Filter("feature" :: 1 :: HNil, 0.5, 0.5))
+    Filter("feature" :: 0 :: HNil, 20, 0.5),
+    Filter("feature" :: 1 :: HNil, 20, 0.5))
 
   val c = ClusteringParams()
 

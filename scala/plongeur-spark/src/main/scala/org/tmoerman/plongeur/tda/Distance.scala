@@ -3,6 +3,7 @@ package org.tmoerman.plongeur.tda
 import breeze.linalg.functions._
 import org.apache.spark.mllib.linalg.VectorConversions._
 import org.tmoerman.plongeur.tda.Model._
+import shapeless._
 
 /**
   * @author Thomas Moerman
@@ -63,17 +64,17 @@ object Distance {
   }
 
   /**
-    * @param name
-    * @return Returns the DistanceFunction associated with specified name.
+    * @param distanceSpec
+    * @return Returns a DistanceFunction for specified spec.
     */
-  def from(name: String): (Any) => DistanceFunction = name match {
-    case "chebyshev"  => (_)      => ChebyshevDistance
-    case "cosine"     => (_)      => CosineDistance
-    case "euclidean"  => (_)      => EuclideanDistance
-    case "manhattan"  => (_)      => ManhattanDistance
-    case "minkowski"  => (e: Any) => MinkowskiDistance(e.asInstanceOf[Double])
+  def parseDistance(distanceSpec: HList): DistanceFunction = distanceSpec match {
+    case "chebyshev" :: HNil             => ChebyshevDistance
+    case "cosine"    :: HNil             => CosineDistance
+    case "euclidean" :: HNil             => EuclideanDistance
+    case "manhattan" :: HNil             => ManhattanDistance
+    case "minkowski" :: (e: Any) :: HNil => MinkowskiDistance(e.asInstanceOf[Double])
 
-    case _ => throw new IllegalArgumentException(s"unknown distance function $name")
-   }
+    case _                               => EuclideanDistance
+  }
 
 }

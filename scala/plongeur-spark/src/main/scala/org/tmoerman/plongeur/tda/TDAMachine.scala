@@ -29,7 +29,7 @@ object TDAMachine {
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
         .groupByKey
         .map { case (levelSetID, levelSetPoints) =>
-          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toList, distanceFunction, clusteringMethod)) }
+          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toList, clusteringParams)) }
         .cache
 
     (clusteringParams :: lens :: HNil, rdd)
@@ -84,7 +84,7 @@ object TDAMachine {
     (reconstructedParams, result)
   }
 
-  private def flattenTuple[A, B, C](t: ((A, B), C)) = t match {case ((a: A, b: B), c: C) => (a, b, c) }
+  private def flattenTuple[A, B, C](t: ((A, B), C)) = t match {case ((a, b), c) => (a, b, c) }
 
   def run(ctx: TDAContext, tdaParams$: Observable[TDAParams]): Observable[(TDAParams, TDAResult)] = {
 

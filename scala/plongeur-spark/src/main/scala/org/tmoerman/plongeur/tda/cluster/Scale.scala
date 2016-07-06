@@ -2,11 +2,22 @@ package org.tmoerman.plongeur.tda.cluster
 
 import org.tmoerman.plongeur.tda.cluster.Clustering.ScaleSelection
 import org.tmoerman.plongeur.util.IterableFunctions._
+import shapeless.{HNil, HList}
+import shapeless.HList.ListCompat._
 
 /**
   * @author Thomas Moerman
   */
 object Scale extends Serializable {
+
+  def parseScale(scaleSpec: HList): ScaleSelection = scaleSpec match {
+    case "histogram" #: (nrBins: Int) #: HNil => histogram(nrBins)
+    case "first_gap" #: HNil                  => firstGap()
+
+    case _                                    => histogram()
+  }
+
+  def histogram(nrBins: Int = 10) = HistogramScaleSelection(nrBins)
 
   case class HistogramScaleSelection(val nrBins: Int) extends ScaleSelection with Serializable {
 
@@ -32,8 +43,6 @@ object Scale extends Serializable {
     override def toString = s"Scale.histogram($nrBins)"
 
   }
-
-  def histogram(nrBins: Int = 10) = HistogramScaleSelection(nrBins)
 
   def firstGap() = ???
 

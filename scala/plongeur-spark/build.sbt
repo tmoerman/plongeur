@@ -6,7 +6,7 @@ name := "plongeur-spark"
 
 description := "Plongeur Spark algorithms module"
 
-scalaVersion := "2.10.6"
+scalaVersion := "2.10.4"
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("releases"),
@@ -23,9 +23,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark"       % "spark-mllib_2.10"  % sparkVersion exclude("com.chuusai", "*"),
   "com.esotericsoftware"   % "kryo"              % "3.0.3",
 
-  "com.github.haifengl"    % "smile-core"        % "1.0.4",
-  "com.github.haifengl"    % "smile-plot"        % "1.0.4",
-  "org.scalanlp"           %% "breeze-natives"   % "0.12"       exclude("com.chuusai", "*"),
+  "com.github.haifengl"    % "smile-core"        % "1.1.0",
 
   "io.reactivex"           %% "rxscala"          % "0.26.1",
   "org.scalaz"             %% "scalaz-core"      % "7.2.0",

@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import java.io.Serializable
 import java.util.UUID
 
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
@@ -18,11 +19,14 @@ object Model {
   type Index = Long
 
   trait DataPoint {
-    def features: MLVector
     def index: Index
+    def features: MLVector
+    def meta: Option[Map[String, _ <: Serializable]]
   }
 
-  case class IndexedDataPoint(val index: Long, val features: MLVector) extends DataPoint with Serializable
+  case class IndexedDataPoint(val index: Long,
+                              val features: MLVector,
+                              val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable
 
   type LevelSetID = Vector[BigDecimal]
 
@@ -67,13 +71,12 @@ object Model {
   }
 
   case class Filter(val spec:     HList,
-                    val length:   Percentage, // TODO instead of length, define in nr of partitions.
+                    val nrBins:   Int,
                     val overlap:  Percentage,
                     val balanced: Boolean = false) extends Serializable {
 
-    require(length >= 0 && length <= 1, "length must be a percentage.")
-    require(overlap >= 0,               "overlap cannot be negative")
-    require(overlap >= 2/3,             "overlap > 2/3 is discouraged")
+    require(nrBins > 0,     "nrBins must be greater than 0")
+    require(overlap >= 0,   "overlap cannot be negative")
   }
 
 }
