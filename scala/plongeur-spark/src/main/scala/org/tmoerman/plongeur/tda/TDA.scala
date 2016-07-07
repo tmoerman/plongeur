@@ -66,7 +66,7 @@ object TDA {
         .reduceByKey((c1, c2) => c1)
         .values
 
-    val clustersRDD = (if (tdaParams.collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed)
+    val clustersRDD = (if (tdaParams.collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed).cache
 
     val clusterEdgesRDD =
       clustersRDD
@@ -99,10 +99,11 @@ case class TDAParams(val lens: TDALens,
                      val scaleSelection: ScaleSelection = histogram(),
                      val coveringBoundaries: Option[Boundaries] = None) extends Serializable
 
-case class TDAResult(val clustersRDD: RDD[Cluster], val edgesRDD: RDD[Set[ID]]) extends Serializable {
+case class TDAResult(val clustersRDD: RDD[Cluster],
+                     val edgesRDD: RDD[Set[ID]]) extends Serializable {
 
-  lazy val clusters = clustersRDD.collect
+  val clusters = clustersRDD.collect
 
-  lazy val edges = edgesRDD.collect
+  val edges = edgesRDD.collect
 
 }

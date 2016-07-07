@@ -48,7 +48,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
 
     inParams shouldBe outParams
 
-    printInspections(result, "test TDA Machine 1 input")
+    // printInspections(result, "test TDA Machine 1 input")
   }
 
   val secs_10 = Duration(10, SECONDS)

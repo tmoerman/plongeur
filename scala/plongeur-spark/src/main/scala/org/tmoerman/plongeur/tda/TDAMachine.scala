@@ -57,17 +57,19 @@ object TDAMachine extends Logging {
 
     logDebug(s">>> makeTDAResult - collapse duplicate clusters? $collapseDuplicateClusters")
 
-    val (hlist, localClustersRDD) = product
+    val (hlist, partitionedClustersRDD) = product
 
-    val clustersRDD =
-      if (collapseDuplicateClusters)
-        localClustersRDD
-          .flatMap(_.map(cluster => (cluster.dataPoints, cluster)))
-          .reduceByKey((c1, c2) => c1)
-          .values
-      else
-        localClustersRDD
-          .flatMap(identity)
+    lazy val duplicatesAllowed: RDD[Cluster] =
+      partitionedClustersRDD
+        .flatMap(identity)
+
+    lazy val duplicatesCollapsed: RDD[Cluster] =
+      partitionedClustersRDD
+        .flatMap(_.map(cluster => (cluster.dataPoints, cluster)))
+        .reduceByKey((c1, c2) => c1)
+        .values
+
+    val clustersRDD = (if (collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed).cache
 
     val clusterEdgesRDD =
       clustersRDD
@@ -76,6 +78,7 @@ object TDAMachine extends Logging {
         .values
         .flatMap(_.toSet.subsets(2))
         .distinct
+        .cache
 
     val reconstructedParams = hlist match {
       case (scaleSelection: ScaleSelection) :: (clusteringParams: ClusteringParams) :: (lens: TDALens) :: HNil =>
