@@ -1,0 +1,34 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<!--
+`plongeur-graph`
+A polymer wrapper for Sigma/Linkurious graphs
+
+@demo demo/index.html 
+-->
+
+<dom-module id="plongeur-graph">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <h2>Hello [[prop1]]</h2>
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'plongeur-graph',
+
+      properties: {
+        prop1: {
+          type: String,
+          value: 'plongeur-graph',
+        },
+      },
+
+    });
+  </script>
+</dom-module>
