@@ -5,7 +5,10 @@
   "dependencies": {
     "polymer": "Polymer/polymer#^1.4.0",
     "linkurious-sigma-bower": "*",
-    "linkurious-plugins-bower": "^1.5.1"
+    "linkurious-plugins-bower": "^1.5.1",
+    "linkurious-addons-bower": "^0.1.1",
+    "rxjs": "^4.1.0",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
