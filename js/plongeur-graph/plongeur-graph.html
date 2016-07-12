@@ -33,13 +33,10 @@ A polymer wrapper for Sigma/Linkurious graphs
           type: String,
           value: 'plongeur-graph',
         },
-        sigma: {
+        context: { // keys: [sigma, lasso]
           type: Object,
           notify: true,
-          observer: '_sigmaChanged'
-        },
-        lasso: {
-          type: Object
+          observer: '_contextChanged'
         },
         data: {
           type: Object,
@@ -74,14 +71,18 @@ A polymer wrapper for Sigma/Linkurious graphs
       attached: function() {
         console.log("attached!", sigma, this.$.container); // select a local DOM element
 
-        this._initSigma(this.data);
+        this._initContext(this.data);
       },
 
       detached: function() {
         console.log("detached!");
+        
+        if (this.context) {
+          this.context.sigma.kill();
+        }
       },
 
-      _initSigma: function(data) {
+      _initContext: function(data) {
         console.log("initializing Sigma instance");
 
         var cfg = {renderer: {type: 'canvas',
@@ -97,27 +98,36 @@ A polymer wrapper for Sigma/Linkurious graphs
 
         var renderer = sigma_inst.renderers[0];
 
-        var select = sigma.plugins.select(sigma_inst, activeState, renderer);
+        var select_inst = sigma.plugins.select(sigma_inst, activeState, renderer);
 
         var lasso_inst = sigma.plugins.lasso(sigma_inst, renderer, options);
+
+        select_inst.bindLasso(lasso_inst);
+
+        var dragListener = sigma.plugins.dragNodes(sigma_inst, renderer, activeState);
+
+        dragListener.bind('startdrag', function() {this.forceActive = false});
 
         lasso_inst.bind('selectedNodes', function (evt) {
           var nodes = evt.data
           var nodeIds = _.map(nodes, function(n) {return n.id;});
 
-          //activeState.dropNodes();
           activeState.addNodes(nodeIds);
-
           sigma_inst.refresh();
         });
 
-        this.lasso = lasso_inst;
-        this.sigma = sigma_inst;
+        sigma_inst.startForceAtlas2();
+
+        this.context = {
+          sigma: sigma_inst,
+          lasso: lasso_inst,
+          select: select_inst,
+          activeState: activeState,
+          dragListener: dragListener
+        }
 
         this.forceActive = true;
         this.lassoActive = false;
-
-        this.sigma.startForceAtlas2();
       },
 
       listeners: {
@@ -131,12 +141,12 @@ A polymer wrapper for Sigma/Linkurious graphs
       },
 
       _lassoToggled: function(newValue, oldValue) {
-        if (this.lasso) {
+        if (this.context) {
           if (newValue) {
             this.forceActive = false;
-            this.lasso.activate();
+            this.context.lasso.activate();
           } else {
-            this.lasso.deactivate();
+            this.context.lasso.deactivate();
           }
         }
       },
@@ -146,11 +156,11 @@ A polymer wrapper for Sigma/Linkurious graphs
       },
 
       _forceToggled: function(newValue, oldValue) {
-        if (this.sigma) {
+        if (this.context) {
           if (newValue) {
-            this.sigma.startForceAtlas2();
+            this.context.sigma.startForceAtlas2();
           } else {
-            this.sigma.stopForceAtlas2();
+            this.context.sigma.stopForceAtlas2();
           }
         }
       },
@@ -172,15 +182,14 @@ A polymer wrapper for Sigma/Linkurious graphs
       },
 
       _dataChanged: function(newValue, oldValue) {
-        if (this.sigma) {
-          this.sigma.kill();
-
-          this._initSigma(newValue);
+        if (this.context) {
+          this.context.sigma.kill();
+          this._initContext(newValue);
         }
       },
 
-      _sigmaChanged: function(newValue, oldValue) {
-        newValue.refresh();
+      _contextChanged: function(newValue, oldValue) {
+        newValue.sigma.refresh();
       },
 
     });
