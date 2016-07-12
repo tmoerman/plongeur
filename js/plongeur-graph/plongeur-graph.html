@@ -4,7 +4,7 @@
 `plongeur-graph`
 A polymer wrapper for Sigma/Linkurious graphs
 
-@demo demo/index.html 
+@demo demo/index.html
 -->
 
 <dom-module id="plongeur-graph">
@@ -15,6 +15,10 @@ A polymer wrapper for Sigma/Linkurious graphs
       }
     </style>
     <h2>Hello [[prop1]]</h2>
+    <div id="container" style="width: 600px; height: 400px; background: #FF0"></div>
+    <div>
+      <input type="button" id="toggle_force">toggle-force</input>
+    </div>
   </template>
 
   <script>
@@ -27,8 +31,101 @@ A polymer wrapper for Sigma/Linkurious graphs
           type: String,
           value: 'plongeur-graph',
         },
+        sigma: {
+          type: Object
+        },
+        activeState: {
+          type: Object
+        },
+        data: {
+          type: Object,
+          notify: true,
+          value: function() {return {"nodes":[{"id":0,"label":"node 0","x":77,"y":63,"size":0.7000000000000001},{"id":1,"label":"node 1","x":37,"y":13,"size":0.2},{"id":2,"label":"node 2","x":77,"y":24,"size":0.30000000000000004},{"id":3,"label":"node 3","x":56,"y":25,"size":0.8},{"id":4,"label":"node 4","x":62,"y":33,"size":0.8},{"id":5,"label":"node 5","x":20,"y":44,"size":0.8},{"id":6,"label":"node 6","x":18,"y":57,"size":0.4},{"id":7,"label":"node 7","x":29,"y":75,"size":0.7000000000000001},{"id":8,"label":"node 8","x":0,"y":67,"size":0.7000000000000001},{"id":9,"label":"node 9","x":64,"y":39,"size":0.9},{"id":10,"label":"node 10","x":72,"y":9,"size":0.8},{"id":11,"label":"node 11","x":79,"y":76,"size":0.7000000000000001},{"id":12,"label":"node 12","x":69,"y":57,"size":0.30000000000000004},{"id":13,"label":"node 13","x":64,"y":21,"size":0.30000000000000004},{"id":14,"label":"node 14","x":80,"y":2,"size":0},{"id":15,"label":"node 15","x":0,"y":34,"size":0},{"id":16,"label":"node 16","x":16,"y":99,"size":0.30000000000000004},{"id":17,"label":"node 17","x":6,"y":25,"size":0.4},{"id":18,"label":"node 18","x":93,"y":36,"size":0.9},{"id":19,"label":"node 19","x":3,"y":33,"size":0.30000000000000004},{"id":20,"label":"node 20","x":76,"y":61,"size":0.5},{"id":21,"label":"node 21","x":53,"y":96,"size":0.1},{"id":22,"label":"node 22","x":99,"y":91,"size":0.9},{"id":23,"label":"node 23","x":61,"y":24,"size":0.9},{"id":24,"label":"node 24","x":71,"y":96,"size":0},{"id":25,"label":"node 25","x":80,"y":94,"size":0.8},{"id":26,"label":"node 26","x":72,"y":80,"size":0},{"id":27,"label":"node 27","x":83,"y":82,"size":0.7000000000000001},{"id":28,"label":"node 28","x":97,"y":63,"size":0.2},{"id":29,"label":"node 29","x":82,"y":18,"size":0.4},{"id":30,"label":"node 30","x":34,"y":91,"size":0.1},{"id":31,"label":"node 31","x":6,"y":57,"size":0.6000000000000001},{"id":32,"label":"node 32","x":79,"y":72,"size":0.2},{"id":33,"label":"node 33","x":7,"y":6,"size":0.5},{"id":34,"label":"node 34","x":34,"y":70,"size":0.8},{"id":35,"label":"node 35","x":72,"y":78,"size":0.1},{"id":36,"label":"node 36","x":1,"y":94,"size":0.6000000000000001},{"id":37,"label":"node 37","x":63,"y":76,"size":0.30000000000000004},{"id":38,"label":"node 38","x":59,"y":19,"size":0.5},{"id":39,"label":"node 39","x":47,"y":26,"size":0.4},{"id":40,"label":"node 40","x":2,"y":87,"size":0.30000000000000004},{"id":41,"label":"node 41","x":1,"y":5,"size":0.1},{"id":42,"label":"node 42","x":88,"y":42,"size":0.6000000000000001},{"id":43,"label":"node 43","x":15,"y":72,"size":0.9},{"id":44,"label":"node 44","x":61,"y":93,"size":0.30000000000000004},{"id":45,"label":"node 45","x":16,"y":2,"size":0.9},{"id":46,"label":"node 46","x":81,"y":86,"size":0.8},{"id":47,"label":"node 47","x":74,"y":84,"size":0.6000000000000001},{"id":48,"label":"node 48","x":65,"y":74,"size":0},{"id":49,"label":"node 49","x":31,"y":31,"size":0.8},{"id":50,"label":"node 50","x":42,"y":68,"size":0.5},{"id":51,"label":"node 51","x":77,"y":97,"size":0.5},{"id":52,"label":"node 52","x":79,"y":87,"size":0.2},{"id":53,"label":"node 53","x":62,"y":39,"size":0},{"id":54,"label":"node 54","x":86,"y":8,"size":0.30000000000000004},{"id":55,"label":"node 55","x":15,"y":4,"size":0.6000000000000001},{"id":56,"label":"node 56","x":3,"y":88,"size":0.4},{"id":57,"label":"node 57","x":17,"y":36,"size":0.30000000000000004},{"id":58,"label":"node 58","x":48,"y":64,"size":0.30000000000000004},{"id":59,"label":"node 59","x":69,"y":85,"size":0.30000000000000004},{"id":60,"label":"node 60","x":90,"y":59,"size":0.1},{"id":61,"label":"node 61","x":89,"y":40,"size":0.1},{"id":62,"label":"node 62","x":92,"y":89,"size":0.5},{"id":63,"label":"node 63","x":2,"y":48,"size":0.8},{"id":64,"label":"node 64","x":43,"y":97,"size":0.8},{"id":65,"label":"node 65","x":52,"y":29,"size":0.1}],"edges":[{"id":0,"label":"0","source":0,"target":1},{"id":1,"label":"1","source":1,"target":2},{"id":2,"label":"2","source":2,"target":3},{"id":3,"label":"3","source":3,"target":4},{"id":4,"label":"4","source":4,"target":5},{"id":5,"label":"5","source":5,"target":6},{"id":6,"label":"6","source":6,"target":7},{"id":7,"label":"7","source":7,"target":8},{"id":8,"label":"8","source":8,"target":9},{"id":9,"label":"9","source":9,"target":10},{"id":10,"label":"10","source":10,"target":11},{"id":11,"label":"11","source":11,"target":12},{"id":12,"label":"12","source":12,"target":13},{"id":13,"label":"13","source":13,"target":14},{"id":14,"label":"14","source":14,"target":15},{"id":15,"label":"15","source":15,"target":16},{"id":16,"label":"16","source":16,"target":17},{"id":17,"label":"17","source":17,"target":18},{"id":18,"label":"18","source":18,"target":19},{"id":19,"label":"19","source":19,"target":20},{"id":20,"label":"20","source":20,"target":21},{"id":21,"label":"21","source":21,"target":22},{"id":22,"label":"22","source":22,"target":23},{"id":23,"label":"23","source":23,"target":24},{"id":24,"label":"24","source":24,"target":25},{"id":25,"label":"25","source":25,"target":26},{"id":26,"label":"26","source":26,"target":27},{"id":27,"label":"27","source":27,"target":28},{"id":28,"label":"28","source":28,"target":29},{"id":29,"label":"29","source":29,"target":30},{"id":30,"label":"30","source":30,"target":31},{"id":31,"label":"31","source":31,"target":32},{"id":32,"label":"32","source":32,"target":33},{"id":33,"label":"33","source":33,"target":34},{"id":34,"label":"34","source":34,"target":35},{"id":35,"label":"35","source":35,"target":36},{"id":36,"label":"36","source":36,"target":37},{"id":37,"label":"37","source":37,"target":38},{"id":38,"label":"38","source":38,"target":39},{"id":39,"label":"39","source":39,"target":40},{"id":40,"label":"40","source":40,"target":41},{"id":41,"label":"41","source":41,"target":42},{"id":42,"label":"42","source":42,"target":43},{"id":43,"label":"43","source":43,"target":44},{"id":44,"label":"44","source":44,"target":45},{"id":45,"label":"45","source":45,"target":46},{"id":46,"label":"46","source":46,"target":47},{"id":47,"label":"47","source":47,"target":48},{"id":48,"label":"48","source":48,"target":49},{"id":49,"label":"49","source":49,"target":50},{"id":50,"label":"50","source":50,"target":51},{"id":51,"label":"51","source":51,"target":52},{"id":52,"label":"52","source":52,"target":53},{"id":53,"label":"53","source":53,"target":54},{"id":54,"label":"54","source":54,"target":55},{"id":55,"label":"55","source":55,"target":56},{"id":56,"label":"56","source":56,"target":57},{"id":57,"label":"57","source":57,"target":58},{"id":58,"label":"58","source":58,"target":59},{"id":59,"label":"59","source":59,"target":60},{"id":60,"label":"60","source":60,"target":61},{"id":61,"label":"61","source":61,"target":62},{"id":62,"label":"62","source":62,"target":63},{"id":63,"label":"63","source":63,"target":64},{"id":64,"label":"64","source":64,"target":65},{"id":65,"label":"65","source":65,"target":0}]}; },
+          observer: '_dataChanged'
+        },
+        force: {
+          type: Boolean,
+          value: function() {return true;},
+          notify: true,
+          observer: '_forceToggled'
+        },
+      },
+
+      // Lifecycle callback functions.
+
+      created: function() {
+        console.log("created!");
+      },
+
+      ready: function() {
+        console.log("ready!");
+      },
+
+      attached: function() {
+        console.log("attached!", sigma, this.$.container); // select a local DOM element
+
+        var cfg = {renderer: {type: 'canvas',
+                              container: 'container'}}
+
+        this.sigma = new sigma(cfg);
+        this.sigma.graph.read(this.data);
+
+        if (this.force) {
+          this.sigma.startForceAtlas2(); // TODO add a timeout for the forceAtlas
+        }
+
+        
+      },
+
+      detached: function() {
+        console.log("detached!");
+      },
+
+      _initSigma: function() {
+        console.log("initializing Sigma");
+      },
+
+      listeners: {
+        //'tap': '_onTap',
+        'toggle_force.tap': '_toggleForce'
+      },
+
+      _onTap: function() {
+        console.log("tapped!");
+      },
+
+      _toggleForce: function() {
+        console.log("toggling force, old value = ", this.force);
+
+        this.force = ! this.force;
+      },
+
+      _forceToggled: function(newValue, oldValue) {
+        console.log("force toggled", newValue, oldValue);
+
+        if (this.sigma) {
+          if (newValue) {
+            console.log("starting force");
+
+            this.sigma.startForceAtlas2();
+          } else {
+            console.log("stopping force");
+
+            this.sigma.stopForceAtlas2();
+          }
+        }
+      },
+
+      _dataChanged: function(newValue, oldValue) {
+        console.log("data changed", newValue, oldValue);
+
+        if (this.sigma) {
+          this.sigma.graph.read(newValue);
+        }
       },
 
     });
   </script>
 </dom-module>
+<script type="text/javascript" src="../linkurious-sigma-bower/sigma.js"></script>
+<script type="text/javascript" src="../linkurious-plugins-bower/plugins.js"></script>

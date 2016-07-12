@@ -3,7 +3,9 @@
   "description": "A polymer wrapper for Sigma/Linkurious graphs.",
   "main": "plongeur-graph.html",
   "dependencies": {
-    "polymer": "Polymer/polymer#^1.4.0"
+    "polymer": "Polymer/polymer#^1.4.0",
+    "linkurious-sigma-bower": "*",
+    "linkurious-plugins-bower": "^1.5.1"
   },
   "devDependencies": {
     "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
