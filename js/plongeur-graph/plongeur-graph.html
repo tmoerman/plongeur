@@ -39,7 +39,9 @@ A polymer wrapper for Sigma/Linkurious graphs
               return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
             };
 
-            return "sigma-" + (S4() + S4() + "-" + S4() + "-4" + S4().substr(0,3) + "-" + S4() + "-" + S4() + S4() + S4()).toLowerCase();
+            var uuid = (S4() + S4() + "-" + S4() + "-4" + S4().substr(0,3) + "-" + S4() + "-" + S4() + S4() + S4()).toLowerCase();
+
+            return "sigma-" + uuid;
           }
         },
         settings: {
@@ -112,8 +114,6 @@ A polymer wrapper for Sigma/Linkurious graphs
       },
 
       _initContext: function(data, settings, container) {
-        console.log("initializing Sigma instance");
-
         var self = this;
 
         var cfg = {settings: settings,
@@ -125,8 +125,8 @@ A polymer wrapper for Sigma/Linkurious graphs
 
         sigma_inst.graph.read(data);
 
-        //var activeState = sigma.plugins.customActiveState(sigma_inst); //TODO evaluate necessity in polymer context
-        activeState = sigma.plugins.activeState(sigma_inst);
+        var activeState = sigma.plugins.customActiveState(sigma_inst); //TODO evaluate necessity in polymer context
+        //activeState = sigma.plugins.activeState(sigma_inst);
 
         var lasso_inst = sigma.plugins.lasso(sigma_inst, renderer, {});
 
