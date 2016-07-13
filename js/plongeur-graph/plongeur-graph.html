@@ -14,8 +14,8 @@ A polymer wrapper for Sigma/Linkurious graphs
         display: block;
       }
     </style>
-    <h2>Hello [[prop1]]</h2>
-    <div id="container" style="width: 600px; height: 400px; background: #FF0"></div>
+    <h2>Hello</h2>
+    <div id="container" style="width: 600px; height: 400px; background: #333"></div>
     <div>
       <input type="button" id="toggle_force">toggle-force ([[forceActive]])</input>
       <input type="button" id="toggle_lasso">toggle-lasso ([[lassoActive]])</input>
@@ -29,11 +29,25 @@ A polymer wrapper for Sigma/Linkurious graphs
       is: 'plongeur-graph',
 
       properties: {
-        prop1: {
-          type: String,
-          value: 'plongeur-graph',
+        settings: {
+          type: Object,
+          value: function() {return {
+            verbose:                           true,
+            defaultLabelColor:                 "#999",
+            defaultNodeColor:                  "#FF9",
+            nodeHoverBorderSize:               2,
+            defaultLabelActiveColor:           "#CCC",
+            defaultNodeHoverBorderColor:       "#fff",
+            nodeActiveBorderSize:              2,
+            nodeActiveOuterBorderSize:         3,
+            defaultNodeActiveBorderColor:      "#000",
+            defaultNodeActiveOuterBorderColor: "#f33",
+            edgeHoverExtremities:              true,
+            nodeHaloColor:                     "#99F",
+            nodeHaloSize:                      5
+          };}
         },
-        context: { // keys: [sigma, lasso]
+        context: {
           type: Object,
           notify: true,
           observer: '_contextChanged'
@@ -71,63 +85,73 @@ A polymer wrapper for Sigma/Linkurious graphs
       attached: function() {
         console.log("attached!", sigma, this.$.container); // select a local DOM element
 
-        this._initContext(this.data);
+        this.context     = this._initContext(this.data, this.settings);
+        this.forceActive = true;
+        this.lassoActive = false;
       },
 
       detached: function() {
         console.log("detached!");
-        
+
         if (this.context) {
           this.context.sigma.kill();
         }
       },
 
-      _initContext: function(data) {
+      _initContext: function(data, settings) {
         console.log("initializing Sigma instance");
 
-        var cfg = {renderer: {type: 'canvas',
+        var self = this;
+
+        var cfg = {settings: settings,
+                   renderer: {type: 'canvas',
                               container: 'container'}}
 
         var sigma_inst = new sigma(cfg);
+        var renderer = sigma_inst.renderers[0];
 
         sigma_inst.graph.read(data);
 
-        var options = {};
+        //var activeState = sigma.plugins.customActiveState(sigma_inst); //TODO evaluate necessity in polymer context
+        activeState = sigma.plugins.activeState(sigma_inst);
 
-        var activeState = sigma.plugins.customActiveState(sigma_inst);
-
-        var renderer = sigma_inst.renderers[0];
+        var lasso_inst = sigma.plugins.lasso(sigma_inst, renderer, {});
 
         var select_inst = sigma.plugins.select(sigma_inst, activeState, renderer);
-
-        var lasso_inst = sigma.plugins.lasso(sigma_inst, renderer, options);
-
         select_inst.bindLasso(lasso_inst);
 
         var dragListener = sigma.plugins.dragNodes(sigma_inst, renderer, activeState);
 
-        dragListener.bind('startdrag', function() {this.forceActive = false});
+        dragListener.bind('startdrag', function(evt) {
+          console.log("startdrag", evt);
+
+          self.forceActive = false;
+        });
+
+        dragListener.bind('dragend', function(evt) {
+          console.log("dragend", self.context.activeState);
+        });
 
         lasso_inst.bind('selectedNodes', function (evt) {
           var nodes = evt.data
           var nodeIds = _.map(nodes, function(n) {return n.id;});
 
+          // activeState.dropNodes(); // TODO implement toggle logic for selected nodes.
           activeState.addNodes(nodeIds);
           sigma_inst.refresh();
         });
 
         sigma_inst.startForceAtlas2();
 
-        this.context = {
+        var context = {
           sigma: sigma_inst,
           lasso: lasso_inst,
           select: select_inst,
           activeState: activeState,
           dragListener: dragListener
-        }
+        };
 
-        this.forceActive = true;
-        this.lassoActive = false;
+        return context;
       },
 
       listeners: {
@@ -143,9 +167,12 @@ A polymer wrapper for Sigma/Linkurious graphs
       _lassoToggled: function(newValue, oldValue) {
         if (this.context) {
           if (newValue) {
+            console.log("activating lasso");
             this.forceActive = false;
             this.context.lasso.activate();
           } else {
+            console.log("deactivating lasso");
+
             this.context.lasso.deactivate();
           }
         }
@@ -160,7 +187,7 @@ A polymer wrapper for Sigma/Linkurious graphs
           if (newValue) {
             this.context.sigma.startForceAtlas2();
           } else {
-            this.context.sigma.stopForceAtlas2();
+            this.context.sigma.killForceAtlas2();
           }
         }
       },
@@ -184,7 +211,10 @@ A polymer wrapper for Sigma/Linkurious graphs
       _dataChanged: function(newValue, oldValue) {
         if (this.context) {
           this.context.sigma.kill();
-          this._initContext(newValue);
+
+          this.context     = this._initContext(this.data, this.settings);
+          this.forceActive = true;
+          this.lassoActive = false;
         }
       },
 
