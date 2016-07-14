@@ -7,6 +7,8 @@ import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import shapeless.HNil
 
+import TDAParams._
+
 /**
   * @author Thomas Moerman
   */
@@ -38,10 +40,8 @@ class ModelSpec extends FlatSpec with Matchers {
 
   behavior of "lenses"
 
-  import L._
-
   it should "be able to update a filter" in {
-    val updated = filter(0).set(base, Filter("feature" :: 0 :: HNil, 30, 0.8)).get
+    val updated = modFilter(0)(base).setTo(Filter("feature" :: 0 :: HNil, 30, 0.8))
 
     updated shouldBe TDAParams(
       lens = TDALens(
@@ -52,14 +52,36 @@ class ModelSpec extends FlatSpec with Matchers {
   }
 
   it should "be able to update nrBins in a filter" in {
-    val updated = setNrBins(0, 100)(base)
-
-    updated shouldBe TDAParams(
+    setFilterNrBins(0, 100)(base) shouldBe TDAParams(
       lens = TDALens(
         Filter("feature" :: 0 :: HNil, 100, 0.6),
         Filter("feature" :: 1 :: HNil, 20,  0.6)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
+  }
+
+  it should "be able to update overlap in a filter" in {
+    setFilterOverlap(1, 0.666)(base) shouldBe TDAParams(
+      lens = TDALens(
+        Filter("feature" :: 0 :: HNil, 10, 0.6),
+        Filter("feature" :: 1 :: HNil, 20, 0.666)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(10))
+  }
+
+  it should "return the original when passed an invalid lens" in {
+    val invalidIndex = 5
+
+    setFilterOverlap(invalidIndex, 0.5)(base) shouldBe base
+  }
+
+  it should "be able to update subtypes of ScaleSelection" in {
+    setHistogramScaleSelectionNrBins(666)(base) shouldBe TDAParams(
+      lens = TDALens(
+        Filter("feature" :: 0 :: HNil, 10, 0.6),
+        Filter("feature" :: 1 :: HNil, 20, 0.6)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(666))
   }
 
 }

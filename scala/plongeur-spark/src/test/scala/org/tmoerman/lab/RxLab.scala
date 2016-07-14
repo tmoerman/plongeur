@@ -1,8 +1,14 @@
 package org.tmoerman.lab
 
 import org.scalatest.{FlatSpec, Matchers}
+import org.tmoerman.plongeur.tda.Model.{Filter, TDALens}
+import org.tmoerman.plongeur.tda.TDAParams
+import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
+import org.tmoerman.plongeur.tda.cluster.Scale
+import org.tmoerman.plongeur.tda.cluster.Scale.histogram
 import org.tmoerman.plongeur.util.RxUtils._
 import rx.lang.scala.subjects.PublishSubject
+import shapeless.HNil
 
 /**
   * @author Thomas Moerman
@@ -124,5 +130,22 @@ class RxLab extends FlatSpec with Matchers {
     waitFor(combo)
   }
 
+  it should "bla" in {
+    val in$ = PublishSubject[TDAParams]
+
+    val base =
+      TDAParams(
+        lens = TDALens(
+          Filter("feature" :: 0 :: HNil, 10, 0.6)),
+        clusteringParams = ClusteringParams(),
+        scaleSelection = histogram(10))
+
+    val nrBins$ = PublishSubject[Int]
+
+//    val updateParams$ =
+//      nrBins$
+//        .scan(base)((p, i) => p.copy(lens = p.lens.fil))
+
+  }
 
 }

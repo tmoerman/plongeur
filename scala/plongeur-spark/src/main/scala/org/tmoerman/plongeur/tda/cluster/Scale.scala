@@ -10,12 +10,12 @@ import shapeless.HList.ListCompat._
   */
 object Scale extends Serializable {
 
-  def parseScale(scaleSpec: HList): ScaleSelection = scaleSpec match {
-    case "histogram" #: (nrBins: Int) #: HNil => histogram(nrBins)
-    case "first_gap" #: HNil                  => firstGap()
-
-    case _                                    => histogram()
-  }
+//  def parseScale(scaleSpec: HList): ScaleSelection = scaleSpec match {
+//    case "histogram" #: (nrBins: Int) #: HNil => histogram(nrBins)
+//    case "first_gap" #: HNil                  => firstGap()
+//
+//    case _                                    => histogram()
+//  }
 
   def histogram(nrBins: Int = 10) = HistogramScaleSelection(nrBins)
 

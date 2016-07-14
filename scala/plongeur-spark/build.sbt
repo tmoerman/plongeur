@@ -31,6 +31,8 @@ libraryDependencies ++= Seq(
   "com.chuusai"            %% "shapeless"        % "2.3.0",
   "org.typelevel"          %% "shapeless-scalaz" % "0.4",
 
+  "com.softwaremill.quicklens" %% "quicklens" % "1.4.4",
+
   "com.typesafe.play"      % "play-json_2.10"    % "2.4.8",
 
   "org.scalatest"          %% "scalatest"        % "2.2.4"  % "test",
