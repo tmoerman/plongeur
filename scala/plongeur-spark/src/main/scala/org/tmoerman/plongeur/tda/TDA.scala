@@ -10,6 +10,7 @@ import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
 import org.tmoerman.plongeur.util.IterableFunctions._
+import play.api.libs.json.JsObject
 import rx.lang.scala.Observable
 
 /**
@@ -102,8 +103,8 @@ case class TDAParams(val lens: TDALens,
 case class TDAResult(val clustersRDD: RDD[Cluster],
                      val edgesRDD: RDD[Set[ID]]) extends Serializable {
 
-  val clusters = clustersRDD.collect
+  lazy val clusters = clustersRDD.collect
 
-  val edges = edgesRDD.collect
+  lazy val edges = edgesRDD.collect
 
 }
