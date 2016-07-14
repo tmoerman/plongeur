@@ -30,6 +30,8 @@ libraryDependencies ++= Seq(
   "org.scalaz"             %% "scalaz-core"      % "7.2.0",
   "com.chuusai"            %% "shapeless"        % "2.3.0",
 
+  "com.typesafe.play"      % "play-json_2.10"    % "2.4.8",
+
   "org.scalatest"          %% "scalatest"        % "2.2.4"  % "test",
 
   compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)

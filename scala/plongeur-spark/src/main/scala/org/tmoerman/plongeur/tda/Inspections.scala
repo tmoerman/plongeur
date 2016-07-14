@@ -18,6 +18,32 @@ object Inspections {
     Memo.mutableHashMapMemo(_ => source.next)
   }
 
+  def json(result: TDAResult) = {
+    import play.api.libs.json._
+
+    val r = scala.util.Random
+
+    JsObject(
+      Seq(
+        "nodes" -> JsArray(
+          result.clusters.map(c => {
+            JsObject(Seq(
+              "id"    -> JsString(c.id.toString),
+              "label" -> JsString(c.id.toString),
+              "size"  -> JsNumber(c.dataPoints.size),
+              "x"     -> JsNumber(r.nextInt(100)),
+              "y"     -> JsNumber(r.nextInt(100))))
+          })),
+        "edges" -> JsArray(
+          result.edges.map(e => {
+            val (from, to) = e.toArray match {case Array(f, t) => (f, t)}
+            JsObject(Seq(
+              "id"     -> JsString(s"$from--$to"),
+              "source" -> JsString(from.toString),
+              "target" -> JsString(to.toString)))
+          }))))
+  }
+
 }
 
 class TDAResultInspections(val result: TDAResult,
