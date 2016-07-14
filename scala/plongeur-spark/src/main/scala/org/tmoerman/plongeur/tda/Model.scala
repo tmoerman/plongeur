@@ -4,7 +4,10 @@ import java.io.Serializable
 import java.util.UUID
 
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
-import shapeless.HList
+import shapeless.contrib.scalaz._
+import shapeless.{HList, lens}
+
+import scalaz.PLens._
 
 /**
   * @author Thomas Moerman
@@ -57,7 +60,7 @@ object Model {
 
   type Percentage = BigDecimal
 
-  case class TDALens(val filters: Filter*) extends Serializable {
+  case class TDALens(val filters: List[Filter]) extends Serializable {
 
     def assocFilterMemos(tdaContext: TDAContext): TDAContext =
       filters.foldLeft(tdaContext) {
@@ -70,6 +73,18 @@ object Model {
 
   }
 
+  object TDALens {
+
+    /**
+      * Factory method with var arg filters.
+ *
+      * @param filters
+      * @return Returns a TDALens
+      */
+    def apply(filters: Filter*): TDALens = TDALens(filters.toList)
+
+  }
+
   case class Filter(val spec:     HList,
                     val nrBins:   Int,
                     val overlap:  Percentage,
@@ -77,6 +92,22 @@ object Model {
 
     require(nrBins > 0,     "nrBins must be greater than 0")
     require(overlap >= 0,   "overlap cannot be negative")
+  }
+
+  /**
+    * Hosts model lenses (cfr. Scalaz).
+    */
+  object L {
+    val filtersLens = (lens[TDAParams] >> 'lens >> 'filters).asScalaz.partial
+
+    def filter(i: Int) = filtersLens.andThen(listNthPLens(i))
+
+    val nrBinsLens = (lens[Filter] >> 'nrBins).asScalaz.partial
+
+    def nrBins(i: Int) = filter(i).andThen(nrBinsLens)
+
+    def setNrBins(i: Int, nr: Int) = (p: TDAParams) => nrBins(i).set(p, nr).get
+    
   }
 
 }
