@@ -1,9 +1,9 @@
 package org.tmoerman.lab
 
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Model.{Filter, TDALens}
+import org.tmoerman.plongeur.tda.Model.{Percentage, Filter, TDALens}
 import org.tmoerman.plongeur.tda.TDAParams
-import org.tmoerman.plongeur.tda.TDAParams.setFilterNrBins
+import org.tmoerman.plongeur.tda.TDAParams.{setFilterOverlap, setFilterNrBins}
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale
 import org.tmoerman.plongeur.tda.cluster.Scale.histogram
@@ -145,21 +145,28 @@ class RxLab extends FlatSpec with Matchers {
 
     val updates$ = in$.toVector
 
-    updates$.subscribe{ _.map(_.lens.filters(0).nrBins) shouldBe Vector(10, 10, 20, 30) }
+    updates$.subscribe{ _.map(_.lens.filters(0).nrBins) shouldBe Vector(10, 10, 10, 20, 20, 30, 30) }
 
     val nrBins$ = PublishSubject[Int]
 
+    val overlap$ = PublishSubject[Percentage]
+
     val updateParams$ =
-      nrBins$
-        .map(v => setFilterNrBins(0, v))
+      List(nrBins$.map(v => setFilterNrBins(0, v)),
+           overlap$.map(v => setFilterOverlap(0, v)))
+        .reduce(_ merge _)
         .scan(base)((params, fn) => fn(params))
 
     updateParams$.subscribe(in$)
 
     nrBins$.onNext(10)
+    overlap$.onNext(.1)
     nrBins$.onNext(20)
+    overlap$.onNext(.2)
     nrBins$.onNext(30)
+    overlap$.onNext(.3)
     nrBins$.onCompleted()
+    overlap$.onCompleted()
 
     waitFor(updates$)
   }
