@@ -1,8 +1,15 @@
 package org.tmoerman.lab
 
 import org.scalatest.{FlatSpec, Matchers}
+import org.tmoerman.plongeur.tda.Model.{Percentage, Filter, TDALens}
+import org.tmoerman.plongeur.tda.TDAParams
+import org.tmoerman.plongeur.tda.TDAParams.{setFilterOverlap, setFilterNrBins}
+import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
+import org.tmoerman.plongeur.tda.cluster.Scale
+import org.tmoerman.plongeur.tda.cluster.Scale.histogram
 import org.tmoerman.plongeur.util.RxUtils._
 import rx.lang.scala.subjects.PublishSubject
+import shapeless.HNil
 
 /**
   * @author Thomas Moerman
@@ -124,5 +131,44 @@ class RxLab extends FlatSpec with Matchers {
     waitFor(combo)
   }
 
+  behavior of "Piping observables"
+
+  it should "forward from on observable to a subject" in {
+    val base =
+      TDAParams(
+        lens = TDALens(
+          Filter("feature" :: 0 :: HNil, 10, 0.6)),
+        clusteringParams = ClusteringParams(),
+        scaleSelection = histogram(10))
+
+    val in$ = PublishSubject[TDAParams]
+
+    val updates$ = in$.toVector
+
+    updates$.subscribe{ _.map(_.lens.filters(0).nrBins) shouldBe Vector(10, 10, 10, 20, 20, 30, 30) }
+
+    val nrBins$ = PublishSubject[Int]
+
+    val overlap$ = PublishSubject[Percentage]
+
+    val updateParams$ =
+      List(nrBins$.map(v => setFilterNrBins(0, v)),
+           overlap$.map(v => setFilterOverlap(0, v)))
+        .reduce(_ merge _)
+        .scan(base)((params, fn) => fn(params))
+
+    updateParams$.subscribe(in$)
+
+    nrBins$.onNext(10)
+    overlap$.onNext(.1)
+    nrBins$.onNext(20)
+    overlap$.onNext(.2)
+    nrBins$.onNext(30)
+    overlap$.onNext(.3)
+    nrBins$.onCompleted()
+    overlap$.onCompleted()
+
+    waitFor(updates$)
+  }
 
 }

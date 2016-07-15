@@ -29,6 +29,9 @@ libraryDependencies ++= Seq(
   "io.reactivex"           %% "rxscala"          % "0.26.1",
   "org.scalaz"             %% "scalaz-core"      % "7.2.0",
   "com.chuusai"            %% "shapeless"        % "2.3.0",
+  "org.typelevel"          %% "shapeless-scalaz" % "0.4",
+
+  "com.softwaremill.quicklens" %% "quicklens" % "1.4.4",
 
   "com.typesafe.play"      % "play-json_2.10"    % "2.4.8",
 

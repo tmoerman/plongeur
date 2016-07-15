@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import com.softwaremill.quicklens
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
@@ -10,8 +11,9 @@ import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
 import org.tmoerman.plongeur.util.IterableFunctions._
-import play.api.libs.json.JsObject
 import rx.lang.scala.Observable
+
+import scala.util.Try
 
 /**
   * TODO turn into a part of the reactive machinery with observable input and observable output. Cfr. Cycle.js
@@ -99,6 +101,27 @@ case class TDAParams(val lens: TDALens,
                      val collapseDuplicateClusters: Boolean = true,
                      val scaleSelection: ScaleSelection = histogram(),
                      val coveringBoundaries: Option[Boundaries] = None) extends Serializable
+
+object TDAParams {
+
+  import quicklens._
+
+  val modFilterNrBins  = modify(_:Filter)(_.nrBins)
+
+  val modFilterOverlap = modify(_:Filter)(_.overlap)
+
+  def modFilter(i: Int) = modify(_:TDAParams)(_.lens.filters.at(i))
+
+  def setFilterNrBins(i: Int, value: Int) =
+    (params: TDAParams) => Try((modFilter(i) andThenModify modFilterNrBins)(params).setTo(value)).getOrElse(params)
+
+  def setFilterOverlap(i: Int, value: Percentage) =
+    (params: TDAParams) => Try((modFilter(i) andThenModify modFilterOverlap)(params).setTo(value)).getOrElse(params)
+
+  def setHistogramScaleSelectionNrBins(nrBins: Int) =
+    (params: TDAParams) => modify(params)(_.scaleSelection).setTo(HistogramScaleSelection(nrBins))
+
+}
 
 case class TDAResult(val clustersRDD: RDD[Cluster],
                      val edgesRDD: RDD[Set[ID]]) extends Serializable {

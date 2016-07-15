@@ -4,7 +4,10 @@ import java.io.Serializable
 import java.util.UUID
 
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
-import shapeless.HList
+import shapeless.contrib.scalaz._
+import shapeless.{HList, lens}
+
+import scalaz.PLens._
 
 /**
   * @author Thomas Moerman
@@ -57,7 +60,7 @@ object Model {
 
   type Percentage = BigDecimal
 
-  case class TDALens(val filters: Filter*) extends Serializable {
+  case class TDALens(val filters: List[Filter]) extends Serializable {
 
     def assocFilterMemos(tdaContext: TDAContext): TDAContext =
       filters.foldLeft(tdaContext) {
@@ -67,6 +70,12 @@ object Model {
             .map(pair => ctx.updateMemo(memo => memo + pair))
             .getOrElse(ctx)
       }
+
+  }
+
+  object TDALens {
+
+    def apply(filters: Filter*): TDALens = TDALens(filters.toList)
 
   }
 
