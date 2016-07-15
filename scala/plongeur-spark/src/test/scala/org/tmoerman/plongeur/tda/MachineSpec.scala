@@ -59,20 +59,6 @@ class MachineSpec extends FlatSpec with Matchers {
     runMachine(cc).toBlocking.toList shouldBe List((l10, c, h10), (l10, c, h12), (l05, c, h12))
   }
 
-//  "ConnectableObservable to the resque?" should "yield multiple results" in {
-//    val o1 = Observable.just(p1)
-//    val o2 = Observable.just(p2)
-//    val o3 = Observable.just(p3)
-//
-//    val cc = Observable.from(List(p1, p2, p3))
-//
-//    val out = runMachine(cc).publish
-//
-//    out.subscribe(onNext = s => println(s)) // shouldBe List((l10, c, h10), (l10, c, h12), (l05, c, h12))
-//
-//    out.connect
-//  }
-
   def runMachine(in$: Observable[TDAParams]) = {
 
     val lens$             = in$.map(_.lens).distinct.onBackpressureLatest
