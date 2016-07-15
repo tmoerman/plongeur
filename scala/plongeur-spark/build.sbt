@@ -33,7 +33,7 @@ libraryDependencies ++= Seq(
 
   "com.softwaremill.quicklens" %% "quicklens" % "1.4.4",
 
-  "com.typesafe.play"      % "play-json_2.10"    % "2.4.8",
+  "com.typesafe.play"      % "play-json_2.10"    % "2.4.8" exclude("com.fasterxml.jackson.core", "*"),
 
   "org.scalatest"          %% "scalatest"        % "2.2.4"  % "test",
 
