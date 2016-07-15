@@ -3,6 +3,7 @@ package org.tmoerman.lab
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Model.{Filter, TDALens}
 import org.tmoerman.plongeur.tda.TDAParams
+import org.tmoerman.plongeur.tda.TDAParams.setFilterNrBins
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale
 import org.tmoerman.plongeur.tda.cluster.Scale.histogram
@@ -130,9 +131,9 @@ class RxLab extends FlatSpec with Matchers {
     waitFor(combo)
   }
 
-  it should "bla" in {
-    val in$ = PublishSubject[TDAParams]
+  behavior of "Piping observables"
 
+  it should "forward from on observable to a subject" in {
     val base =
       TDAParams(
         lens = TDALens(
@@ -140,12 +141,27 @@ class RxLab extends FlatSpec with Matchers {
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
+    val in$ = PublishSubject[TDAParams]
+
+    val updates$ = in$.toVector
+
+    updates$.subscribe{ _.map(_.lens.filters(0).nrBins) shouldBe Vector(10, 10, 20, 30) }
+
     val nrBins$ = PublishSubject[Int]
 
-//    val updateParams$ =
-//      nrBins$
-//        .scan(base)((p, i) => p.copy(lens = p.lens.fil))
+    val updateParams$ =
+      nrBins$
+        .map(v => setFilterNrBins(0, v))
+        .scan(base)((params, fn) => fn(params))
 
+    updateParams$.subscribe(in$)
+
+    nrBins$.onNext(10)
+    nrBins$.onNext(20)
+    nrBins$.onNext(30)
+    nrBins$.onCompleted()
+
+    waitFor(updates$)
   }
 
 }
