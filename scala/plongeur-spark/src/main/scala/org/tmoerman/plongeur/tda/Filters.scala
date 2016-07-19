@@ -103,7 +103,7 @@ object Filters extends Serializable {
             { case (acc, (a, b)) => val d = distance(a, b)
                                     Map(a.index -> d, b.index -> d).merge(_ + _)(acc) },
             { case (acc1, acc2) => acc1.merge(_ + _)(acc2) })
-          .mapValues(sum => sum / N)
+          .map{ case (i, sum) => (i, sum / N) }
 
       case n: Int =>
         combinations
@@ -112,7 +112,7 @@ object Filters extends Serializable {
                                     val v = pow(d, n)
                                     Map(a.index -> v, b.index -> v).merge(_ + _)(acc) },
             { case (acc1, acc2) => acc1.merge(_ + _)(acc2) })
-          .mapValues(sum => pow(sum, 1d / n) / N)
+          .map{ case (i, sum) => (i, pow(sum, 1d / n) / N) }
 
       case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$n'")
     }}
