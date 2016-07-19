@@ -92,6 +92,8 @@ case class TDAContext(val sc: SparkContext,
 
   lazy val N = dataPoints.count
 
+  lazy val dim = dataPoints.first.features.size
+
   def updateMemo(f: Map[Any, Any] => Map[Any, Any]) = copy(memo = f(memo))
 
 }

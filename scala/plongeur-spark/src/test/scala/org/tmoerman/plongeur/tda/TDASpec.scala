@@ -67,8 +67,16 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
         scaleSelection = histogram(10))
 
     val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
+  }
 
-    // TODO verify stuff
+  it should "pass smoke test with pca filter" in {
+    val tdaParams =
+      TDAParams(
+        lens = TDALens(Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+        clusteringParams = ClusteringParams(),
+        scaleSelection = histogram(10))
+
+    val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
   }
 
 }

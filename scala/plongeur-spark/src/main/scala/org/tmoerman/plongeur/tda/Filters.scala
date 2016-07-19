@@ -1,8 +1,11 @@
 package org.tmoerman.plongeur.tda
 
+import java.lang.Math.min
+
 import breeze.linalg.{Vector => MLVector}
+import org.apache.spark.Logging
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.mllib.feature.PCA
+import org.apache.spark.mllib.feature.{PCAModel, PCA}
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, parseDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
@@ -14,7 +17,7 @@ import scala.math.{max, pow}
 /**
   * @author Thomas Moerman
   */
-object Filters extends Serializable {
+object Filters extends Serializable with Logging {
 
   /**
     * @param spec
@@ -29,29 +32,34 @@ object Filters extends Serializable {
 
       case "feature" #: (n: Int) #: HNil => (d: DataPoint) => d.features(n)
 
-      case "PCA" #: n #: HNil =>
-        val pcaMemo = ctx.memo(key).asInstanceOf[PCA]
+      case "PCA" #: (n: Int) #: HNil =>
+        val pcaMemo = ctx.memo(key).asInstanceOf[PCAModel]
 
-        ???
+        val bc = ctx.sc.broadcast(pcaMemo)
 
-      case "SVD" #: n #: HNil => ???
+        (d: DataPoint) => bc.value.transform(d.features)(n)
+
+
+      case "SVD" #: (n: Int) #: HNil => ???
 
       case "eccentricity" #: n #: distanceSpec =>
         val eccMemo = ctx.memo(key).asInstanceOf[Map[Index, Double]]
 
-        makeFn(ctx.sc.broadcast(eccMemo))
+        val bc = ctx.sc.broadcast(eccMemo)
+
+        (d: DataPoint) => bc.value.apply(d.index)
 
       case _ => throw new IllegalArgumentException(s"could not materialize spec: $spec")
     }
   }
 
-  val MAX_PCs: Int = 5
+  val MAX_PCs: Int = 10
 
   def toFilterMemo(spec: HList, ctx: TDAContext): Option[(Any, Any)] =  {
     lazy val key = toFilterMemoKey(spec)
 
     spec match {
-      case "PCA"          #: _ #: HNil         => Some(key -> new PCA(MAX_PCs).fit(ctx.dataPoints.map(_.features)))
+      case "PCA"          #: _ #: HNil         => Some(key -> new PCA(min(MAX_PCs, ctx.dim)).fit(ctx.dataPoints.map(_.features)))
 
       case "eccentricity" #: n #: distanceSpec => Some(key -> eccentricityMap(n, ctx, parseDistance(distanceSpec)))
 
@@ -64,8 +72,6 @@ object Filters extends Serializable {
     case "eccentricity" #: n #: _    => s"ECC_$n"
     case _                           => throw new IllegalArgumentException(s"no memo key for filter spec: $spec")
   }
-
-  def makeFn(bc: Broadcast[Map[Index, Double]]) = (d: DataPoint) => bc.value.apply(d.index)
 
   /**
     * @param n The exponent
