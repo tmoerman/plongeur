@@ -1,5 +1,7 @@
 package org.tmoerman.lab
 
+import java.util.concurrent.atomic.AtomicReference
+
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Model.{Percentage, Filter, TDALens}
 import org.tmoerman.plongeur.tda.TDAParams
@@ -8,6 +10,7 @@ import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale
 import org.tmoerman.plongeur.tda.cluster.Scale.histogram
 import org.tmoerman.plongeur.util.RxUtils._
+import rx.lang.scala.Subscription
 import rx.lang.scala.subjects.PublishSubject
 import shapeless.HNil
 
@@ -169,6 +172,44 @@ class RxLab extends FlatSpec with Matchers {
     overlap$.onCompleted()
 
     waitFor(updates$)
+  }
+
+  case class SubRef(val ref: AtomicReference[Option[Subscription]] = new AtomicReference[Option[Subscription]](None)) extends Serializable {
+
+    def update(sub: Subscription): Unit = ref.getAndSet(Option(sub)).foreach(old => old.unsubscribe())
+
+    def reset(): Unit = update(null)
+
+  }
+
+  behavior of "SubRef"
+
+  it should "clean up subscriptions nicely" in {
+
+    val sub = SubRef()
+
+    val in$ = PublishSubject[Int]
+
+    sub.update(in$.subscribe(onNext = (i: Int) => println(s"sub 1: $i")))
+    in$.onNext(1)
+    in$.onNext(2)
+    in$.onNext(3)
+
+    val r1 = sub.ref.get.get
+    r1.isUnsubscribed shouldBe false
+
+    sub.update(in$.subscribe(onNext = (i: Int) => println(s"sub 2: $i")))
+    in$.onNext(100)
+    in$.onNext(200)
+    in$.onNext(300)
+
+    val r2 = sub.ref.get.get
+    r2.isUnsubscribed shouldBe false
+    r1.isUnsubscribed shouldBe true
+
+    in$.onCompleted()
+
+    waitFor(in$.toVector)
   }
 
 }

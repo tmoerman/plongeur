@@ -1,21 +1,19 @@
 package org.tmoerman.plongeur.tda
 
-import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.TimeUnit.SECONDS
 
-import org.tmoerman.plongeur.tda.TDAMachine._
-
-import scala.concurrent.duration.Duration
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Inspections._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
+import org.tmoerman.plongeur.util.RxUtils._
 import rx.lang.scala.Observable
 import rx.lang.scala.subjects.PublishSubject
 import shapeless.HNil
-import org.tmoerman.plongeur.util.RxUtils._
+
+import scala.concurrent.duration.Duration
 
 /**
   * @author Thomas Moerman
@@ -82,6 +80,28 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     in.onNext(params_1)
     in.onNext(params_2)
     in.onNext(params_1)
+    in.onCompleted()
+
+    waitFor(out)
+  }
+
+  val p_ecc_1 =
+    TDAParams(
+      lens = TDALens(
+        Filter("eccentricity" :: 1 :: HNil, 10, 0.5)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(10))
+
+  it should "work with ecc 1 filter" in {
+    val in = PublishSubject[TDAParams]
+
+    val ctx = TDAContext(sc, circle1kRDD)
+
+    val out = TDAMachine.run(ctx, in).toVector
+
+    val out_sub = out.subscribe(_.size shouldBe 1)
+
+    in.onNext(p_ecc_1)
     in.onCompleted()
 
     waitFor(out)
