@@ -32,9 +32,7 @@ libraryDependencies ++= Seq(
   "org.typelevel"          %% "shapeless-scalaz" % "0.4",
 
   "com.softwaremill.quicklens" %% "quicklens" % "1.4.4",
-
-  "com.typesafe.play"      % "play-json_2.10"    % "2.4.8" exclude("com.fasterxml.jackson.core", "*"),
-
+  
   "org.scalatest"          %% "scalatest"        % "2.2.4"  % "test",
 
   compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
