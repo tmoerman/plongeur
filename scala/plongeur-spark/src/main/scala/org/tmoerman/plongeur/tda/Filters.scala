@@ -33,7 +33,7 @@ object Filters extends Serializable with Logging {
       case "feature" #: (n: Int) #: HNil => (d: DataPoint) => d.features(n)
 
       case "PCA" #: (n: Int) #: HNil =>
-        val pcaMemo = ctx.memo(key).asInstanceOf[PCAModel]
+        val pcaMemo = ctx.memo(key.get).asInstanceOf[PCAModel]
 
         val bc = ctx.sc.broadcast(pcaMemo)
 
@@ -43,7 +43,7 @@ object Filters extends Serializable with Logging {
       case "SVD" #: (n: Int) #: HNil => ???
 
       case "eccentricity" #: n #: distanceSpec =>
-        val eccMemo = ctx.memo(key).asInstanceOf[Map[Index, Double]]
+        val eccMemo = ctx.memo(key.get).asInstanceOf[Map[Index, Double]]
 
         val bc = ctx.sc.broadcast(eccMemo)
 
@@ -55,22 +55,26 @@ object Filters extends Serializable with Logging {
 
   val MAX_PCs: Int = 10
 
-  def toFilterMemo(spec: HList, ctx: TDAContext): Option[(Any, Any)] =  {
-    lazy val key = toFilterMemoKey(spec)
+  def toFilterMemo(spec: HList, ctx: TDAContext): Option[(String, Any)] = {
+    toFilterMemoKey(spec).flatMap(key =>
+      ctx
+        .memo
+        .get(key)
+        .map(v => (key -> v))
+        .orElse{
+          spec match {
+            case "PCA"          #: _ #: HNil         => Some(key -> new PCA(min(MAX_PCs, ctx.dim)).fit(ctx.dataPoints.map(_.features)))
 
-    spec match {
-      case "PCA"          #: _ #: HNil         => Some(key -> new PCA(min(MAX_PCs, ctx.dim)).fit(ctx.dataPoints.map(_.features)))
+            case "eccentricity" #: n #: distanceSpec => Some(key -> eccentricityMap(n, ctx, parseDistance(distanceSpec)))
 
-      case "eccentricity" #: n #: distanceSpec => Some(key -> eccentricityMap(n, ctx, parseDistance(distanceSpec)))
-
-      case _                                   => None
-    }
+            case _                                   => None
+          }})
   }
 
-  def toFilterMemoKey(spec: HList) = spec match {
-    case "PCA"          #: _ #: HNil => "PCA"
-    case "eccentricity" #: n #: _    => s"ECC_$n"
-    case _                           => throw new IllegalArgumentException(s"no memo key for filter spec: $spec")
+  def toFilterMemoKey(spec: HList): Option[String] = spec match {
+    case "PCA"          #: _ #: HNil => Some("PCA")
+    case "eccentricity" #: n #: _    => Some(s"ECC_$n")
+    case _                           => None
   }
 
   /**

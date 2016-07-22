@@ -88,13 +88,13 @@ object TDA {
 @deprecated("disappears in the light of the meta machine!")
 case class TDAContext(val sc: SparkContext,
                       val dataPoints: RDD[DataPoint],
-                      val memo: Map[Any, Any] = Map()) extends Serializable {
+                      val memo: Map[String, Any] = Map()) extends Serializable {
 
   lazy val N = dataPoints.count
 
   lazy val dim = dataPoints.first.features.size
 
-  def updateMemo(f: Map[Any, Any] => Map[Any, Any]) = copy(memo = f(memo))
+  def updateMemo(f: Map[String, Any] => Map[String, Any]) = copy(memo = f(memo))
 
 }
 
