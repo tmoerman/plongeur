@@ -113,9 +113,9 @@ object TDAMachine extends Logging {
 
     // TDA computation merges in parameter changes
 
-    val ctx$                 = Observable.just(ctx)
+    val ctx$                 = lens$.scan(ctx){(ctx, lens) => lens.assocFilterMemos(ctx)}.distinctUntilChanged
 
-    val lensCtx$             = lens$.combineLatestWith(ctx$)((lens, ctx) => (lens, lens.assocFilterMemos(ctx)) )
+    val lensCtx$             = lens$.combineLatest(ctx$)
 
     val levelSetClustersRDD$ = lensCtx$.combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets(clusterer).tupled)
 

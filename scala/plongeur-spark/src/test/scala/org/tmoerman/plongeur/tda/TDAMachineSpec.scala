@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Inspections._
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.TDAParams.setFilterNrBins
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
@@ -85,6 +86,31 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     waitFor(out)
   }
 
+  val p_pca_0 =
+    TDAParams(
+      lens = TDALens(
+        Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(10))
+
+  it should "work with pca filters" in {
+    val in = PublishSubject[TDAParams]
+
+    val ctx = TDAContext(sc, circle1kRDD)
+
+    val out = TDAMachine.run(ctx, in).toVector
+
+    val out_sub = out.subscribe(_.size shouldBe 3)
+
+    in.onNext(p_pca_0)
+    in.onNext(setFilterNrBins(0, 20)(p_pca_0))
+    in.onNext(setFilterNrBins(0, 40)(p_pca_0))
+
+    in.onCompleted()
+
+    waitFor(out)
+  }
+
   val p_ecc_1 =
     TDAParams(
       lens = TDALens(
@@ -99,12 +125,29 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
 
     val out = TDAMachine.run(ctx, in).toVector
 
-    val out_sub = out.subscribe(_.size shouldBe 1)
+    val out_sub = out.subscribe(_.size shouldBe 2)
 
     in.onNext(p_ecc_1)
+    in.onNext(setFilterNrBins(0, 20)(p_ecc_1))
     in.onCompleted()
 
     waitFor(out)
+  }
+
+
+  behavior of "assocFilterMemos"
+
+  it should "add memo entries to a TDAContext" in {
+    val ctx = TDAContext(sc, circle1kRDD)
+
+    val updated = p_pca_0.lens.assocFilterMemos(ctx)
+
+    ctx should not be updated
+
+    val updated2 = p_pca_0.lens.assocFilterMemos(updated)
+
+    updated shouldBe updated2
+
   }
 
 //  it should "work in dryRun" in {
