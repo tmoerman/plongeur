@@ -1,9 +1,7 @@
 package org.tmoerman.plongeur.util
 
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Distance.DistanceFunction
-import org.tmoerman.plongeur.tda.Model
-import org.tmoerman.plongeur.tda.Model.{Index, DataPoint}
+import org.tmoerman.plongeur.tda.Model.DataPoint
 
 import scala.reflect.ClassTag
 
@@ -57,13 +55,5 @@ class DataPointRDDFunctions(val rdd: RDD[DataPoint]) extends Serializable {
     rdd
       .cartesian(rdd)
       .flatMap{ case ((p1, p2)) => if (p1.index < p2.index) List(Set(p1, p2)) else Nil }
-
-  /**
-    * @param distance
-    * @return Returns an RDD of DataPoint pairs to
-    */
-  def distanceMatrix(distance: DistanceFunction): RDD[(Set[Index], Double)] =
-    distinctComboPairs
-      .map{ case ((p1, p2)) => (Set(p1.index, p2.index), distance.apply(p1, p2)) }
 
 }
