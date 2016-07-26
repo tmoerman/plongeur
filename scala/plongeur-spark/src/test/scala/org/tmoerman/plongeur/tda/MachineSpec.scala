@@ -1,11 +1,10 @@
 package org.tmoerman.plongeur.tda
 
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Model.{Filter, TDALens}
+import org.tmoerman.plongeur.tda.Model.{Filter, TDALens, _}
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import rx.lang.scala.Observable
-import rx.observables.ConnectableObservable
 import shapeless.HNil
 
 import scala.concurrent.duration._

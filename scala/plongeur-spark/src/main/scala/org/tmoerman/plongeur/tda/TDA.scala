@@ -1,63 +1,74 @@
 package org.tmoerman.plongeur.tda
 
-import com.softwaremill.quicklens
-import org.apache.spark.SparkContext
-import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{Logging, RangePartitioner}
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
-import org.tmoerman.plongeur.tda.Model.{DataPoint, _}
+import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
-import org.tmoerman.plongeur.tda.cluster.Scale._
-import org.tmoerman.plongeur.tda.cluster.SmileClusteringProvider
-import org.tmoerman.plongeur.util.IterableFunctions._
-import rx.lang.scala.Observable
-
-import scala.util.Try
+import shapeless.{::, HList, HNil}
 
 /**
-  * TODO turn into a part of the reactive machinery with observable input and observable output. Cfr. Cycle.js
-  *
   * @author Thomas Moerman
   */
-object TDA {
+trait TDA extends Logging {
 
-  val clusterer = SmileClusteringProvider // TODO injectable
+  val clusterLevelSets = (clusterer: LocalClusteringProvider) => (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
+    import ctx._
+    import org.tmoerman.plongeur.util.IterableFunctions._
 
-  def doMain(in: Observable[String]) = {
-    val out: Observable[Int] = in.map(_.length)
-    out
-  }
+    logDebug(s">>> clusterLevelSets $lens")
 
-  def echo(call: String) = s"$call $call"
+    val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, ctx))
 
-  def apply(tdaParams: TDAParams, ctx: TDAContext): TDAResult = {
+    val boundaries = calculateBoundaries(filterFunctions, dataPoints)
 
-    val ctxWithMemo = tdaParams.lens.assocFilterMemos(ctx)
+    val levelSetsInverse = levelSetsInverseFunction(boundaries, lens, filterFunctions)
 
-    val filterFunctions = tdaParams.lens.filters.map(f => toFilterFunction(f.spec, ctxWithMemo))
-
-    //val boundaries = coveringBoundaries.getOrElse(calculateBoundaries(filterFunctions, dataPoints))
-    val boundaries = calculateBoundaries(filterFunctions, ctxWithMemo.dataPoints)
-
-    val levelSetsInverse = levelSetsInverseFunction(boundaries, tdaParams.lens, filterFunctions)
-
-    val byLevelSet =
-      ctxWithMemo
-        .dataPoints
+    val keyedByLevelSetId =
+      dataPoints
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
-        .groupByKey // TODO turn this into a reduceByKey with an incremental single linkage algorithm? -> probably pointless
 
-    val tripletsRDD =
-      byLevelSet
-        .map{ case (levelSetID, levelSetPoints) =>
-          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toSeq, tdaParams.clusteringParams)) }
+    val groupedByLevelSetId =
+      if (clusteringParams.partitionByLevelSetID)
+        keyedByLevelSetId
+          .partitionBy(new RangePartitioner(8, keyedByLevelSetId))
+          .groupByKey
+      else
+        keyedByLevelSetId
+          .groupByKey
+
+    val rdd =
+      groupedByLevelSetId
+        .map { case (levelSetID, levelSetPoints) =>
+          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toList, clusteringParams))
+        }
         .cache
 
-    val partitionedClustersRDD: RDD[List[Cluster]] =
-      tripletsRDD
-        .map{ case (levelSetID, clusterPoints, clustering) =>
-          localClusters(levelSetID, clusterPoints, clustering.labels(tdaParams.scaleSelection)) }
+    (clusteringParams :: lens :: HNil, rdd)
+  }
+
+  val applyScale = (product: (HList, RDD[(LevelSetID, List[DataPoint], LocalClustering)]),
+                    scaleSelection: ScaleSelection) => {
+
+    logDebug(s">>> applyScale $scaleSelection")
+
+    val (hlist, levelSetClustersRDD) = product
+
+    val rdd =
+      levelSetClustersRDD
+        .map { case (levelSetID, clusterPoints, clustering) => localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
+        .cache
+
+    (scaleSelection :: hlist, rdd)
+  }
+
+  val makeTDAResult = (product: (HList, RDD[List[Cluster]]),
+                       collapseDuplicateClusters: Boolean) => {
+
+    logDebug(s">>> makeTDAResult - collapse duplicate clusters? $collapseDuplicateClusters")
+
+    val (hlist, partitionedClustersRDD) = product
 
     lazy val duplicatesAllowed: RDD[Cluster] =
       partitionedClustersRDD
@@ -69,67 +80,33 @@ object TDA {
         .reduceByKey((c1, c2) => c1)
         .values
 
-    val clustersRDD = (if (tdaParams.collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed).cache
+    val clustersRDD = (if (collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed).cache
 
     val clusterEdgesRDD =
       clustersRDD
-        .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id)))   // melt all clusters by points
+        .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id))) // melt all clusters by points
         .groupByKey
         .values
         .flatMap(_.toSet.subsets(2))
         .distinct
         .cache
 
-    TDAResult(clustersRDD, clusterEdgesRDD)
+    val reconstructedParams = hlist match {
+      case (scaleSelection: ScaleSelection) :: (clusteringParams: ClusteringParams) :: (lens: TDALens) :: HNil =>
+        TDAParams(
+          lens = lens,
+          clusteringParams = clusteringParams,
+          scaleSelection = scaleSelection,
+          collapseDuplicateClusters = collapseDuplicateClusters)
+    }
+
+    val result = TDAResult(clustersRDD, clusterEdgesRDD)
+
+    (reconstructedParams, result)
   }
 
-}
-
-@deprecated("disappears in the light of the meta machine!")
-case class TDAContext(val sc: SparkContext,
-                      val dataPoints: RDD[DataPoint],
-                      val memo: Map[String, Any] = Map()) extends Serializable {
-
-  lazy val N = dataPoints.count
-
-  lazy val dim = dataPoints.first.features.size
-
-  def updateMemo(f: Map[String, Any] => Map[String, Any]) = copy(memo = f(memo))
-
-}
-
-case class TDAParams(val lens: TDALens,
-                     val clusteringParams: ClusteringParams,
-                     val collapseDuplicateClusters: Boolean = true,
-                     val scaleSelection: ScaleSelection = histogram(),
-                     val coveringBoundaries: Option[Boundaries] = None) extends Serializable
-
-object TDAParams {
-
-  import quicklens._
-
-  val modFilterNrBins  = modify(_:Filter)(_.nrBins)
-
-  val modFilterOverlap = modify(_:Filter)(_.overlap)
-
-  def modFilter(i: Int) = modify(_:TDAParams)(_.lens.filters.at(i))
-
-  def setFilterNrBins(i: Int, value: Int) =
-    (params: TDAParams) => Try((modFilter(i) andThenModify modFilterNrBins)(params).setTo(value)).getOrElse(params)
-
-  def setFilterOverlap(i: Int, value: Percentage) =
-    (params: TDAParams) => Try((modFilter(i) andThenModify modFilterOverlap)(params).setTo(value)).getOrElse(params)
-
-  def setHistogramScaleSelectionNrBins(nrBins: Int) =
-    (params: TDAParams) => modify(params)(_.scaleSelection).setTo(HistogramScaleSelection(nrBins))
-
-}
-
-case class TDAResult(val clustersRDD: RDD[Cluster],
-                     val edgesRDD: RDD[Set[ID]]) extends Serializable {
-
-  lazy val clusters = clustersRDD.collect
-
-  lazy val edges = edgesRDD.collect
+  def flattenTuple[A, B, C](t: ((A, B), C)) = t match {
+    case ((a, b), c) => (a, b, c)
+  }
 
 }

@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Inspections._
+import org.tmoerman.plongeur.tda.Model.TDAParams._
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.TDAParams.setFilterNrBins
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}

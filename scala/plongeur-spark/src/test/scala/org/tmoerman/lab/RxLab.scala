@@ -3,11 +3,9 @@ package org.tmoerman.lab
 import java.util.concurrent.atomic.AtomicReference
 
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Model.{Percentage, Filter, TDALens}
-import org.tmoerman.plongeur.tda.TDAParams
-import org.tmoerman.plongeur.tda.TDAParams.{setFilterOverlap, setFilterNrBins}
+import org.tmoerman.plongeur.tda.Model.TDAParams._
+import org.tmoerman.plongeur.tda.Model.{Filter, Percentage, TDALens, _}
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
-import org.tmoerman.plongeur.tda.cluster.Scale
 import org.tmoerman.plongeur.tda.cluster.Scale.histogram
 import org.tmoerman.plongeur.util.RxUtils._
 import rx.lang.scala.Subscription

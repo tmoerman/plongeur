@@ -5,7 +5,7 @@ import org.tmoerman.plongeur.test.TestResources
 
 import Covering._
 import Model._
-import TDA._
+import TDAProcedure._
 import shapeless.HNil
 
 /**

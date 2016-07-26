@@ -45,7 +45,8 @@ object Clustering extends Serializable {
     * @param clusteringMethod Single, Complete, etc...
     */
   case class ClusteringParams(distanceSpec:     HList  = "euclidean" :: HNil,
-                              clusteringMethod: String = "single") extends Serializable
+                              clusteringMethod: String = "single",
+                              partitionByLevelSetID: Boolean = true) extends Serializable
 
   /**
     * Protocol for constructing Clustering instances.

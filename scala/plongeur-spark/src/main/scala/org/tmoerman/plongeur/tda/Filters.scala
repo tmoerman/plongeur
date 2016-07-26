@@ -4,13 +4,13 @@ import java.lang.Math.min
 
 import breeze.linalg.{Vector => MLVector}
 import org.apache.spark.Logging
-import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.mllib.feature.{PCAModel, PCA}
+import org.apache.spark.mllib.feature.{PCA, PCAModel}
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, parseDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
 import shapeless.HList.ListCompat._
 import shapeless._
+import org.tmoerman.plongeur.util.RDDFunctions._
 
 import scala.math.{max, pow}
 
@@ -94,21 +94,18 @@ object Filters extends Serializable with Logging {
 
     val EMPTY = Map[Index, Double]()
 
-    val combinations =
-      dataPoints
-        .cartesian(dataPoints)                           // cartesian product
-        .filter { case (p1, p2) => p1.index < p2.index } // combinations only
-
     n match {
       case "infinity" =>
-        combinations
+        dataPoints
+          .distinctComboPairs
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
                                     Map(a.index -> d, b.index -> d).merge(max)(acc) },
             { case (acc1, acc2) => acc1.merge(max)(acc2) })
 
       case 1 =>
-        combinations
+        dataPoints
+          .distinctComboPairs
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
                                     Map(a.index -> d, b.index -> d).merge(_ + _)(acc) },
@@ -116,7 +113,8 @@ object Filters extends Serializable with Logging {
           .map{ case (i, sum) => (i, sum / N) }
 
       case n: Int =>
-        combinations
+        dataPoints
+          .distinctComboPairs
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
                                     val v = pow(d, n)

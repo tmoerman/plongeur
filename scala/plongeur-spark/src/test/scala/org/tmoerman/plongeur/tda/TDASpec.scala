@@ -36,7 +36,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
         scaleSelection = histogram(10),
         coveringBoundaries = Some(Array((0.0, 12.0), (0.0, 12.0))))
 
-    val result = TDA.apply(tdaParams, TDAContext(sc, test2DLabeledPointsRDD))
+    val result = TDAProcedure.apply(tdaParams, TDAContext(sc, test2DLabeledPointsRDD))
 
     val all = test2DLabeledPointsRDD.distinct.collect.toSet
 
@@ -52,7 +52,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
-    val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
+    val result = TDAProcedure.apply(tdaParams, TDAContext(sc, circle250RDD))
 
     printInspections(result, "circle250")
 
@@ -66,7 +66,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
-    val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
+    val result = TDAProcedure.apply(tdaParams, TDAContext(sc, circle250RDD))
   }
 
   it should "pass smoke test with pca filter" in {
@@ -76,7 +76,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
-    val result = TDA.apply(tdaParams, TDAContext(sc, circle250RDD))
+    val result = TDAProcedure.apply(tdaParams, TDAContext(sc, circle250RDD))
   }
 
 }
