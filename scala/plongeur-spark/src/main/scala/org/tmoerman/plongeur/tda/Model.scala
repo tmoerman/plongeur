@@ -6,7 +6,6 @@ import java.util.UUID
 import com.softwaremill.quicklens
 import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.mllib.linalg.distributed.IndexedRow
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
@@ -22,11 +21,11 @@ object Model {
 
   def feature(n: Int) = (p: DataPoint) => p.features(n)
 
-  implicit def pimp(in: (Int, MLVector)): DataPoint = dp(in._1, in._2)
+  implicit def pimp(in: (Index, MLVector)): DataPoint = dp(in._1, in._2)
 
-  def dp(in: (Long, MLVector)): DataPoint = IndexedDataPoint(in._1, in._2)
+  def dp(index: Long, features: MLVector): DataPoint = IndexedDataPoint(index.toInt, features)
 
-  type Index = Long
+  type Index = Int
 
   trait DataPoint {
     def index: Index
@@ -34,11 +33,9 @@ object Model {
     def features: MLVector
 
     def meta: Option[Map[String, _ <: Serializable]]
-
-    def asIndexedRow = IndexedRow(index, features)
   }
 
-  case class IndexedDataPoint(val index: Long,
+  case class IndexedDataPoint(val index: Index,
                               val features: MLVector,
                               val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable
 
@@ -86,7 +83,6 @@ object Model {
         .get(key)
         .map(_ => self)
         .getOrElse(self.copy(broadcasts = broadcasts + (key -> producer.apply())))
-
   }
 
   case class TDAParams(val lens: TDALens,
