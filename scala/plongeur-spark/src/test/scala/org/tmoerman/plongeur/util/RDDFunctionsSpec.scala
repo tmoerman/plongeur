@@ -20,4 +20,6 @@ class RDDFunctionsSpec extends FlatSpec with TestResources with Matchers {
 
   }
 
+  behavior of "combinations"
+
 }

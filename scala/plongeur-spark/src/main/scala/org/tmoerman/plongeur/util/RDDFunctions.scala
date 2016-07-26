@@ -1,6 +1,7 @@
 package org.tmoerman.plongeur.util
 
 import org.apache.spark.rdd.RDD
+import org.tmoerman.plongeur.tda.Model.DataPoint
 
 import scala.reflect.ClassTag
 
@@ -12,6 +13,8 @@ object RDDFunctions {
   implicit def pimpRDD[T: ClassTag](rdd: RDD[T]): RDDFunctions[T] = new RDDFunctions[T](rdd)
 
   implicit def pimpCsvRDD(rdd: RDD[Array[String]]): CsvRDDFunctions = new CsvRDDFunctions(rdd)
+
+  implicit def pimpDataPointRDD(rdd: RDD[DataPoint]): DataPointRDDFunctions = new DataPointRDDFunctions(rdd)
 
 }
 
@@ -32,5 +35,25 @@ class CsvRDDFunctions(val rdd: RDD[Array[String]]) extends Serializable {
 
     (header, if (cacheValues) values.cache() else values)
   }
+
+}
+
+class DataPointRDDFunctions(val rdd: RDD[DataPoint]) extends Serializable {
+
+  /**
+    * @return Returns an RDD of all non-equal combination pairs of the specified RDD.
+    */
+  def distinctComboPairs: RDD[(DataPoint, DataPoint)] =
+    rdd
+      .cartesian(rdd)
+      .filter{ case ((p1, p2)) => p1.index < p2.index }
+
+  /**
+    * @return Returns an RDD of all non-equal combination sets of the specified RDD.
+    */
+  def distinctComboSets: RDD[Set[DataPoint]] =
+    rdd
+      .cartesian(rdd)
+      .flatMap{ case ((p1, p2)) => if (p1.index < p2.index) List(Set(p1, p2)) else Nil }
 
 }

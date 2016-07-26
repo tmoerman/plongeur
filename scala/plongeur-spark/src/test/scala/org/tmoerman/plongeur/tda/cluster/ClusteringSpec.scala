@@ -19,7 +19,7 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
   it should "yield 1 cluster for homogeneous data points" in {
     val homogeneous = heuristicData.take(4)
 
-    val clustering = SmileClusteringProvider.apply(homogeneous)
+    val clustering = SimpleSmileClusteringProvider.apply(homogeneous)
 
     clustering.heights() shouldBe Seq(1.0, 1.0, 1.0, sqrt(2))
 
@@ -27,7 +27,7 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
   }
 
   it should "yield 2 cluster for bipartite data points" in {
-    val clustering = SmileClusteringProvider.apply(heuristicData)
+    val clustering = SimpleSmileClusteringProvider.apply(heuristicData)
 
     clustering.heights() shouldBe Seq(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, sqrt(8), 5.0)
 
@@ -37,7 +37,7 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
   it should "yield 1 cluster for a singleton" in {
     val singleton = heuristicData.take(1)
 
-    val clustering = SmileClusteringProvider.apply(singleton)
+    val clustering = SimpleSmileClusteringProvider.apply(singleton)
 
     clustering.labels(histogram(10)) shouldBe Seq(0)
   }
@@ -45,13 +45,13 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
   it should "yield 2 clusters for a pair" in {
     val pair = heuristicData.take(2)
 
-    val clustering = SmileClusteringProvider.apply(pair)
+    val clustering = SimpleSmileClusteringProvider.apply(pair)
 
     clustering.labels(histogram(10)) shouldBe Seq(0, 1)
   }
 
   it should "yield an acceptable nr of clusters for test.2d.csv data" in {
-    val clustering = SmileClusteringProvider.apply(test2dData)
+    val clustering = SimpleSmileClusteringProvider.apply(test2dData)
 
     println(clustering.heights(true))
 

@@ -5,12 +5,13 @@ import java.lang.Math.min
 import breeze.linalg.{Vector => MLVector}
 import org.apache.spark.Logging
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.mllib.feature.{PCAModel, PCA}
+import org.apache.spark.mllib.feature.{PCA, PCAModel}
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, parseDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
 import shapeless.HList.ListCompat._
 import shapeless._
+import org.tmoerman.plongeur.util.RDDFunctions._
 
 import scala.math.{max, pow}
 
@@ -25,55 +26,44 @@ object Filters extends Serializable with Logging {
     * @return Returns a FilterFunction for the specified filter specification.
     *         Closes over TDAContext for references to SparkContext and DataPoints.
     */
-  def toFilterFunction(spec: HList, ctx: TDAContext): FilterFunction = {
-    lazy val key = toFilterMemoKey(spec)
-
-    spec match {
-
+  def toFilterFunction(spec: HList, ctx: TDAContext): FilterFunction = spec match {
       case "feature" #: (n: Int) #: HNil => (d: DataPoint) => d.features(n)
 
-      case "PCA" #: (n: Int) #: HNil =>
-        val pcaMemo = ctx.memo(key.get).asInstanceOf[PCAModel]
-
-        val bc = ctx.sc.broadcast(pcaMemo)
-
-        (d: DataPoint) => bc.value.transform(d.features)(n)
-
-
-      case "SVD" #: (n: Int) #: HNil => ???
-
-      case "eccentricity" #: n #: distanceSpec =>
-        val eccMemo = ctx.memo(key.get).asInstanceOf[Map[Index, Double]]
-
-        val bc = ctx.sc.broadcast(eccMemo)
-
-        (d: DataPoint) => bc.value.apply(d.index)
-
-      case _ => throw new IllegalArgumentException(s"could not materialize spec: $spec")
+      case _ =>
+        toBroadcastKey(spec)
+          .flatMap(key => ctx.broadcasts.get(key))
+          .map(bc => bc.value.asInstanceOf[FilterFunction])
+          .getOrElse(throw new IllegalArgumentException(s"no filter function for $spec"))
     }
-  }
 
   val MAX_PCs: Int = 10
 
-  def toFilterMemo(spec: HList, ctx: TDAContext): Option[(String, Any)] = {
-    toFilterMemoKey(spec).flatMap(key =>
-      ctx
-        .memo
-        .get(key)
-        .map(v => (key -> v))
-        .orElse{
-          spec match {
-            case "PCA"          #: _ #: HNil         => Some(key -> new PCA(min(MAX_PCs, ctx.dim)).fit(ctx.dataPoints.map(_.features)))
+  def toBroadcastAmendment(spec: HList, ctx: TDAContext): Option[(String, () => Broadcast[Any])] =
+    toBroadcastKey(spec).map(key => (key, () => {
+      val v: Any = toBroadcastFilterFunction(spec, ctx)
 
-            case "eccentricity" #: n #: distanceSpec => Some(key -> eccentricityMap(n, ctx, parseDistance(distanceSpec)))
+      ctx.sc.broadcast(v)
+    }))
 
-            case _                                   => None
-          }})
+  def toBroadcastFilterFunction(spec: HList, ctx: TDAContext): FilterFunction = spec match {
+    case "PCA" #: (n: Int) #: HNil => {
+      val pcaModel = new PCA(min(MAX_PCs, ctx.dim)).fit(ctx.dataPoints.map(_.features))
+
+      (d: DataPoint) => pcaModel.transform(d.features)(n)
+    }
+      
+    case "eccentricity" #: n #: distanceSpec => {
+      val map = eccentricityMap(n, ctx, parseDistance(distanceSpec))
+
+      (d: DataPoint) => map.apply(d.index)
+    }
+
+    case _ => throw new IllegalArgumentException(s"No broadcast value for $spec")
   }
 
-  def toFilterMemoKey(spec: HList): Option[String] = spec match {
+  def toBroadcastKey(spec: HList): Option[String] = spec match {
     case "PCA"          #: _ #: HNil => Some("PCA")
-    case "eccentricity" #: n #: _    => Some(s"ECC_$n")
+    case "eccentricity" #: n #: _    => Some(s"ECC[$n]")
     case _                           => None
   }
 
@@ -94,21 +84,18 @@ object Filters extends Serializable with Logging {
 
     val EMPTY = Map[Index, Double]()
 
-    val combinations =
-      dataPoints
-        .cartesian(dataPoints)                           // cartesian product
-        .filter { case (p1, p2) => p1.index < p2.index } // combinations only
-
     n match {
       case "infinity" =>
-        combinations
+        dataPoints
+          .distinctComboPairs
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
                                     Map(a.index -> d, b.index -> d).merge(max)(acc) },
             { case (acc1, acc2) => acc1.merge(max)(acc2) })
 
       case 1 =>
-        combinations
+        dataPoints
+          .distinctComboPairs
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
                                     Map(a.index -> d, b.index -> d).merge(_ + _)(acc) },
@@ -116,7 +103,8 @@ object Filters extends Serializable with Logging {
           .map{ case (i, sum) => (i, sum / N) }
 
       case n: Int =>
-        combinations
+        dataPoints
+          .distinctComboPairs
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
                                     val v = pow(d, n)

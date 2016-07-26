@@ -41,7 +41,9 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
     val spec: HList = "eccentricity" :: 1 :: HNil
 
-    val ff = toFilterFunction(spec, ctx.updateMemo(_ + Filters.toFilterMemo(spec, ctx).get))
+    val amended = toBroadcastAmendment(spec, ctx).map{ case (k, fn) => ctx.addBroadcast(k, fn) }.get
+
+    val ff = toFilterFunction(spec, amended)
 
     dataPoints.map(ff).toSet shouldBe Set((2 + 2 + sqrt(8)) / 4)
   }
@@ -52,7 +54,9 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
     val spec: HList = "eccentricity" :: "infinity" :: HNil
 
-    val ff = toFilterFunction(spec, ctx.updateMemo(_ + Filters.toFilterMemo(spec, ctx).get))
+    val amended = toBroadcastAmendment(spec, ctx).map{ case (k, fn) => ctx.addBroadcast(k, fn) }.get
+
+    val ff = toFilterFunction(spec, amended)
 
     dataPoints.map(ff).toSet shouldBe Set(sqrt(8))
   }
@@ -63,7 +67,9 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
     val spec: HList = "eccentricity" :: "infinity" :: "euclidean" :: HNil
 
-    val ff = toFilterFunction(spec, ctx.updateMemo(_ + Filters.toFilterMemo(spec, ctx).get))
+    val amended = toBroadcastAmendment(spec, ctx).map{ case (k, fn) => ctx.addBroadcast(k, fn) }.get
+
+    val ff = toFilterFunction(spec, amended)
 
     dataPoints.map(ff).toSet shouldBe Set(sqrt(8))
   }

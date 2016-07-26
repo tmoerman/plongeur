@@ -3,6 +3,7 @@ package org.tmoerman.plongeur.tda
 import org.tmoerman.plongeur.util.IterableFunctions
 
 import scalaz.Memo
+import Model._
 
 /**
   * Inspections on a TDA result only needed in debugging/analysis context.
