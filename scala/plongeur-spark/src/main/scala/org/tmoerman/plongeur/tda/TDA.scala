@@ -5,8 +5,9 @@ import org.apache.spark.{Logging, RangePartitioner}
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.cluster.BroadcastSmileClusteringProvider
 import org.tmoerman.plongeur.tda.cluster.Clustering._
+import org.tmoerman.plongeur.tda.cluster.{BroadcastSmileClusteringProvider, SimpleSmileClusteringProvider}
+import org.tmoerman.plongeur.util.IterableFunctions._
 import shapeless.{::, HList, HNil}
 
 /**
@@ -16,7 +17,7 @@ trait TDA extends Logging {
 
   val clusterLevelSets = (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
     import ctx._
-    import org.tmoerman.plongeur.util.IterableFunctions._
+    import clusteringParams._
 
     logDebug(s">>> clusterLevelSets $lens")
 
@@ -31,7 +32,7 @@ trait TDA extends Logging {
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
 
     val groupedByLevelSetId =
-      if (clusteringParams.partitionByLevelSetID)
+      if (clusteringParams.partitionByLevelSetID) // TODO test the effect of this!
         keyedByLevelSetId
           .partitionBy(new RangePartitioner(8, keyedByLevelSetId))
           .groupByKey
@@ -39,7 +40,7 @@ trait TDA extends Logging {
         keyedByLevelSetId
           .groupByKey
 
-    val clusterer = new BroadcastSmileClusteringProvider(ctx.broadcasts)
+    val clusterer = if (useBroadcast) new BroadcastSmileClusteringProvider(ctx.broadcasts) else SimpleSmileClusteringProvider
 
     val rdd =
       groupedByLevelSetId
