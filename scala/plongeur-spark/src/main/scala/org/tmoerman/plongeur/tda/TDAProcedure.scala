@@ -6,8 +6,8 @@ import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.cluster.BroadcastSmileClusteringProvider
 import org.tmoerman.plongeur.tda.cluster.Clustering._
-import org.tmoerman.plongeur.tda.cluster.SimpleSmileClusteringProvider
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
@@ -17,24 +17,23 @@ import org.tmoerman.plongeur.util.IterableFunctions._
   */
 object TDAProcedure extends TDA {
 
-  val clusterer = SimpleSmileClusteringProvider // TODO injectable
-
   // TODO refactor to use the functions from the TDA trait
-
   def apply(tdaParams: TDAParams, ctx: TDAContext): TDAResult = {
 
-    val ctxWithMemo = tdaParams.lens.assocFilterMemos(ctx)
+    val amendedCtx = tdaParams.amend(ctx)
 
-    val filterFunctions = tdaParams.lens.filters.map(f => toFilterFunction(f.spec, ctxWithMemo))
+    val clusterer = new BroadcastSmileClusteringProvider(amendedCtx.broadcasts)
 
-    val boundaries = calculateBoundaries(filterFunctions, ctxWithMemo.dataPoints)
+    val filterFunctions = tdaParams.lens.filters.map(f => toFilterFunction(f.spec, amendedCtx))
+
+    val boundaries = calculateBoundaries(filterFunctions, amendedCtx.dataPoints)
 
     val levelSetsInverse = levelSetsInverseFunction(boundaries, tdaParams.lens, filterFunctions)
 
     //import org.tmoerman.plongeur.util.IterableFunctions._
 
     val keyedByLevelSet =
-      ctxWithMemo
+      amendedCtx
         .dataPoints
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
 

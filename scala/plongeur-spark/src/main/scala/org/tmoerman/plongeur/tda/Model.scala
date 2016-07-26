@@ -4,18 +4,16 @@ import java.io.Serializable
 import java.util.UUID
 
 import com.softwaremill.quicklens
-import com.softwaremill.quicklens._
 import org.apache.spark.SparkContext
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.distributed.IndexedRow
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.cluster.Clustering.{ScaleSelection, ClusteringParams}
+import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
 import org.tmoerman.plongeur.tda.cluster.Scale._
-import shapeless.contrib.scalaz._
-import shapeless.{HList, lens}
+import shapeless.HList
 
 import scala.util.Try
-import scalaz.PLens._
 
 /**
   * @author Thomas Moerman
@@ -73,16 +71,21 @@ object Model {
 
   type Percentage = BigDecimal
 
-  @deprecated("disappears in the light of the meta machine!")
   case class TDAContext(val sc: SparkContext,
                         val dataPoints: RDD[DataPoint],
-                        val memo: Map[String, Any] = Map()) extends Serializable {
+                        val broadcasts: Map[String, Broadcast[Any]] = Map()) extends Serializable {
+
+    val self = this
 
     lazy val N = dataPoints.count
 
     lazy val dim = dataPoints.first.features.size
 
-    def updateMemo(f: Map[String, Any] => Map[String, Any]) = copy(memo = f(memo))
+    def addBroadcast(key: String, producer: () => Broadcast[Any]) =
+      broadcasts
+        .get(key)
+        .map(_ => self)
+        .getOrElse(self.copy(broadcasts = broadcasts + (key -> producer.apply())))
 
   }
 
@@ -90,7 +93,19 @@ object Model {
                        val clusteringParams: ClusteringParams,
                        val collapseDuplicateClusters: Boolean = true,
                        val scaleSelection: ScaleSelection = histogram(),
-                       val coveringBoundaries: Option[Boundaries] = None) extends Serializable //TODO remove boundaries -> not useful
+                       val coveringBoundaries: Option[Boundaries] = None) extends Serializable {
+
+    def amend(ctx: TDAContext): TDAContext = {
+      val amendments =
+        Distance.toBroadcastAmendment(clusteringParams.distanceSpec, ctx) ::
+        lens.filters.map(f => Filters.toBroadcastAmendment(f.spec, ctx))
+
+      amendments
+        .flatten
+        .foldLeft(ctx){ case (c, (key, fn)) => c.addBroadcast(key, fn) }
+    }
+
+  }
 
   object TDAParams {
 
@@ -122,18 +137,7 @@ object Model {
 
   }
 
-  case class TDALens(val filters: List[Filter]) extends Serializable {
-
-    def assocFilterMemos(tdaContext: TDAContext): TDAContext =
-      filters.foldLeft(tdaContext) {
-        (ctx, filter) =>
-          Filters
-            .toFilterMemo(filter.spec, ctx)
-            .map(pair => ctx.updateMemo(memo => memo + pair))
-            .getOrElse(ctx)
-      }
-
-  }
+  case class TDALens(val filters: List[Filter]) extends Serializable
 
   object TDALens {
 

@@ -5,6 +5,7 @@ import org.apache.spark.{Logging, RangePartitioner}
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.cluster.BroadcastSmileClusteringProvider
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import shapeless.{::, HList, HNil}
 
@@ -13,7 +14,7 @@ import shapeless.{::, HList, HNil}
   */
 trait TDA extends Logging {
 
-  val clusterLevelSets = (clusterer: LocalClusteringProvider) => (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
+  val clusterLevelSets = (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
     import ctx._
     import org.tmoerman.plongeur.util.IterableFunctions._
 
@@ -37,6 +38,8 @@ trait TDA extends Logging {
       else
         keyedByLevelSetId
           .groupByKey
+
+    val clusterer = new BroadcastSmileClusteringProvider(ctx.broadcasts)
 
     val rdd =
       groupedByLevelSetId

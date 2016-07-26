@@ -11,14 +11,11 @@ object TDAMachine extends TDA {
 
   def run(ctx: TDAContext, tdaParams$: Observable[TDAParams]): Observable[(TDAParams, TDAResult)] = {
 
-    // val clusterer = SimpleSmileClusteringProvider // TODO inject
-    val clusterer = new BroadcastSmileClusteringProvider(ctx)
-
     // source observable with backpressure
 
     ctx.sc.broadcast()
 
-    val tdaParamsSource$ = tdaParams$
+    val tdaParamsSource$ = tdaParams$.distinctUntilChanged
 
     // deconstructing the parameters
 
@@ -29,11 +26,11 @@ object TDAMachine extends TDA {
 
     // TDA computation merges in parameter changes
 
-    val ctx$                 = lens$.scan(ctx){(ctx, lens) => lens.assocFilterMemos(ctx)}.distinctUntilChanged
+    val ctx$                 = tdaParamsSource$.scan(ctx){ (ctx, params) => params.amend(ctx) }.distinctUntilChanged
 
     val lensCtx$             = lens$.combineLatest(ctx$)
 
-    val levelSetClustersRDD$ = lensCtx$.combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets(clusterer).tupled)
+    val levelSetClustersRDD$ = lensCtx$.combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets.tupled)
 
     val localClustersRDD$    = levelSetClustersRDD$.combineLatest(scaleSelection$).map(applyScale.tupled)
 

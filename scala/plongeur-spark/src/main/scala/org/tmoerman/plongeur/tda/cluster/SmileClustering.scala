@@ -1,6 +1,7 @@
 package org.tmoerman.plongeur.tda.cluster
 
 import org.apache.spark.Logging
+import org.apache.spark.broadcast.Broadcast
 import org.tmoerman.plongeur.tda.Distance._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
@@ -13,7 +14,7 @@ import scala.util.Try
 object SmileClustering extends Serializable {
 
   def createLocalClustering(localDataPoints: Seq[DataPoint],
-                            distances: DistanceMatrix,
+                            distances: Array[Array[Double]],
                             clusteringMethod: String) = new LocalClustering {
 
     lazy val linkage = createLinkage(clusteringMethod, distances)
@@ -40,7 +41,7 @@ object SmileClustering extends Serializable {
       }
   }
 
-  private def createLinkage(method: String, distanceMatrix: DistanceMatrix) =
+  private def createLinkage(method: String, distanceMatrix: Array[Array[Double]]) =
     method.toLowerCase match {
       case "complete" => new CompleteLinkage(distanceMatrix)
       case "single"   => new SingleLinkage(distanceMatrix)
@@ -66,55 +67,46 @@ object SimpleSmileClusteringProvider extends LocalClusteringProvider with Serial
     * @see LocalClusteringProvider
     */
   def apply(localDataPoints: Seq[DataPoint],
-            params: ClusteringParams = ClusteringParams()) = {
+            params: ClusteringParams = ClusteringParams()): LocalClustering = {
 
     import params._
 
-    lazy val distanceFunction = parseDistance(distanceSpec)
+    val distanceFunction = parseDistance(distanceSpec)
 
-    lazy val distances = distanceMatrix(localDataPoints, distanceFunction)
+    val distances = distanceMatrix(localDataPoints, distanceFunction)
 
     createLocalClustering(localDataPoints, distances, clusteringMethod)
   }
 
 }
 
-import org.tmoerman.plongeur.util.RDDFunctions._
-
 /**
   * Broadcasts the entire distance matrix for a specified distance function.
   *
-  * @param ctx
+  * @param broadcasts
   */
-class BroadcastSmileClusteringProvider(val ctx: TDAContext)
+class BroadcastSmileClusteringProvider(val broadcasts: Map[String, Broadcast[Any]])
   extends LocalClusteringProvider with Serializable with Logging {
-
-  def computeDistanceMatrixForBroadcast(distanceFunction: DistanceFunction) = {
-    logWarning(s"computing distance matrix $distanceFunction")
-
-    ctx.dataPoints.distanceMatrix(distanceFunction).collectAsMap
-  }
 
   /**
     * @see LocalClusteringProvider
     */
   def apply(localDataPoints: Seq[DataPoint],
-            params: ClusteringParams = ClusteringParams()) = {
+            params: ClusteringParams = ClusteringParams()): LocalClustering = {
 
-    import ctx._
     import params._
 
-    val distanceFunction = parseDistance(distanceSpec)
+    val key = toBroadcastKey(distanceSpec).get
 
-    lazy val bc = sc.broadcast(computeDistanceMatrixForBroadcast(distanceFunction))
+    val bc = broadcasts.get(key).get.asInstanceOf[Broadcast[Map[Set[Index], Double]]]
 
-    lazy val bcDistanceFunction = new DistanceFunction {
+    val pipedFromBroadcastDistanceFunction = new DistanceFunction {
       def apply(p1: DataPoint, p2: DataPoint) = bc.value.apply(Set(p1.index, p2.index))
 
-      override def toString = s"broadcast $distanceFunction"
+      override def toString = s"distance function piped from broadcast $key"
     }
 
-    lazy val distances = distanceMatrix(localDataPoints, bcDistanceFunction)
+    val distances = distanceMatrix(localDataPoints, pipedFromBroadcastDistanceFunction)
 
     createLocalClustering(localDataPoints, distances, clusteringMethod)
   }
