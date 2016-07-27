@@ -6,8 +6,8 @@ import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.cluster.BroadcastSmileClusteringProvider
 import org.tmoerman.plongeur.tda.cluster.Clustering._
+import org.tmoerman.plongeur.tda.cluster.SimpleSmileClusteringProvider
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
@@ -22,15 +22,13 @@ object TDAProcedure extends TDA {
 
     val amendedCtx = tdaParams.amend(ctx)
 
-    val clusterer = new BroadcastSmileClusteringProvider(amendedCtx.broadcasts)
+    val clusterer = SimpleSmileClusteringProvider
 
     val filterFunctions = tdaParams.lens.filters.map(f => toFilterFunction(f.spec, amendedCtx))
 
     val boundaries = calculateBoundaries(filterFunctions, amendedCtx.dataPoints)
 
     val levelSetsInverse = levelSetsInverseFunction(boundaries, tdaParams.lens, filterFunctions)
-
-    //import org.tmoerman.plongeur.util.IterableFunctions._
 
     val keyedByLevelSet =
       amendedCtx

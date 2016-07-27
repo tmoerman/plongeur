@@ -92,8 +92,15 @@ object Model {
                        val coveringBoundaries: Option[Boundaries] = None) extends Serializable {
 
     def amend(ctx: TDAContext): TDAContext = {
+
+      val distanceAmendment =
+        if (clusteringParams.useBroadcast)
+          Distance.toBroadcastAmendment(clusteringParams.distanceSpec, ctx)
+        else
+          None
+
       val amendments =
-        Distance.toBroadcastAmendment(clusteringParams.distanceSpec, ctx) ::
+        distanceAmendment ::
         lens.filters.map(f => Filters.toBroadcastAmendment(f.spec, ctx))
 
       amendments

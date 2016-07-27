@@ -11,6 +11,7 @@ import smile.clustering.linkage._
 
 import scala.util.Try
 
+//TODO get rid of OO style
 object SmileClustering extends Serializable {
 
   def createLocalClustering(localDataPoints: Seq[DataPoint],
@@ -66,9 +67,7 @@ object SimpleSmileClusteringProvider extends LocalClusteringProvider with Serial
   /**
     * @see LocalClusteringProvider
     */
-  def apply(localDataPoints: Seq[DataPoint],
-            params: ClusteringParams = ClusteringParams()): LocalClustering = {
-
+  def apply(localDataPoints: Seq[DataPoint], params: ClusteringParams = ClusteringParams()): LocalClustering = {
     import params._
 
     val distanceFunction = parseDistance(distanceSpec)
@@ -85,15 +84,14 @@ object SimpleSmileClusteringProvider extends LocalClusteringProvider with Serial
   *
   * @param broadcasts
   */
+@deprecated("bad idea")
 class BroadcastSmileClusteringProvider(val broadcasts: Map[String, Broadcast[Any]])
   extends LocalClusteringProvider with Serializable with Logging {
 
   /**
     * @see LocalClusteringProvider
     */
-  def apply(localDataPoints: Seq[DataPoint],
-            params: ClusteringParams = ClusteringParams()): LocalClustering = {
-
+  def apply(localDataPoints: Seq[DataPoint], params: ClusteringParams = ClusteringParams()): LocalClustering = {
     import params._
 
     val key = toBroadcastKey(distanceSpec).get
