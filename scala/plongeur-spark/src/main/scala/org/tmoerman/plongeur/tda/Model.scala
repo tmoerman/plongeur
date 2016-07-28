@@ -120,6 +120,9 @@ object Model {
     def setHistogramScaleSelectionNrBins(nrBins: Int) =
       (params: TDAParams) => modify(params)(_.scaleSelection).setTo(HistogramScaleSelection(nrBins))
 
+    def setCollapseDuplicateClusters(collapse: Boolean) =
+      (params: TDAParams) => params.copy(collapseDuplicateClusters = collapse)
+
   }
 
   case class TDAResult(val clustersRDD: RDD[Cluster],
