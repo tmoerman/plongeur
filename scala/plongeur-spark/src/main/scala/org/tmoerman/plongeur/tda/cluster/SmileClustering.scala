@@ -18,7 +18,7 @@ object SmileClustering extends Serializable {
                             distances: Array[Array[Double]],
                             clusteringMethod: String) = new LocalClustering {
 
-    lazy val linkage = createLinkage(clusteringMethod, distances)
+    val linkage = createLinkage(clusteringMethod, distances)
 
     val hierarchicalClustering = new HierarchicalClustering(linkage)
 
@@ -84,10 +84,10 @@ object SimpleSmileClusteringProvider extends LocalClusteringProvider with Serial
   *
   * @param broadcasts
   */
-@deprecated("bad idea")
+@deprecated("bad idea - the whole distance matrix doesn't fit within the 1GB, the size constraint for broadcast variables.")
 class BroadcastSmileClusteringProvider(val broadcasts: Map[String, Broadcast[Any]])
   extends LocalClusteringProvider with Serializable with Logging {
-
+  
   /**
     * @see LocalClusteringProvider
     */
