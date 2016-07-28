@@ -8,6 +8,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
+import org.tmoerman.plongeur.tda.Filters.toBroadcastAmendment
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import shapeless.HList
@@ -91,22 +92,12 @@ object Model {
                        val scaleSelection: ScaleSelection = histogram(),
                        val coveringBoundaries: Option[Boundaries] = None) extends Serializable {
 
-    def amend(ctx: TDAContext): TDAContext = {
-
-      val distanceAmendment =
-        if (clusteringParams.useBroadcast)
-          Distance.toBroadcastAmendment(clusteringParams.distanceSpec, ctx)
-        else
-          None
-
-      val amendments =
-        distanceAmendment ::
-        lens.filters.map(f => Filters.toBroadcastAmendment(f.spec, ctx))
-
-      amendments
+    def amend(ctx: TDAContext): TDAContext =
+      lens
+        .filters
+        .map(f => toBroadcastAmendment(f.spec, ctx))
         .flatten
         .foldLeft(ctx){ case (c, (key, fn)) => c.addBroadcast(key, fn) }
-    }
 
   }
 

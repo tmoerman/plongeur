@@ -47,7 +47,6 @@ object Clustering extends Serializable {
     *                              partitioning on LevelSetIDs.
     */
   case class ClusteringParams(distanceSpec: HList  = "euclidean" :: HNil,
-                              @deprecated("bad idea") useBroadcast: Boolean = false,
                               clusteringMethod: String = "single",
                               partitionByLevelSetID: Boolean = true) extends Serializable
 
@@ -56,8 +55,7 @@ object Clustering extends Serializable {
     */
   trait LocalClusteringProvider {
 
-    def apply(dataPoints: Seq[DataPoint],
-              params: ClusteringParams): LocalClustering
+    def apply(dataPoints: Seq[DataPoint], params: ClusteringParams): LocalClustering
 
   }
 

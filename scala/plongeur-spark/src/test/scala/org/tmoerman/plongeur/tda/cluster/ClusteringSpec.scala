@@ -29,7 +29,8 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
   it should "yield 2 cluster for bipartite data points" in {
     val clustering = SimpleSmileClusteringProvider.apply(heuristicData)
 
-    clustering.heights() shouldBe Seq(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, sqrt(8), 5.0)
+    clustering.heights(true) shouldBe Seq(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, sqrt(8), 5.0)
+    clustering.heights(false) shouldBe Seq(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, sqrt(8))
 
     clustering.labels(histogram(10)) shouldBe Seq(0, 0, 0, 0, 1, 1, 1, 1)
   }

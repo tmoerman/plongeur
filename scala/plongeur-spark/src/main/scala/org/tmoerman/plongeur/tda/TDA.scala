@@ -6,7 +6,7 @@ import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
-import org.tmoerman.plongeur.tda.cluster.{BroadcastSmileClusteringProvider, SimpleSmileClusteringProvider}
+import org.tmoerman.plongeur.tda.cluster.{Clustering, SimpleSmileClusteringProvider}
 import org.tmoerman.plongeur.util.IterableFunctions._
 import shapeless.{::, HList, HNil}
 
@@ -15,11 +15,10 @@ import shapeless.{::, HList, HNil}
   */
 trait TDA extends Logging {
 
-  val clusterLevelSets = (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
+  def clusterLevelSets(lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams): RDD[(LevelSetID, (List[DataPoint], LocalClustering))] = {
     import ctx._
-    import clusteringParams._
 
-    logDebug(s">>> clusterLevelSets $lens")
+    val clusterer = SimpleSmileClusteringProvider
 
     val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, ctx))
 
@@ -31,49 +30,30 @@ trait TDA extends Logging {
       dataPoints
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
 
-    val groupedByLevelSetId =
-      if (clusteringParams.partitionByLevelSetID) // TODO test the effect of this!
-        keyedByLevelSetId
-          .partitionBy(new RangePartitioner(8, keyedByLevelSetId))
-          .groupByKey
+    val maybeCustomPartitioned =
+      if (clusteringParams.partitionByLevelSetID)
+        keyedByLevelSetId.partitionBy(new RangePartitioner(32, keyedByLevelSetId))
       else
         keyedByLevelSetId
-          .groupByKey
-
-    val clusterer = if (useBroadcast) new BroadcastSmileClusteringProvider(ctx.broadcasts) else SimpleSmileClusteringProvider
 
     val rdd =
-      groupedByLevelSetId
-        .map { case (levelSetID, levelSetPoints) =>
-          (levelSetID, levelSetPoints.toList, clusterer.apply(levelSetPoints.toList, clusteringParams))
-        }
+      maybeCustomPartitioned
+        .groupByKey
+        .mapValues(levelSetPoints => {
+          val pointsList = levelSetPoints.toList
+          (pointsList, clusterer.apply(pointsList, clusteringParams))
+        })
         .cache
 
-    (clusteringParams :: lens :: HNil, rdd)
+    rdd
   }
 
-  val applyScale = (product: (HList, RDD[(LevelSetID, List[DataPoint], LocalClustering)]),
-                    scaleSelection: ScaleSelection) => {
+  def applyScale(levelSetClustersRDD: RDD[(LevelSetID, (List[DataPoint], LocalClustering))], scaleSelection: ScaleSelection) =
+    levelSetClustersRDD
+      .map { case (levelSetID, (clusterPoints, clustering)) => localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
+      .cache
 
-    logDebug(s">>> applyScale $scaleSelection")
-
-    val (hlist, levelSetClustersRDD) = product
-
-    val rdd =
-      levelSetClustersRDD
-        .map { case (levelSetID, clusterPoints, clustering) => localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
-        .cache
-
-    (scaleSelection :: hlist, rdd)
-  }
-
-  val makeTDAResult = (product: (HList, RDD[List[Cluster]]),
-                       collapseDuplicateClusters: Boolean) => {
-
-    logDebug(s">>> makeTDAResult - collapse duplicate clusters? $collapseDuplicateClusters")
-
-    val (hlist, partitionedClustersRDD) = product
-
+  def makeTDAResult(partitionedClustersRDD: RDD[List[Cluster]], collapseDuplicateClusters: Boolean): TDAResult = {
     lazy val duplicatesAllowed: RDD[Cluster] =
       partitionedClustersRDD
         .flatMap(identity)
@@ -81,10 +61,10 @@ trait TDA extends Logging {
     lazy val duplicatesCollapsed: RDD[Cluster] =
       partitionedClustersRDD
         .flatMap(_.map(cluster => (cluster.dataPoints, cluster)))
-        .reduceByKey((c1, c2) => c1)
+        .reduceByKey((c1, c2) => c1) // if two clusters are keyed by an identical set of data points, retain only one of them
         .values
 
-    val clustersRDD = (if (collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed).cache
+    val clustersRDD = (if (collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed).cache // cache because it is used twice in 1 computation
 
     val clusterEdgesRDD =
       clustersRDD
@@ -95,18 +75,7 @@ trait TDA extends Logging {
         .distinct
         .cache
 
-    val reconstructedParams = hlist match {
-      case (scaleSelection: ScaleSelection) :: (clusteringParams: ClusteringParams) :: (lens: TDALens) :: HNil =>
-        TDAParams(
-          lens = lens,
-          clusteringParams = clusteringParams,
-          scaleSelection = scaleSelection,
-          collapseDuplicateClusters = collapseDuplicateClusters)
-    }
-
-    val result = TDAResult(clustersRDD, clusterEdgesRDD)
-
-    (reconstructedParams, result)
+    TDAResult(clustersRDD, clusterEdgesRDD)
   }
 
   def flattenTuple[A, B, C](t: ((A, B), C)) = t match {
