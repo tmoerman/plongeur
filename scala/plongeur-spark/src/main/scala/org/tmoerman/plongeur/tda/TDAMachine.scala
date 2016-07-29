@@ -14,29 +14,30 @@ object TDAMachine extends TDA {
 
   def run(ctx: TDAContext, tdaParams$: Observable[TDAParams]): Observable[(TDAParams, TDAResult)] = {
 
-    // source observable with backpressure
-
-    ctx.sc.broadcast()
-
-    val tdaParamsSource$ = tdaParams$.distinctUntilChanged
-
-    // deconstructing the parameters
-
-    val lens$               = tdaParamsSource$.map(_.lens                     ).distinctUntilChanged
-    val clusteringParams$   = tdaParamsSource$.map(_.clusteringParams         ).distinctUntilChanged
-    val scaleSelection$     = tdaParamsSource$.map(_.scaleSelection           ).distinctUntilChanged
-    val collapseDuplicates$ = tdaParamsSource$.map(_.collapseDuplicateClusters).distinctUntilChanged
-
     // TDA computation merges in parameter changes
 
-    val ctx$                 = tdaParamsSource$.scan(ctx){ (ctx, params) => params.amend(ctx) }.distinctUntilChanged
+    val init: (TDAContext, Option[TDAParams]) = (ctx, None)
+
+    val ctxParams$ =
+      tdaParams$
+        .scan(init){ case ((ctx, _), params) => (params.amend(ctx), Some(params)) }
+        .filter(_._2.isDefined)
+
+    val ctx$                 = ctxParams$.map(_._1).distinctUntilChanged
+    val appliedParams$       = ctxParams$.flatMapIterable(_._2).distinctUntilChanged
+
+    // deconstructing the applied parameters
+
+    val lens$                = appliedParams$.map(_.lens                     ).distinctUntilChanged
+    val clusteringParams$    = appliedParams$.map(_.clusteringParams         ).distinctUntilChanged
+    val scaleSelection$      = appliedParams$.map(_.scaleSelection           ).distinctUntilChanged
+    val collapseDuplicates$  = appliedParams$.map(_.collapseDuplicateClusters).distinctUntilChanged
+
+    // combine the deconstructed parameter pieces with the computation
 
     val lensCtx$             = lens$.combineLatest(ctx$)
-
     val levelSetClustersRDD$ = lensCtx$.combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets_P.tupled)
-
     val localClustersRDD$    = levelSetClustersRDD$.combineLatest(scaleSelection$).map(applyScale_P.tupled)
-
     val paramsWithResult$    = localClustersRDD$.combineLatest(collapseDuplicates$).map(makeTDAResult_P.tupled)
 
     paramsWithResult$

@@ -132,6 +132,21 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     waitFor(out)
   }
 
+  it should "work with mixed filters" in {
+    val in = PublishSubject[TDAParams]
+
+    val ctx = TDAContext(sc, circle1kRDD)
+
+    val out = TDAMachine.run(ctx, in).toVector
+
+    in.onNext(p_ecc_1)
+    in.onNext(setFilterNrBins(0, 20)(p_ecc_1))
+    in.onNext(p_pca_0)
+    in.onCompleted()
+
+    waitFor(out)
+  }
+
 
   behavior of "assocFilterMemos"
 
