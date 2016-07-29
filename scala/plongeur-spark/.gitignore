@@ -9,3 +9,4 @@
 /plongeur-nb/urth-examples
 /plongeur-nb/demos
 /plongeur-nb/.*
+/src/test/resources/mnist/

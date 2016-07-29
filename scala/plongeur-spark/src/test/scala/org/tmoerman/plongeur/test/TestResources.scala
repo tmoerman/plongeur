@@ -1,7 +1,8 @@
 package org.tmoerman.plongeur.test
 
 import org.apache.commons.lang.StringUtils.trim
-import org.apache.spark.mllib.linalg.Vectors.dense
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.Vectors._
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.RDDFunctions._
@@ -42,19 +43,46 @@ trait TestResources extends SparkContextSpec with FileResources {
       .textFile(heuristicFile)
       .map(_.split(",").map(trim))
       .zipWithIndex
-      .map{ case (Array(a, b), idx) => dp(idx, dense(a.toDouble, b.toDouble)) }
+      .map{ case (arr, idx) => dp(idx, dense(arr.map(_.toDouble))) }
 
-  def readCircle(file: String): RDD[DataPoint] =
+  def readDense(file: String): RDD[DataPoint] =
     sc
       .textFile(file)
       .map(_.split(",").map(trim))
       .sortBy{ case Array(x, y) => (x.toDouble,  y.toDouble) }
       .zipWithIndex
-      .map{ case (Array(x, y), idx) => dp(idx, dense(x.toDouble, y.toDouble))}
+      .map{ case (arr, idx) => dp(idx, dense(arr.map(_.toDouble))) }
 
-  val circle100RDD = readCircle(circle100)
-  val circle250RDD = readCircle(circle250)
-  val circle1kRDD  = readCircle(circle1k)
-  val circle10kRDD = readCircle(circle10k)
+  def readMnist(file: String) =
+    sc
+      .textFile(file)
+      .map(s => {
+        val columns = s.split(",").map(trim).toList
+
+        columns match {
+          case cat :: rawFeatures =>
+            val nonZero =
+              rawFeatures
+                .map(_.toInt)
+                .zipWithIndex
+                .filter{ case (v, idx) => v != 0 }
+                .map{ case (v, idx) => (idx, v.toDouble) }
+
+            val sparseFeatures = Vectors.sparse(rawFeatures.size, nonZero)
+
+            (cat, sparseFeatures)
+        }})
+      .zipWithIndex
+      .map {case ((cat, features), idx) => IndexedDataPoint(idx.toInt, features, Some(Map("cat" -> cat)))}   
+
+
+
+
+  lazy val circle100RDD = readDense(circle100)
+  lazy val circle250RDD = readDense(circle250)
+  lazy val circle1kRDD  = readDense(circle1k)
+  lazy val circle10kRDD = readDense(circle10k)
+
+
 
 }
