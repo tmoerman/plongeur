@@ -21,6 +21,8 @@ import scala.math.{max, pow}
 object Filters extends Serializable with Logging {
 
   /**
+    *
+    *
     * @param spec
     * @param ctx
     * @return Returns a FilterFunction for the specified filter specification.
@@ -29,29 +31,39 @@ object Filters extends Serializable with Logging {
   def toFilterFunction(spec: HList, ctx: TDAContext): FilterFunction = spec match {
       case "feature" #: (n: Int) #: HNil => (d: DataPoint) => d.features(n)
 
-      case _ =>
+      case "PCA" #: (n: Int) #: HNil =>
+        toBroadcastKey(spec)
+            .flatMap(key => ctx.broadcasts.get(key))
+            .map(bc => {
+              val pcaModel = bc.value.asInstanceOf[PCAModel]
+              (d: DataPoint) => pcaModel.transform(d.features)(n)
+            })
+            .get
+
+      case _ => // broadcast value is a FilterFunction
         toBroadcastKey(spec)
           .flatMap(key => ctx.broadcasts.get(key))
-          .map(bc => bc.value.asInstanceOf[FilterFunction])
-          .getOrElse(throw new IllegalArgumentException(s"no filter function for $spec"))
+          .map(bc => bc.value.asInstanceOf[FilterFunction]) // TODO incorrect ->
+          .getOrElse(throw new IllegalArgumentException(
+            s"no filter function for $spec, current broadcasts: " + ctx.broadcasts.keys.mkString(", ")))
     }
 
   val MAX_PCs: Int = 10
 
   def toBroadcastAmendment(spec: HList, ctx: TDAContext): Option[(String, () => Broadcast[Any])] =
     toBroadcastKey(spec).map(key => (key, () => {
-      val v: Any = toBroadcastFilterFunction(spec, ctx)
+      val v: Any = toBroadcastValue(spec, ctx)
 
       ctx.sc.broadcast(v)
     }))
 
-  def toBroadcastFilterFunction(spec: HList, ctx: TDAContext): FilterFunction = spec match {
-    case "PCA" #: (n: Int) #: HNil => {
+  def toBroadcastValue(spec: HList, ctx: TDAContext): Any = spec match {
+    case "PCA" #: (_: Int) #: HNil => {
       val pcaModel = new PCA(min(MAX_PCs, ctx.dim)).fit(ctx.dataPoints.map(_.features))
 
-      (d: DataPoint) => pcaModel.transform(d.features)(n)
+      pcaModel
     }
-      
+
     case "eccentricity" #: n #: distanceSpec => {
       val map = eccentricityMap(n, ctx, parseDistance(distanceSpec))
 
