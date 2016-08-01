@@ -12,11 +12,12 @@ import shapeless.{::, HNil, HList}
   */
 object TDAMachine extends TDA {
 
-  def run(ctx: TDAContext, tdaParams$: Observable[TDAParams]): Observable[(TDAParams, TDAResult)] = {
+  def run(tdaContext: TDAContext,
+          tdaParams$: Observable[TDAParams]): Observable[(TDAParams, TDAResult)] = {
 
     // TDA computation merges in parameter changes
 
-    val init: (TDAContext, Option[TDAParams]) = (ctx, None)
+    val init: (TDAContext, Option[TDAParams]) = (tdaContext, None)
 
     val ctxParams$ =
       tdaParams$
