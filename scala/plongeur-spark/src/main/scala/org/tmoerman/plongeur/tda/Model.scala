@@ -87,10 +87,9 @@ object Model {
   }
 
   case class TDAParams(val lens: TDALens,
-                       val clusteringParams: ClusteringParams,
+                       val clusteringParams: ClusteringParams = ClusteringParams(),
                        val collapseDuplicateClusters: Boolean = true,
-                       val scaleSelection: ScaleSelection = histogram(),
-                       val coveringBoundaries: Option[Boundaries] = None) extends Serializable {
+                       val scaleSelection: ScaleSelection = histogram()) extends Serializable {
 
     def amend(ctx: TDAContext): TDAContext =
       lens
@@ -109,19 +108,21 @@ object Model {
 
     val modFilterOverlap = modify(_: Filter)(_.overlap)
 
-    def modFilter(i: Int) = modify(_: TDAParams)(_.lens.filters.at(i))
+    def modFilter(idx: Int) = modify(_: TDAParams)(_.lens.filters.at(idx))
 
-    def setFilterNrBins(i: Int, value: Int) =
-      (params: TDAParams) => Try((modFilter(i) andThenModify modFilterNrBins) (params).setTo(value)).getOrElse(params)
+    def setFilterNrBins(idx: Int, value: Int) =
+      (params: TDAParams) => Try((modFilter(idx) andThenModify modFilterNrBins) (params).setTo(value)).getOrElse(params)
 
-    def setFilterOverlap(i: Int, value: Percentage) =
-      (params: TDAParams) => Try((modFilter(i) andThenModify modFilterOverlap) (params).setTo(value)).getOrElse(params)
+    def setFilterOverlap(idx: Int, value: Percentage) =
+      (params: TDAParams) => Try((modFilter(idx) andThenModify modFilterOverlap) (params).setTo(value)).getOrElse(params)
 
     def setHistogramScaleSelectionNrBins(nrBins: Int) =
       (params: TDAParams) => modify(params)(_.scaleSelection).setTo(HistogramScaleSelection(nrBins))
 
     def setCollapseDuplicateClusters(collapse: Boolean) =
       (params: TDAParams) => params.copy(collapseDuplicateClusters = collapse)
+
+    def setDistanceFunction = (params: TDAParams) => params // TODO implement
 
   }
 

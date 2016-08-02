@@ -25,7 +25,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
         .mkString("\n"))
   }
 
-  it should "work with specified boundaries" in {
+  it should "work in a smoke test" in {
 
     val tdaParams =
       TDAParams(
@@ -33,8 +33,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
           Filter("feature" :: 0 :: HNil, 1, 0.5),
           Filter("feature" :: 1 :: HNil, 1, 0.5)),
         clusteringParams = ClusteringParams(),
-        scaleSelection = histogram(10),
-        coveringBoundaries = Some(Array((0.0, 12.0), (0.0, 12.0))))
+        scaleSelection = histogram(10))
 
     val result = TDAProcedure.apply(tdaParams, TDAContext(sc, test2DLabeledPointsRDD))
 

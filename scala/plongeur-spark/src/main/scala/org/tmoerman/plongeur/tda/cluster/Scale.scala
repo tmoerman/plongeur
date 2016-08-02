@@ -40,6 +40,8 @@ object Scale extends Serializable {
           .head
     }
 
+    override val resolution = nrBins
+
     override def toString = s"Scale.histogram($nrBins)"
 
   }
