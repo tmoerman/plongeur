@@ -53,7 +53,8 @@ object Model {
     */
   case class Cluster(val id: ID,
                      val levelSetID: LevelSetID,
-                     val dataPoints: Set[DataPoint]) extends Serializable {
+                     val dataPoints: Set[DataPoint],
+                     val colorBins: Seq[Int] = Seq()) extends Serializable {
 
     def size = dataPoints.size
 
