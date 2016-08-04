@@ -96,7 +96,7 @@ class HtmlControls(val tdaParams: TDAParams) extends Serializable {
         </tr>
         <tr>
           <th>Collapse duplicates</th>
-          <td colspan="2"><paper-toggle checked="{{collapse}}"/></td>
+          <td colspan="2"><paper-toggle-button checked="{{collapse}}"/></td>
         </tr>
       </table>
     </template>
