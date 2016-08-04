@@ -127,4 +127,11 @@ object Filters extends Serializable with Logging {
       case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$n'")
     }}
 
+  // TODO density filter
+  def densityMap(ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
+    import ctx._
+
+    ???
+  }
+
 }

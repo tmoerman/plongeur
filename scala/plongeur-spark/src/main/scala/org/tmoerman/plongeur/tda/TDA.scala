@@ -75,6 +75,8 @@ trait TDA extends Logging {
         .distinct
         .cache
 
+    // B< B< B< --- cut here --- merge in selections/active nodes --- colorings
+
     TDAResult(clustersRDD, clusterEdgesRDD)
   }
 
