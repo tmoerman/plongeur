@@ -80,6 +80,7 @@ object Model {
 
     lazy val dim = dataPoints.first.features.size
 
+    // TODO move to TDA package
     def addBroadcast(key: String, producer: () => Broadcast[Any]) =
       broadcasts
         .get(key)
@@ -92,6 +93,7 @@ object Model {
                        val collapseDuplicateClusters: Boolean = true,
                        val scaleSelection: ScaleSelection = histogram()) extends Serializable {
 
+    // TODO move to TDA package
     def amend(ctx: TDAContext): TDAContext =
       lens
         .filters
