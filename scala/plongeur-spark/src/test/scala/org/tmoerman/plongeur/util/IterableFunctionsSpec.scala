@@ -38,7 +38,7 @@ class IterableFunctionsSpec extends FlatSpec with Matchers {
   behavior of "frequencies"
 
   it should "be correct for empty input" in {
-    Nil.frequencies shouldBe Map()
+    Nil.frequencies shouldBe Map.empty
   }
 
   it should "be correct for singleton input" in {
