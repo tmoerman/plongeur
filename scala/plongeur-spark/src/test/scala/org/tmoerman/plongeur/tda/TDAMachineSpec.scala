@@ -147,7 +147,6 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     waitFor(out)
   }
 
-
   behavior of "assocFilterMemos"
 
   it should "add memo entries to a TDAContext" in {

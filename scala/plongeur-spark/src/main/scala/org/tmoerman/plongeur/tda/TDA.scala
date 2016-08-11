@@ -2,6 +2,7 @@ package org.tmoerman.plongeur.tda
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Logging, RangePartitioner}
+import org.tmoerman.plongeur.tda.Colour.Colouring
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
@@ -53,7 +54,7 @@ trait TDA extends Logging {
       .map { case (levelSetID, (clusterPoints, clustering)) => localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
       .cache
 
-  def makeTDAResult(partitionedClustersRDD: RDD[List[Cluster]], collapseDuplicateClusters: Boolean): TDAResult = {
+  def formClusters(partitionedClustersRDD: RDD[List[Cluster]], collapseDuplicateClusters: Boolean) = {
     lazy val duplicatesAllowed: RDD[Cluster] =
       partitionedClustersRDD
         .flatMap(identity)
@@ -66,18 +67,36 @@ trait TDA extends Logging {
 
     val clustersRDD = (if (collapseDuplicateClusters) duplicatesCollapsed else duplicatesAllowed).cache // cache because it is used twice in 1 computation
 
-    val clusterEdgesRDD =
+    lazy val edgesRDD =
       clustersRDD
-        .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id))) // melt all clusters by points
-        .groupByKey
+        .flatMap(cluster => cluster.dataPoints.map(point => (point.index, (cluster.id, cluster.size))))
+        .groupByKey // (dp1, [(cl1, 2), (cl2, 5), (cl3, 7)])
         .values
-        .flatMap(_.toSet.subsets(2))
+        .flatMap(_.toSet.subsets(2).map(_.toSeq.sortBy(_._2).reverse)) // order by cluster size (Big -> Small)
         .distinct
+        .map(_.map(_._1)) // retain only cluster ids
         .cache
 
-    // B< B< B< --- cut here --- merge in selections/active nodes --- colorings
+//    @deprecated lazy val clusterEdgesRDD =
+//      clustersRDD
+//        .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id))) // melt all clusters by points
+//        .groupByKey
+//        .values
+//        .flatMap(_.toSet.subsets(2))
+//        .distinct
+//        .cache
 
-    TDAResult(clustersRDD, clusterEdgesRDD)
+    (clustersRDD, edgesRDD)
+  }
+
+  def applyColouring(clustersRDD: RDD[Cluster], edgesRDD: RDD[ClusterEdge], colouring: Colouring) = {
+    import colouring._
+
+    val colouredClustersRDD =
+      clustersRDD
+        .map(cluster => cluster.copy(colours = palette.toSeq.flatMap(rgbs => binner(cluster).map(bin => rgbs(bin)))))
+
+    TDAResult(colouredClustersRDD, edgesRDD)
   }
 
   def flattenTuple[A, B, C](t: ((A, B), C)) = t match {

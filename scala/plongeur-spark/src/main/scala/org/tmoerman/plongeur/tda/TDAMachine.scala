@@ -1,6 +1,7 @@
 package org.tmoerman.plongeur.tda
 
 import org.apache.spark.rdd.RDD
+import org.tmoerman.plongeur.tda.Colour.Colouring
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ScaleSelection, LocalClustering, ClusteringParams}
 import org.tmoerman.plongeur.tda.cluster.{BroadcastSmileClusteringProvider, SimpleSmileClusteringProvider}
 import rx.lang.scala.Observable
@@ -35,14 +36,16 @@ object TDAMachine extends TDA {
     val clusteringParams$    = appliedParams$.map(_.clusteringParams         ).distinctUntilChanged
     val scaleSelection$      = appliedParams$.map(_.scaleSelection           ).distinctUntilChanged
     val collapseDuplicates$  = appliedParams$.map(_.collapseDuplicateClusters).distinctUntilChanged
+    val colouring$           = appliedParams$.map(_.colouring                ).distinctUntilChanged
 
     // combine the deconstructed parameter pieces with the computation
 
     val levelSetClustersRDD$ = lensCtx$.combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets_P.tupled)
     val localClustersRDD$    = levelSetClustersRDD$.combineLatest(scaleSelection$).map(applyScale_P.tupled)
-    val paramsWithResult$    = localClustersRDD$.combineLatest(collapseDuplicates$).map(makeTDAResult_P.tupled)
+    val clustersAndEdges$    = localClustersRDD$.combineLatest(collapseDuplicates$).map(formClusters_P.tupled)
+    val paramsAndResult$     = clustersAndEdges$.combineLatest(colouring$).map(applyColouring_P.tupled)
 
-    paramsWithResult$
+    paramsAndResult$
   }
 
   // TODO better naming of following functions
@@ -65,20 +68,35 @@ object TDAMachine extends TDA {
     (scaleSelection :: hlist, rdd)
   }
 
-  val makeTDAResult_P = (product: (HList, RDD[List[Cluster]]), collapseDuplicateClusters: Boolean) => {
-    logDebug(s">>> makeTDAResult - collapse duplicate clusters? $collapseDuplicateClusters")
+  val formClusters_P = (product: (HList, RDD[List[Cluster]]), collapseDuplicateClusters: Boolean) => {
+    logDebug(s">>> formCluster - collapse duplicate clusters? $collapseDuplicateClusters")
 
     val (hlist, partitionedClustersRDD) = product
 
-    val result: TDAResult = makeTDAResult(partitionedClustersRDD, collapseDuplicateClusters)
+    val (clustersRDD, edgesRDD) = formClusters(partitionedClustersRDD, collapseDuplicateClusters)
+
+    (collapseDuplicateClusters :: hlist, (clustersRDD, edgesRDD))
+  }
+
+  val applyColouring_P = (product: (HList, (RDD[Cluster], RDD[ClusterEdge])), colouring: Colouring) => {
+    logDebug(s">>> applyColouring $colouring")
+
+    val (hlist, (clustersRDD, edgesRDD)) = product
+
+    val result = applyColouring(clustersRDD, edgesRDD, colouring)
 
     val reconstructedParams = hlist match {
-      case (scaleSelection: ScaleSelection) :: (clusteringParams: ClusteringParams) :: (lens: TDALens) :: HNil =>
+      case
+        (collapseDuplicateClusters: Boolean) ::
+          (scaleSelection: ScaleSelection) ::
+          (clusteringParams: ClusteringParams) ::
+          (lens: TDALens) :: HNil =>
         TDAParams(
           lens = lens,
           clusteringParams = clusteringParams,
           scaleSelection = scaleSelection,
-          collapseDuplicateClusters = collapseDuplicateClusters)
+          collapseDuplicateClusters = collapseDuplicateClusters,
+          colouring = colouring)
 
       case _ => throw new IllegalStateException("dafuq?")
     }
