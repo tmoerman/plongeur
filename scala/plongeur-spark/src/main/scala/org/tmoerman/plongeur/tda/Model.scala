@@ -8,6 +8,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
+import org.tmoerman.plongeur.tda.Colour.{Colouring, Constantly, Binner}
 import org.tmoerman.plongeur.tda.Filters.toBroadcastAmendment
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
 import org.tmoerman.plongeur.tda.cluster.Scale._
@@ -46,15 +47,18 @@ object Model {
 
   type ID = UUID
 
+  type ClusterEdge = Seq[ID]
+
   /**
     * @param id         The cluster ID.
     * @param levelSetID The level set ID.
     * @param dataPoints The data points contained by this cluster.
+    * @param colours    The colours.
     */
   case class Cluster(val id: ID,
                      val levelSetID: LevelSetID,
                      val dataPoints: Set[DataPoint],
-                     val colorBins: Seq[Int] = Seq()) extends Serializable {
+                     val colours: Iterable[String] = Nil) extends Serializable {
 
     def size = dataPoints.size
 
@@ -72,7 +76,7 @@ object Model {
 
   case class TDAContext(val sc: SparkContext,
                         val dataPoints: RDD[DataPoint],
-                        val broadcasts: Map[String, Broadcast[Any]] = Map()) extends Serializable {
+                        val broadcasts: Map[String, Broadcast[Any]] = Map.empty) extends Serializable {
 
     val self = this
 
@@ -91,7 +95,8 @@ object Model {
   case class TDAParams(val lens: TDALens,
                        val clusteringParams: ClusteringParams = ClusteringParams(),
                        val collapseDuplicateClusters: Boolean = true,
-                       val scaleSelection: ScaleSelection = histogram()) extends Serializable {
+                       val scaleSelection: ScaleSelection = histogram(),
+                       val colouring: Colouring = Colouring()) extends Serializable {
 
     // TODO move to TDA package
     def amend(ctx: TDAContext): TDAContext =
@@ -130,7 +135,7 @@ object Model {
   }
 
   case class TDAResult(val clustersRDD: RDD[Cluster],
-                       val edgesRDD: RDD[Set[ID]]) extends Serializable {
+                       val edgesRDD: RDD[ClusterEdge]) extends Serializable {
 
     lazy val clusters = clustersRDD.collect
 
