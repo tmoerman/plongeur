@@ -1,12 +1,12 @@
 package org.tmoerman.plongeur.tda
 
 import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.tda.Colour.pctToBin
+import org.tmoerman.plongeur.tda.Colour.{Colouring, pctToBin}
 
 /**
   * @author Thomas Moerman
   */
-class ColoursSpec extends FlatSpec with Matchers {
+class ColourSpec extends FlatSpec with Matchers {
 
   behavior of "pctToBin"
 
@@ -18,8 +18,15 @@ class ColoursSpec extends FlatSpec with Matchers {
 
   behavior of "Brewer"
 
+  import Colour._
+
   it should "correctly parse the palettes.json" in {
 
+    val cat0 = new AttributeSelector[Boolean]("cat") {
+      override def apply(number: Any): Boolean = number.asInstanceOf[Int] == 0
+    }
+
+    //Colouring(Brewer.palettes("Blues").get(9), LocalPercentage(9, cat0, ),)
   }
 
 }
