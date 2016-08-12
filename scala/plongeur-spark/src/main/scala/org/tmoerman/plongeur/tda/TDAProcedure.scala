@@ -19,7 +19,7 @@ object TDAProcedure extends TDA {
 
     val (clustersRDD, edgesRDD) = formClusters(partitionedClustersRDD, collapseDuplicateClusters)
 
-    val result = applyColouring(clustersRDD, edgesRDD, colouring)
+    val result = applyColouring(clustersRDD, edgesRDD, colouring, amendedCtx)
 
     result
   }
