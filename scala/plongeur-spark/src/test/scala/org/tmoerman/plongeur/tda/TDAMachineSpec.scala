@@ -159,8 +159,9 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     val updated2 = p_pca_0.amend(updated)
 
     updated shouldBe updated2
-
   }
+
+
 
 //  it should "work in dryRun" in {
 //    val in = PublishSubject[TDAParams]
