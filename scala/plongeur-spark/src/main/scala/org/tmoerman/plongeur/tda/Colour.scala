@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.spark.broadcast.Broadcast
 import org.tmoerman.plongeur.tda.Model.{Cluster, DataPoint, TDAContext}
 import org.tmoerman.plongeur.util.IterableFunctions._
 
@@ -19,16 +20,24 @@ object Colour extends Serializable {
 
   abstract case class AttributeSelector[T](val key: String) extends (Any => T) with Selector[T]
 
-  trait Binner extends (Cluster => Iterable[Int]) with Serializable
+  case class Colouring(palette: Option[Palette] = None, strategy: BinningStrategy = Constantly(0)) extends Serializable
 
-  def dataPointPredicate(selector: Selector[Boolean], ctx: TDAContext) = (dp: DataPoint) => selector match {
-    case pred@AttributeSelector(key) => dp.meta.flatMap(_.get(key)).exists(pred)
-    case pred@BroadcastSelector(key) => ctx.broadcasts.get(key).exists(bc => pred(bc)(dp))
+  trait BinningStrategy extends Serializable {
+
+    def toBinner(broadcasts: Map[String, Broadcast[Any]]): Binner
+
   }
 
-  def dataPointCategorizer[T](selector: Selector[T], ctx: TDAContext) = (dp: DataPoint) => selector match {
+  trait Binner extends (Cluster => Iterable[Int]) with Serializable
+
+  def dataPointPredicate(selector: Selector[Boolean], broadcasts: Map[String, Broadcast[Any]]) = (dp: DataPoint) => selector match {
+    case pred@AttributeSelector(key) => dp.meta.flatMap(_.get(key)).exists(pred)
+    case pred@BroadcastSelector(key) => broadcasts.get(key).exists(bc => pred(bc)(dp))
+  }
+
+  def dataPointCategorizer[T](selector: Selector[T], broadcasts: Map[String, Broadcast[Any]]) = (dp: DataPoint) => selector match {
     case fn@AttributeSelector(key) => dp.meta.flatMap(_.get(key)).map(fn).get
-    case fn@BroadcastSelector(key) => ctx.broadcasts.get(key).map(bc => fn(bc)(dp)).get
+    case fn@BroadcastSelector(key) => broadcasts.get(key).map(bc => fn(bc)(dp)).get
   }
 
   /**
@@ -37,89 +46,98 @@ object Colour extends Serializable {
     * @return Returns a Binner that maps a cluster to a bin according to a predefined nr of bins and the amount of
     *         DataPoint instances that satisfy the specified predicate.
     */
-  case class LocalPercentage(nrBinsResolution: Int, selectorPredicate: Selector[Boolean], ctx: TDAContext) extends Binner {
+  case class LocalPercentage(nrBinsResolution: Int, selectorPredicate: Selector[Boolean]) extends BinningStrategy {
 
-    override def apply(cluster: Cluster) = {
-      val predicate = dataPointPredicate(selectorPredicate, ctx)
+    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) =
+      new Binner {
+        override def apply(cluster: Cluster) = {
+          val predicate = dataPointPredicate(selectorPredicate, broadcasts)
 
-      val freqs = cluster.dataPoints.toStream.map(predicate).frequencies
+          val freqs = cluster.dataPoints.toStream.map(predicate).frequencies
 
-      val pctTrue = freqs(true).toDouble / freqs(false)
+          val pctTrue = freqs(true).toDouble / freqs(false)
 
-      val bin = pctToBin(nrBinsResolution, pctTrue)
+          val bin = pctToBin(nrBinsResolution, pctTrue)
 
-      Seq(bin)
-    }
+          Seq(bin)
+        }
+      }
 
   }
 
   def pctToBin(nrBins: Int, pct: Double) = (pct / (1d / nrBins)).toInt
 
   /**
-    * A Binner that maps a cluster to the first (0) bin if it has DataPoint instances that satisfy
+    * A BinningStrategy that maps a cluster to the first (0) bin if it has DataPoint instances that satisfy
     * the specified predicate.
     *
     * @param selectorPredicate
-    * @param ctx
-    * @return Returns
     */
-  case class LocalOccurrence(selectorPredicate: Selector[Boolean], ctx: TDAContext) extends Binner {
+  case class LocalOccurrence(selectorPredicate: Selector[Boolean]) extends BinningStrategy {
 
-    override def apply(cluster: Cluster) = {
-      val predicate = dataPointPredicate(selectorPredicate, ctx)
+    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) =
+      new Binner {
+        override def apply(cluster: Cluster) = {
+          val predicate = dataPointPredicate(selectorPredicate, broadcasts)
 
-      val exists = cluster.dataPoints.exists(predicate)
+          val exists = cluster.dataPoints.exists(predicate)
 
-      if (exists) Seq(0) else Seq()
-    }
+          if (exists) Seq(0) else Seq()
+        }
+      }
 
   }
 
   /**
-    * A Binner that maps a cluster to the bin corresponding to the category of which the cluster has
+    * A BinningStrategy that maps a cluster to the bin corresponding to the category of which the cluster has
     * the most DataPoint instances.
     *
     * @param categorySelector
-    * @param binMapping
-    * @param ctx
-    * @tparam T
     */
-  case class LocalMaxFreq[T](categorySelector: Selector[T], binMapping: Map[T, Int], ctx: TDAContext) extends Binner {
+  case class LocalMaxFreq(categorySelector: Selector[Int]) extends BinningStrategy {
 
-    override def apply(cluster: Cluster) = {
-      val selector = dataPointCategorizer(categorySelector, ctx)
+    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) =
+      new Binner {
+        override def apply(cluster: Cluster) = {
+          val selector = dataPointCategorizer(categorySelector, broadcasts)
 
-      val freqs = cluster.dataPoints.toStream.map(selector).frequencies
+          val freqs = cluster.dataPoints.toStream.map(selector).frequencies
 
-      val winner = freqs.maxBy(_._2)
+          val winner = freqs.maxBy(_._2)
 
-      binMapping.get(winner._1)
-    }
+          Some(winner._1)
+        }
+      }
 
   }
 
   /**
-    * A binner that maps every cluster to a specified bin.
+    * A BinningStrategy that maps every cluster to a specified bin.
     *
     * @param bin
     */
-  case class Constantly(bin: Int = 0) extends Binner {
+  case class Constantly(bin: Int = 0) extends BinningStrategy {
 
-    override def apply(cluster: Cluster) = Some(bin)
+    lazy val binner = new Binner {
+      override def apply(v1: Cluster) = Some(bin)
+    }
+
+    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) = binner
 
   }
 
   /**
-    * A Binner that maps every cluster to no bins.
+    * A BinningStrategy that maps every cluster to no bins.
     */
-  case class Nop() extends Binner {
+  case class Nop() extends BinningStrategy {
 
-    override def apply(cluster: Cluster) = None
+    lazy val binner = new Binner {
+      override def apply(v1: Cluster) = None
+    }
+
+    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) = binner
 
   }
-
-  case class Colouring(palette: Option[Palette] = None, binner: Binner = Constantly(0)) extends Serializable
-
 
 }
 

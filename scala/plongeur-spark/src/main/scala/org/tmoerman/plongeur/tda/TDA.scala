@@ -72,7 +72,7 @@ trait TDA extends Logging {
         .flatMap(cluster => cluster.dataPoints.map(point => (point.index, (cluster.id, cluster.size))))
         .groupByKey // (dp1, [(cl1, 2), (cl2, 5), (cl3, 7)])
         .values
-        .flatMap(_.toSet.subsets(2).map(_.toSeq.sortBy(_._2).reverse)) // order by cluster size (Big -> Small)
+        .flatMap(_.toSet.subsets(2).map(_.toSeq.sortBy(- _._2))) // order by cluster size (hi -> lo)
         .distinct
         .map(_.map(_._1)) // retain only cluster ids
         .cache
@@ -89,12 +89,14 @@ trait TDA extends Logging {
     (clustersRDD, edgesRDD)
   }
 
-  def applyColouring(clustersRDD: RDD[Cluster], edgesRDD: RDD[ClusterEdge], colouring: Colouring) = {
+  def applyColouring(clustersRDD: RDD[Cluster], edgesRDD: RDD[ClusterEdge], colouring: Colouring, ctx: TDAContext) = {
     import colouring._
+
+    val broadcasts = ctx.broadcasts
 
     val colouredClustersRDD =
       clustersRDD
-        .map(cluster => cluster.copy(colours = palette.toSeq.flatMap(rgbs => binner(cluster).map(bin => rgbs(bin)))))
+        .map(cluster => cluster.copy(colours = palette.toSeq.flatMap(rgbs => strategy.toBinner(broadcasts).apply(cluster).map(bin => rgbs(bin)))))
 
     TDAResult(colouredClustersRDD, edgesRDD)
   }
