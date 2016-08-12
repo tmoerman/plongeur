@@ -38,6 +38,12 @@ trait TestResources extends SparkContextSpec with FileResources {
       .map(_.split(",").map(trim))
       .parseCsv{ case Array(a, b, c, d, e) => (a.toDouble, b.toDouble, c.toDouble, d.toDouble, e) }
 
+  lazy val irisDataPointsRDD: RDD[DataPoint] =
+    irisParsed
+      ._2
+      .zipWithIndex
+      .map{ case ((a, b, c, d, cat), idx) => IndexedDataPoint(idx.toInt, dense(Array(a, b, c, d)), Some(Map("cat" -> cat))) }
+
   lazy val heuristicLabeledPointsRDD: RDD[DataPoint] =
     sc
       .textFile(heuristicFile)
