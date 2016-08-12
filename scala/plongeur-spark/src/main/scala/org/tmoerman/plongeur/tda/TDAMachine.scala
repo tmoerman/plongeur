@@ -55,35 +55,35 @@ object TDAMachine extends TDA {
 
     val rdd: RDD[(LevelSetID, (List[DataPoint], LocalClustering))] = clusterLevelSets(lens, ctx, clusteringParams)
 
-    (clusteringParams :: lens :: HNil, rdd)
+    (clusteringParams :: lens :: HNil, rdd, ctx)
   }
 
-  val applyScale_P = (product: (HList, RDD[(LevelSetID, (List[DataPoint], LocalClustering))]), scaleSelection: ScaleSelection) => {
+  val applyScale_P = (product: (HList, RDD[(LevelSetID, (List[DataPoint], LocalClustering))], TDAContext), scaleSelection: ScaleSelection) => {
     logDebug(s">>> applyScale $scaleSelection")
 
-    val (hlist, levelSetClustersRDD) = product
+    val (hlist, levelSetClustersRDD, ctx) = product
 
     val rdd = applyScale(levelSetClustersRDD, scaleSelection)
 
-    (scaleSelection :: hlist, rdd)
+    (scaleSelection :: hlist, rdd, ctx)
   }
 
-  val formClusters_P = (product: (HList, RDD[List[Cluster]]), collapseDuplicateClusters: Boolean) => {
+  val formClusters_P = (product: (HList, RDD[List[Cluster]], TDAContext), collapseDuplicateClusters: Boolean) => {
     logDebug(s">>> formCluster - collapse duplicate clusters? $collapseDuplicateClusters")
 
-    val (hlist, partitionedClustersRDD) = product
+    val (hlist, partitionedClustersRDD, ctx) = product
 
     val (clustersRDD, edgesRDD) = formClusters(partitionedClustersRDD, collapseDuplicateClusters)
 
-    (collapseDuplicateClusters :: hlist, (clustersRDD, edgesRDD))
+    (collapseDuplicateClusters :: hlist, (clustersRDD, edgesRDD), ctx)
   }
 
-  val applyColouring_P = (product: (HList, (RDD[Cluster], RDD[ClusterEdge])), colouring: Colouring) => {
+  val applyColouring_P = (product: (HList, (RDD[Cluster], RDD[ClusterEdge]), TDAContext), colouring: Colouring) => {
     logDebug(s">>> applyColouring $colouring")
 
-    val (hlist, (clustersRDD, edgesRDD)) = product
+    val (hlist, (clustersRDD, edgesRDD), ctx) = product
 
-    val result = applyColouring(clustersRDD, edgesRDD, colouring)
+    val result = applyColouring(clustersRDD, edgesRDD, colouring, ctx)
 
     val reconstructedParams = hlist match {
       case
