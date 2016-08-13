@@ -25,7 +25,12 @@ object Model {
 
   implicit def pimp(in: (Index, MLVector)): DataPoint = dp(in._1, in._2)
 
-  def dp(index: Long, features: MLVector): DataPoint = IndexedDataPoint(index.toInt, features)
+  def dp(index: Long,
+         features: MLVector): DataPoint = IndexedDataPoint(index.toInt, features)
+
+  def dp(index: Long,
+         features: MLVector,
+         meta: Map[String, _ <: Serializable]): DataPoint = IndexedDataPoint(index.toInt, features, Some(meta))
 
   type Index = Int
 
