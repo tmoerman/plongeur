@@ -1,6 +1,7 @@
 package org.tmoerman.plongeur.tda
 
 import org.apache.spark.rdd.RDD
+import org.tmoerman.plongeur.tda.Colour.Colouring
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ScaleSelection, LocalClustering, ClusteringParams}
 import org.tmoerman.plongeur.tda.cluster.{BroadcastSmileClusteringProvider, SimpleSmileClusteringProvider}
 import rx.lang.scala.Observable
@@ -35,14 +36,16 @@ object TDAMachine extends TDA {
     val clusteringParams$    = appliedParams$.map(_.clusteringParams         ).distinctUntilChanged
     val scaleSelection$      = appliedParams$.map(_.scaleSelection           ).distinctUntilChanged
     val collapseDuplicates$  = appliedParams$.map(_.collapseDuplicateClusters).distinctUntilChanged
+    val colouring$           = appliedParams$.map(_.colouring                ).distinctUntilChanged
 
     // combine the deconstructed parameter pieces with the computation
 
     val levelSetClustersRDD$ = lensCtx$.combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets_P.tupled)
     val localClustersRDD$    = levelSetClustersRDD$.combineLatest(scaleSelection$).map(applyScale_P.tupled)
-    val paramsWithResult$    = localClustersRDD$.combineLatest(collapseDuplicates$).map(makeTDAResult_P.tupled)
+    val clustersAndEdges$    = localClustersRDD$.combineLatest(collapseDuplicates$).map(formClusters_P.tupled)
+    val paramsAndResult$     = clustersAndEdges$.combineLatest(colouring$).map(applyColouring_P.tupled)
 
-    paramsWithResult$
+    paramsAndResult$
   }
 
   // TODO better naming of following functions
@@ -52,33 +55,48 @@ object TDAMachine extends TDA {
 
     val rdd: RDD[(LevelSetID, (List[DataPoint], LocalClustering))] = clusterLevelSets(lens, ctx, clusteringParams)
 
-    (clusteringParams :: lens :: HNil, rdd)
+    (clusteringParams :: lens :: HNil, rdd, ctx)
   }
 
-  val applyScale_P = (product: (HList, RDD[(LevelSetID, (List[DataPoint], LocalClustering))]), scaleSelection: ScaleSelection) => {
+  val applyScale_P = (product: (HList, RDD[(LevelSetID, (List[DataPoint], LocalClustering))], TDAContext), scaleSelection: ScaleSelection) => {
     logDebug(s">>> applyScale $scaleSelection")
 
-    val (hlist, levelSetClustersRDD) = product
+    val (hlist, levelSetClustersRDD, ctx) = product
 
     val rdd = applyScale(levelSetClustersRDD, scaleSelection)
 
-    (scaleSelection :: hlist, rdd)
+    (scaleSelection :: hlist, rdd, ctx)
   }
 
-  val makeTDAResult_P = (product: (HList, RDD[List[Cluster]]), collapseDuplicateClusters: Boolean) => {
-    logDebug(s">>> makeTDAResult - collapse duplicate clusters? $collapseDuplicateClusters")
+  val formClusters_P = (product: (HList, RDD[List[Cluster]], TDAContext), collapseDuplicateClusters: Boolean) => {
+    logDebug(s">>> formCluster - collapse duplicate clusters? $collapseDuplicateClusters")
 
-    val (hlist, partitionedClustersRDD) = product
+    val (hlist, partitionedClustersRDD, ctx) = product
 
-    val result: TDAResult = makeTDAResult(partitionedClustersRDD, collapseDuplicateClusters)
+    val (clustersRDD, edgesRDD) = formClusters(partitionedClustersRDD, collapseDuplicateClusters)
+
+    (collapseDuplicateClusters :: hlist, (clustersRDD, edgesRDD), ctx)
+  }
+
+  val applyColouring_P = (product: (HList, (RDD[Cluster], RDD[ClusterEdge]), TDAContext), colouring: Colouring) => {
+    logDebug(s">>> applyColouring $colouring")
+
+    val (hlist, (clustersRDD, edgesRDD), ctx) = product
+
+    val result = applyColouring(clustersRDD, edgesRDD, colouring, ctx)
 
     val reconstructedParams = hlist match {
-      case (scaleSelection: ScaleSelection) :: (clusteringParams: ClusteringParams) :: (lens: TDALens) :: HNil =>
+      case
+        (collapseDuplicateClusters: Boolean) ::
+          (scaleSelection: ScaleSelection) ::
+          (clusteringParams: ClusteringParams) ::
+          (lens: TDALens) :: HNil =>
         TDAParams(
           lens = lens,
           clusteringParams = clusteringParams,
           scaleSelection = scaleSelection,
-          collapseDuplicateClusters = collapseDuplicateClusters)
+          collapseDuplicateClusters = collapseDuplicateClusters,
+          colouring = colouring)
 
       case _ => throw new IllegalStateException("dafuq?")
     }

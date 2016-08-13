@@ -8,6 +8,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
+import org.tmoerman.plongeur.tda.Colour.{Colouring, Constantly, Binner}
 import org.tmoerman.plongeur.tda.Filters.toBroadcastAmendment
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
 import org.tmoerman.plongeur.tda.cluster.Scale._
@@ -24,7 +25,12 @@ object Model {
 
   implicit def pimp(in: (Index, MLVector)): DataPoint = dp(in._1, in._2)
 
-  def dp(index: Long, features: MLVector): DataPoint = IndexedDataPoint(index.toInt, features)
+  def dp(index: Long,
+         features: MLVector): DataPoint = IndexedDataPoint(index.toInt, features)
+
+  def dp(index: Long,
+         features: MLVector,
+         meta: Map[String, _ <: Serializable]): DataPoint = IndexedDataPoint(index.toInt, features, Some(meta))
 
   type Index = Int
 
@@ -46,14 +52,18 @@ object Model {
 
   type ID = UUID
 
+  type ClusterEdge = Seq[ID]
+
   /**
     * @param id         The cluster ID.
     * @param levelSetID The level set ID.
     * @param dataPoints The data points contained by this cluster.
+    * @param colours    The colours.
     */
   case class Cluster(val id: ID,
                      val levelSetID: LevelSetID,
-                     val dataPoints: Set[DataPoint]) extends Serializable {
+                     val dataPoints: Set[DataPoint],
+                     val colours: Iterable[String] = Nil) extends Serializable {
 
     def size = dataPoints.size
 
@@ -71,7 +81,7 @@ object Model {
 
   case class TDAContext(val sc: SparkContext,
                         val dataPoints: RDD[DataPoint],
-                        val broadcasts: Map[String, Broadcast[Any]] = Map()) extends Serializable {
+                        val broadcasts: Map[String, Broadcast[Any]] = Map.empty) extends Serializable {
 
     val self = this
 
@@ -79,6 +89,7 @@ object Model {
 
     lazy val dim = dataPoints.first.features.size
 
+    // TODO move to TDA package
     def addBroadcast(key: String, producer: () => Broadcast[Any]) =
       broadcasts
         .get(key)
@@ -89,8 +100,10 @@ object Model {
   case class TDAParams(val lens: TDALens,
                        val clusteringParams: ClusteringParams = ClusteringParams(),
                        val collapseDuplicateClusters: Boolean = true,
-                       val scaleSelection: ScaleSelection = histogram()) extends Serializable {
+                       val scaleSelection: ScaleSelection = histogram(),
+                       val colouring: Colouring = Colouring()) extends Serializable {
 
+    // TODO move to TDA package
     def amend(ctx: TDAContext): TDAContext =
       lens
         .filters
@@ -127,7 +140,7 @@ object Model {
   }
 
   case class TDAResult(val clustersRDD: RDD[Cluster],
-                       val edgesRDD: RDD[Set[ID]]) extends Serializable {
+                       val edgesRDD: RDD[ClusterEdge]) extends Serializable {
 
     lazy val clusters = clustersRDD.collect
 

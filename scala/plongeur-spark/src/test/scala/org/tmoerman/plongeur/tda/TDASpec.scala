@@ -1,6 +1,8 @@
 package org.tmoerman.plongeur.tda
 
 import org.scalatest.{FlatSpec, Matchers}
+import org.tmoerman.plongeur.tda.Brewer.palettes
+import org.tmoerman.plongeur.tda.Colour._
 import org.tmoerman.plongeur.tda.Inspections._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
@@ -76,6 +78,21 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
         scaleSelection = histogram(10))
 
     val result = TDAProcedure.apply(tdaParams, TDAContext(sc, circle250RDD))
+  }
+
+  it should "pass smoke test with colouring" in {
+    val ctx = TDAContext(sc, irisDataPointsRDD)
+
+    val setosa = new AttributePredicate("cat", "setosa")
+
+    val tdaParams =
+      TDAParams(
+        lens = TDALens(Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+        clusteringParams = ClusteringParams(),
+        scaleSelection = histogram(10),
+        colouring = Colouring(palettes("Blues").get(9), LocalPercentage(9, setosa)))
+
+    val result = TDAProcedure.apply(tdaParams, ctx)
   }
 
 }
