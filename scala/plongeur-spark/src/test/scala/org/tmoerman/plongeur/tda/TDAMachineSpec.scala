@@ -83,7 +83,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     in.onNext(params_1)
     in.onCompleted()
 
-    waitFor(out)
+    waitFor(out).map(_._2.clusters)
   }
 
   val p_pca_0 =
@@ -108,7 +108,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
 
     in.onCompleted()
 
-    waitFor(out)
+    waitFor(out).map(_._2.clusters)
   }
 
   val p_ecc_1 =
@@ -129,7 +129,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     in.onNext(setFilterNrBins(0, 20)(p_ecc_1))
     in.onCompleted()
 
-    waitFor(out)
+    waitFor(out).map(_._2.clusters)
   }
 
   it should "work with mixed filters" in {
@@ -144,7 +144,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     in.onNext(p_pca_0)
     in.onCompleted()
 
-    waitFor(out)
+    waitFor(out).map(_._2.clusters)
   }
 
   behavior of "assocFilterMemos"
