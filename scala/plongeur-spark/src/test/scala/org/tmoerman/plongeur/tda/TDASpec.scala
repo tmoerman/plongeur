@@ -83,9 +83,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
   it should "pass smoke test with colouring" in {
     val ctx = TDAContext(sc, irisDataPointsRDD)
 
-    val setosa = new AttributeSelector[Boolean]("cat") {
-      override def apply(cat: Any): Boolean = cat.toString == "setosa"
-    }
+    val setosa = new AttributePredicate("cat", "setosa")
 
     val tdaParams =
       TDAParams(

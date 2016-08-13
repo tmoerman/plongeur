@@ -16,10 +16,28 @@ object Colour extends Serializable {
 
   trait Selector[T] extends Serializable
 
-  abstract case class BroadcastSelector[T](val key: String) extends (Any => DataPoint => T) with Selector[T]
+  trait BroadcastSelector[T] extends Selector[T] {
+    def key: String
+    def fn: (Any => DataPoint => T)
+  }
 
-  abstract case class AttributeSelector[T](val key: String) extends (Any => T) with Selector[T]
+  object BroadcastSelector {
+    def unapply[T](selector: BroadcastSelector[T]): Option[(String, (Any => DataPoint => T))] = Some((selector.key, selector.fn))
+  }
 
+  trait DataPointSelector[T] extends Selector[T] {
+    def fn: (DataPoint => T)
+  }
+
+  object DataPointSelector {
+    def unapply[T](selector: DataPointSelector[T]): Option[DataPoint => T] = Some(selector.fn)
+  }
+
+  case class AttributePredicate(key: String, value: Any) extends DataPointSelector[Boolean] {
+    override val fn = (dp: DataPoint) => dp.meta.exists(_.get(key).exists(_ == value))
+  }
+
+  @deprecated
   case class Colouring(palette: Option[Palette] = None, strategy: BinningStrategy = Constantly(0)) extends Serializable
 
   trait BinningStrategy extends Serializable {
@@ -30,14 +48,14 @@ object Colour extends Serializable {
 
   trait Binner extends (Cluster => Iterable[Int]) with Serializable
 
-  def dataPointPredicate(selector: Selector[Boolean], broadcasts: Map[String, Broadcast[Any]]) = (dp: DataPoint) => selector match {
-    case pred@AttributeSelector(key) => dp.meta.flatMap(_.get(key)).exists(pred)
-    case pred@BroadcastSelector(key) => broadcasts.get(key).exists(bc => pred(bc)(dp))
+  def dataPointPredicate[T](selector: Selector[T], broadcasts: Map[String, Broadcast[Any]]) = (dp: DataPoint) => selector match {
+    case DataPointSelector(fn)      => fn(dp) == true
+    case BroadcastSelector(key, fn) => broadcasts.get(key).exists(bc => fn(bc)(dp) == true)
   }
 
   def dataPointCategorizer[T](selector: Selector[T], broadcasts: Map[String, Broadcast[Any]]) = (dp: DataPoint) => selector match {
-    case fn@AttributeSelector(key) => dp.meta.flatMap(_.get(key)).map(fn).get
-    case fn@BroadcastSelector(key) => broadcasts.get(key).map(bc => fn(bc)(dp)).get
+    case DataPointSelector(fn)      => fn(dp)
+    case BroadcastSelector(key, fn) => broadcasts.get(key).map(bc => fn(bc)(dp)).get
   }
 
   /**
@@ -53,11 +71,9 @@ object Colour extends Serializable {
         override def apply(cluster: Cluster) = {
           val predicate = dataPointPredicate(selectorPredicate, broadcasts)
 
-          val freqs = cluster.dataPoints.toStream.map(predicate).frequencies
+          val pctTrue = cluster.dataPoints.count(predicate).toDouble / cluster.size
 
-          val pctTrue = freqs(true).toDouble / freqs(false)
-
-          val bin = pctToBin(nrBinsResolution, pctTrue)
+          val bin = pctToBin(nrBinsResolution - 1, pctTrue)
 
           Seq(bin)
         }
