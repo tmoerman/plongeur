@@ -9,7 +9,7 @@ object RxUtils {
 
   def putFn[T](s: Subject[T]) = (t: T) => s.onNext(t)
 
-  def waitFor[T](obs: Observable[T]): Unit = {
+  def waitFor[T](obs: Observable[T]): T = {
     obs.toBlocking.toIterable.last
   }
 
