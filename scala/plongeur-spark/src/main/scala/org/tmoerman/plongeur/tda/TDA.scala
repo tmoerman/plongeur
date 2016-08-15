@@ -77,15 +77,6 @@ trait TDA extends Logging {
         .map(_.map(_._1)) // retain only cluster ids
         .cache
 
-//    @deprecated lazy val clusterEdgesRDD =
-//      clustersRDD
-//        .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id))) // melt all clusters by points
-//        .groupByKey
-//        .values
-//        .flatMap(_.toSet.subsets(2))
-//        .distinct
-//        .cache
-
     (clustersRDD, edgesRDD)
   }
 
