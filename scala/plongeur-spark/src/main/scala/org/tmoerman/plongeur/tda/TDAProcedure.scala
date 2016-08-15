@@ -11,7 +11,7 @@ object TDAProcedure extends TDA {
   def apply(tdaParams: TDAParams, ctx: TDAContext): TDAResult = {
     import tdaParams._
 
-    val amendedCtx = tdaParams.lens.amend(ctx)
+    val amendedCtx = tdaParams.amend(ctx)
 
     val levelSetClustersRDD = clusterLevelSets(lens, amendedCtx, clusteringParams)
 

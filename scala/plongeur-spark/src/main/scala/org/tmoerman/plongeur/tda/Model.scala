@@ -100,7 +100,15 @@ object Model {
                        val clusteringParams: ClusteringParams = ClusteringParams(),
                        val collapseDuplicateClusters: Boolean = true,
                        val scaleSelection: ScaleSelection = histogram(),
-                       val colouring: Colouring = Colouring()) extends Serializable
+                       val colouring: Colouring = Colouring()) extends Serializable {
+
+    def amend(ctx: TDAContext): TDAContext =
+      lens
+        .filters
+        .flatMap(f => toBroadcastAmendment(f.spec, ctx))
+        .foldLeft(ctx){ case (c, (key, fn)) => c.addBroadcast(key, fn) }
+
+  }
 
   object TDAParams {
 
@@ -137,14 +145,7 @@ object Model {
 
   }
 
-  case class TDALens(val filters: List[Filter]) extends Serializable {
-
-    def amend(ctx: TDAContext): TDAContext =
-      filters
-        .flatMap(f => toBroadcastAmendment(f.spec, ctx))
-        .foldLeft(ctx){ case (c, (key, fn)) => c.addBroadcast(key, fn) }
-
-  }
+  case class TDALens(val filters: List[Filter]) extends Serializable
 
   object TDALens {
 
