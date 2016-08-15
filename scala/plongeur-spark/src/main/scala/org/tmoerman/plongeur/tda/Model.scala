@@ -89,7 +89,6 @@ object Model {
 
     lazy val dim = dataPoints.first.features.size
 
-    // TODO move to TDA package
     def addBroadcast(key: String, producer: () => Broadcast[Any]) =
       broadcasts
         .get(key)
@@ -101,17 +100,7 @@ object Model {
                        val clusteringParams: ClusteringParams = ClusteringParams(),
                        val collapseDuplicateClusters: Boolean = true,
                        val scaleSelection: ScaleSelection = histogram(),
-                       val colouring: Colouring = Colouring()) extends Serializable {
-
-    // TODO move to TDA package
-    def amend(ctx: TDAContext): TDAContext =
-      lens
-        .filters
-        .map(f => toBroadcastAmendment(f.spec, ctx))
-        .flatten
-        .foldLeft(ctx){ case (c, (key, fn)) => c.addBroadcast(key, fn) }
-
-  }
+                       val colouring: Colouring = Colouring()) extends Serializable
 
   object TDAParams {
 
@@ -148,7 +137,14 @@ object Model {
 
   }
 
-  case class TDALens(val filters: List[Filter]) extends Serializable
+  case class TDALens(val filters: List[Filter]) extends Serializable {
+
+    def amend(ctx: TDAContext): TDAContext =
+      filters
+        .flatMap(f => toBroadcastAmendment(f.spec, ctx))
+        .foldLeft(ctx){ case (c, (key, fn)) => c.addBroadcast(key, fn) }
+
+  }
 
   object TDALens {
 

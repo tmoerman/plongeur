@@ -152,11 +152,11 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   it should "add memo entries to a TDAContext" in {
     val ctx = TDAContext(sc, circle1kRDD)
 
-    val updated = p_pca_0.amend(ctx)
+    val updated = p_pca_0.lens.amend(ctx)
 
     ctx should not be updated
 
-    val updated2 = p_pca_0.amend(updated)
+    val updated2 = p_pca_0.lens.amend(updated)
 
     updated shouldBe updated2
   }
