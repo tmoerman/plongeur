@@ -1,8 +1,8 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Colour.Colouring
+import org.tmoerman.plongeur.tda.Filters.extractBroadcasts
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, LocalClustering, ScaleSelection}
 import rx.lang.scala.Observable
@@ -26,20 +26,19 @@ object TDAMachine extends TDA {
       .groupBy{ case (params, ctx) => params.lens}
       .flatMap{ case (lens, paramsCtx$) =>
 
-        val cached$ = paramsCtx$.replay(1)
+        val cached$ = paramsCtx$.cache
 
         val params$ = cached$.map(_._1)
         val ctx$    = cached$.map(_._2)
+
+        val lensCtx$ = just(lens).combineLatest(ctx$)
 
         val clusteringParams$    = params$.map(_.clusteringParams         ).distinctUntilChanged
         val scaleSelection$      = params$.map(_.scaleSelection           ).distinctUntilChanged
         val collapseDuplicates$  = params$.map(_.collapseDuplicateClusters).distinctUntilChanged
         val colouring$           = params$.map(_.colouring                ).distinctUntilChanged
 
-//        val lensBroadcasts     : Map[String, Broadcast[Any]] = ??? // TODO extracted broadcasts
-//        val colouringBroadcasts: Map[String, Broadcast[Any]] = ??? // TODO extracted broadcasts
-
-        val levelSetClustersRDD$ = just(lens).combineLatest(ctx$).combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets_P.tupled)
+        val levelSetClustersRDD$ = lensCtx$.combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets_P.tupled)
         val localClustersRDD$    = levelSetClustersRDD$.combineLatest(scaleSelection$).map(applyScale_P.tupled)
         val clustersAndEdges$    = localClustersRDD$.combineLatest(collapseDuplicates$).map(formClusters_P.tupled)
         val paramsAndResult$     = clustersAndEdges$.combineLatest(colouring$).map(applyColouring_P.tupled)

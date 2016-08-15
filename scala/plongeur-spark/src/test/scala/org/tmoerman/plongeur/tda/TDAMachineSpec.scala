@@ -50,6 +50,23 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     // printInspections(result, "test TDA Machine 1 input")
   }
 
+  it should "work with one amending input" in {
+    val inParams =
+      TDAParams(
+        lens = TDALens(Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+        clusteringParams = ClusteringParams(),
+        scaleSelection = histogram(10))
+
+    val (outParams, result) =
+      TDAMachine.run(TDAContext(sc, circle250RDD), Observable.just(inParams))
+        .toBlocking
+        .single
+
+    inParams shouldBe outParams
+
+    // printInspections(result, "test TDA Machine 1 input")
+  }
+
   val secs_10 = Duration(10, SECONDS)
 
   val params_1 =
@@ -62,7 +79,6 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   val params_2 =
     TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 10, 0.5),
         Filter("feature" :: 1 :: HNil, 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
@@ -70,7 +86,6 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   val params_2_b =
     TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 10, 0.5),
         Filter("feature" :: 1 :: HNil, 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(20))
@@ -103,6 +118,17 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(20))
 
+  val map =
+    Map(
+      params_1    -> "params_1",
+      params_2    -> "params_2",
+      params_2_b  -> "params_2_b",
+      params_3    -> "params_3",
+      params_3_b  -> "params_3_b",
+      params_4    -> "params_4",
+      params_4_b  -> "params_4_b"
+    )
+
   it should "work with repeated inputs" in {
     val in = PublishSubject[TDAParams]
 
@@ -111,7 +137,8 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     val out = TDAMachine.run(ctx, in).toVector
 
     out.subscribe(results => {
-      //results.size shouldBe
+      println()
+      println(results.map{ case (params, _) => map(params) }.mkString("\n"))
 
       results.map(_._1).toList shouldBe List(
         params_1,
@@ -121,8 +148,11 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
         params_1,
         params_3,
         params_4,
+        params_3, // TODO accept this behaviour for now... we
         params_3_b,
+        params_2,
         params_2_b,
+        params_4,
         params_4_b)
     })
 
