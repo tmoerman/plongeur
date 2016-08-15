@@ -67,6 +67,42 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
+  val params_2_b =
+    TDAParams(
+      lens = TDALens(
+        Filter("feature" :: 0 :: HNil, 10, 0.5),
+        Filter("feature" :: 1 :: HNil, 10, 0.5)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(20))
+
+  val params_3 = // parameters that change the context
+    TDAParams(
+      lens = TDALens(
+        Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(10))
+
+  val params_3_b =
+    TDAParams(
+      lens = TDALens(
+        Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(20))
+
+  val params_4 =
+    TDAParams(
+      lens = TDALens(
+        Filter("eccentricity" :: "infinity" :: HNil, 10, 0.5)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(10))
+
+  val params_4_b =
+    TDAParams(
+      lens = TDALens(
+        Filter("eccentricity" :: "infinity" :: HNil, 10, 0.5)),
+      clusteringParams = ClusteringParams(),
+      scaleSelection = histogram(20))
+
   it should "work with repeated inputs" in {
     val in = PublishSubject[TDAParams]
 
@@ -74,13 +110,36 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
 
     val out = TDAMachine.run(ctx, in).toVector
 
-    val out_sub = out.subscribe(_.size shouldBe 5)
+    out.subscribe(results => {
+      //results.size shouldBe
+
+      results.map(_._1).toList shouldBe List(
+        params_1,
+        params_2,
+        params_1,
+        params_2,
+        params_1,
+        params_3,
+        params_4,
+        params_3_b,
+        params_2_b,
+        params_4_b)
+    })
 
     in.onNext(params_1)
+    in.onNext(params_1)
+    in.onNext(params_2)
     in.onNext(params_2)
     in.onNext(params_1)
     in.onNext(params_2)
     in.onNext(params_1)
+    in.onNext(params_1)
+    in.onNext(params_3)
+    in.onNext(params_4)
+    in.onNext(params_4)
+    in.onNext(params_3_b)
+    in.onNext(params_2_b)
+    in.onNext(params_4_b)
     in.onCompleted()
 
     waitFor(out).map(_._2.clusters)
@@ -152,11 +211,11 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   it should "add memo entries to a TDAContext" in {
     val ctx = TDAContext(sc, circle1kRDD)
 
-    val updated = p_pca_0.lens.amend(ctx)
+    val updated = p_pca_0.amend(ctx)
 
     ctx should not be updated
 
-    val updated2 = p_pca_0.lens.amend(updated)
+    val updated2 = p_pca_0.amend(updated)
 
     updated shouldBe updated2
   }
