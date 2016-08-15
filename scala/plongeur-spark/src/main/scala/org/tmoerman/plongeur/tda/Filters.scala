@@ -32,21 +32,27 @@ object Filters extends Serializable with Logging {
       case "feature" #: (n: Int) #: HNil => (d: DataPoint) => d.features(n)
 
       case "PCA" #: (n: Int) #: HNil =>
-        toBroadcastKey(spec)
-            .flatMap(key => ctx.broadcasts.get(key))
-            .map(bc => {
-              val pcaModel = bc.value.asInstanceOf[PCAModel]
-              (d: DataPoint) => pcaModel.transform(d.features)(n)
-            })
-            .get
+        extractBroadcast(spec, ctx)
+          .map{ case (_, bc) =>
+            val pcaModel = bc.value.asInstanceOf[PCAModel]
+            (d: DataPoint) => pcaModel.transform(d.features)(n)
+          }.get
 
       case _ => // broadcast value is a FilterFunction
-        toBroadcastKey(spec)
-          .flatMap(key => ctx.broadcasts.get(key))
-          .map(bc => bc.value.asInstanceOf[FilterFunction]) // TODO incorrect ->
+        extractBroadcast(spec, ctx)
+          .map{ case (_, bc) => bc.value.asInstanceOf[FilterFunction] } // TODO incorrect -> ???
           .getOrElse(throw new IllegalArgumentException(
             s"no filter function for $spec, current broadcasts: " + ctx.broadcasts.keys.mkString(", ")))
     }
+
+  def extractBroadcasts(lens: TDALens, ctx: TDAContext): Map[String, Broadcast[Any]] =
+    lens
+      .filters
+      .flatMap(f => extractBroadcast(f.spec, ctx))
+      .toMap
+
+  def extractBroadcast(spec: HList, ctx: TDAContext): Option[(String, Broadcast[Any])] =
+    toBroadcastKey(spec).flatMap(key => ctx.broadcasts.get(key).map(bc => (key, bc)))
 
   val MAX_PCs: Int = 10
 
