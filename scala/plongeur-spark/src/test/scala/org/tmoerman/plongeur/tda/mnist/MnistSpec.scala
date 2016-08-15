@@ -46,7 +46,7 @@ class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
       .map {case ((cat, features), idx) => dp(idx.toInt, features, Map("cat" -> cat))}
 
   "running a TDAMachine on mnist data with colouring" should "work" in {
-    val mnistSampleRDD = readMnist(mnistTrainFile).sample(false, .05, 0l).cache
+    val mnistSampleRDD = readMnist(mnistTrainFile).sample(false, .01, 0l).cache
 
     val ctx = TDAContext(sc, mnistSampleRDD)
 
@@ -55,8 +55,8 @@ class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
     val inParams =
       TDAParams(
         lens = TDALens(
-          Filter("PCA" :: 0 :: HNil, 20, 0.33),
-          Filter("PCA" :: 1 :: HNil, 20, 0.33)),
+          Filter("PCA" :: 0 :: HNil, 10, 0.33),
+          Filter("PCA" :: 1 :: HNil, 10, 0.33)),
         clusteringParams = ClusteringParams(),
         collapseDuplicateClusters = false,
         colouring = Colouring(Brewer.palettes("Blues").get(9), LocalPercentage(9, cat)))
