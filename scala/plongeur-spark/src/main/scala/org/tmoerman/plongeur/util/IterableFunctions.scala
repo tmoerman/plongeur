@@ -41,6 +41,12 @@ class IterableFunctions[V](it: Iterable[V]) extends Serializable {
     it.foldLeft(Map[V, Int]() withDefaultValue 0) { (acc, v) => acc.updated(v, acc(v) + 1) }
 
   /**
+    * @return Returns an Iterable of sliding pairs assuming step size 1.
+    */
+  def slidingPairs: Iterable[(V, V)] =
+    it.sliding(2).map(t => (t.head, t.tail.head)).toIterable
+
+  /**
     * @param selector Selector function, defaults to the identity function.
     *
     * @return List of Lists of V instances,

@@ -5,7 +5,6 @@ import java.lang.Math.sqrt
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.test.FileResources
 
@@ -33,6 +32,7 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
     clustering.heights(false) shouldBe Seq(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, sqrt(8))
 
     clustering.labels(histogram(10)) shouldBe Seq(0, 0, 0, 0, 1, 1, 1, 1)
+    clustering.labels(firstGap(30)) shouldBe Seq(0, 0, 0, 0, 1, 1, 1, 1)
   }
 
   it should "yield 1 cluster for a singleton" in {

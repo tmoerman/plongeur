@@ -30,4 +30,34 @@ class ScaleSpec extends FlatSpec with Matchers {
     histogram(10).apply(heights) shouldBe 11.2
   }
 
+  behavior of "danifold(10) scale selection"
+
+  it should "see Danifold mapper example 1" in {
+    val heights = Seq(1, 1, 1, 2, 3, 4, 11).map(_.toDouble)
+
+    Scale.danifold(10).apply(heights) shouldBe 5.5
+  }
+
+  it should "see Danifold mapper example 2" in {
+    val heights = Seq(1, 1, 1, 2, 3, 5, 11).map(_.toDouble)
+
+    Scale.danifold(10).apply(heights) shouldBe 4.4
+  }
+
+  behavior of "firstGap(20%)"
+
+  it should "yield correct" in {
+    val heights = Seq(1, 1, 1, 2, 3, 4, 11).map(_.toDouble)
+
+    Scale.firstGap(20).apply(heights) shouldBe 7.5
+  }
+
+  behavior of "biggestGap"
+
+  it should "yield correct" in {
+    val heights = Seq(1, 1, 1, 2, 3, 4, 11).map(_.toDouble)
+
+    Scale.biggestGap().apply(heights) shouldBe 7.5
+  }
+
 }
