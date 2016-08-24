@@ -8,14 +8,18 @@ description := "Plongeur Spark algorithms module"
 
 scalaVersion := "2.10.4"
 
+val localM2 = Path.userHome.absolutePath + "/.m2/repository"
+
 resolvers ++= Seq(
   Resolver.sonatypeRepo("releases"),
-  Resolver.sonatypeRepo("snapshots")
+  Resolver.sonatypeRepo("snapshots"),
+
+  "local .m2" at "file://" + localM2
 )
 
 val sparkVersion  = "1.6.1"
 
-publishTo := Some(Resolver.file("file",  new File(Path.userHome.absolutePath + "/.m2/repository")))
+publishTo := Some(Resolver.file("file",  new File(localM2)))
 
 libraryDependencies ++= Seq(
 
@@ -30,6 +34,8 @@ libraryDependencies ++= Seq(
   "org.scalaz"             %% "scalaz-core"      % "7.2.0",
   "com.chuusai"            %% "shapeless"        % "2.3.0",
   "org.typelevel"          %% "shapeless-scalaz" % "0.4",
+
+  "com.github.karlhigley"  %% "spark-neighbours" % "0.2.3-FORK",
 
   "com.softwaremill.quicklens" %% "quicklens" % "1.4.4",
   
