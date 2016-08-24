@@ -41,6 +41,8 @@ class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
             val sparseFeatures = Vectors.sparse(rawFeatures.size, nonZero)
 
             (cat, sparseFeatures)
+
+          case _ => throw new Exception("dafuq")
         }})
       .zipWithIndex
       .map {case ((cat, features), idx) => dp(idx.toInt, features, Map("cat" -> cat))}

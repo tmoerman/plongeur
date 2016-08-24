@@ -77,18 +77,14 @@ trait TestResources extends SparkContextSpec with FileResources {
             val sparseFeatures = Vectors.sparse(rawFeatures.size, nonZero)
 
             (cat, sparseFeatures)
+          case _ => throw new Exception("dafuq")
         }})
       .zipWithIndex
       .map {case ((cat, features), idx) => IndexedDataPoint(idx.toInt, features, Some(Map("cat" -> cat)))}   
-
-
-
 
   lazy val circle100RDD = readDense(circle100)
   lazy val circle250RDD = readDense(circle250)
   lazy val circle1kRDD  = readDense(circle1k)
   lazy val circle10kRDD = readDense(circle10k)
-
-
 
 }
