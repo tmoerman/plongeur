@@ -85,15 +85,13 @@ class ModelSpec extends FlatSpec with Matchers {
   }
 
   "finding max of Vector" should "work" in {
+    dense(1.0, 2.0, 3.0, 2.0).argmax shouldBe 2
 
-    dense(1., 2., 3., 2.).argmax shouldBe 2
+    dense(1.0, 2.0, 3.0, 2.0).toSparse.argmax shouldBe 2
 
-    dense(1., 2., 3., 2.).toSparse.argmax shouldBe 2
-
-    val v = dense(1., 2., 3., 2.)
+    val v = dense(1.0, 2.0, 3.0, 2.0)
 
     val max = v(v.argmax)
-
   }
 
 }
