@@ -22,6 +22,14 @@ class RDDFunctions[T: ClassTag](val rdd: RDD[T]) extends Serializable {
 
   def drop(n: Int) = rdd.mapPartitionsWithIndex{ (idx, it) => if (idx == 0) it.drop(n) else it }
 
+  def distinctComboSets[O](orderingSelector: T => O)
+                          (implicit ord: Ordering[O]): RDD[Set[T]] =
+    rdd
+      .cartesian(rdd)
+      .flatMap{ case ((e1, e2)) =>
+        if (ord.lt(orderingSelector(e1), orderingSelector(e2))) Seq(Set(e1, e2)) else Nil
+      }
+
 }
 
 class CsvRDDFunctions(val rdd: RDD[Array[String]]) extends Serializable {
@@ -51,9 +59,6 @@ class DataPointRDDFunctions(val rdd: RDD[DataPoint]) extends Serializable {
   /**
     * @return Returns an RDD of all non-equal combination sets of the specified RDD.
     */
-  def distinctComboSets: RDD[Set[DataPoint]] =
-    rdd
-      .cartesian(rdd)
-      .flatMap{ case ((p1, p2)) => if (p1.index < p2.index) List(Set(p1, p2)) else Nil }
+  def distinctComboSets: RDD[Set[DataPoint]] = new RDDFunctions(rdd).distinctComboSets(p => p.index)
 
 }
