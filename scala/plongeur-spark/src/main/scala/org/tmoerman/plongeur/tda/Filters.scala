@@ -3,7 +3,6 @@ package org.tmoerman.plongeur.tda
 import java.lang.Math.min
 
 import breeze.linalg.{Vector => MLVector}
-import org.apache.spark.Logging
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, parseDistance}
@@ -18,7 +17,7 @@ import scala.math.{max, pow}
 /**
   * @author Thomas Moerman
   */
-object Filters extends Serializable with Logging {
+object Filters extends Serializable {
 
   /**
     *
