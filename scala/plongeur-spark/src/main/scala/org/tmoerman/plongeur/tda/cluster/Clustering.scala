@@ -47,12 +47,9 @@ object Clustering extends Serializable {
   /**
     * @param distanceSpec Distance function in the hierarchical clustering effort.
     * @param clusteringMethod Single, Complete, etc...
-    * @param partitionByLevelSetID Activate RangePartitioning by levelSet ID, is probably more efficient than hash
-    *                              partitioning on LevelSetIDs.
     */
-  case class ClusteringParams(distanceSpec: HList  = "euclidean" :: HNil,
-                              clusteringMethod: String = "single",
-                              partitionByLevelSetID: Boolean = true) extends Serializable
+  case class ClusteringParams(distanceSpec: HList = "euclidean" :: HNil,
+                              clusteringMethod: String = "single") extends Serializable
 
   /**
     * Protocol for constructing Clustering instances.

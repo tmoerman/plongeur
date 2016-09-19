@@ -148,7 +148,13 @@ object Model {
 
   }
 
-  case class TDALens(val filters: List[Filter]) extends Serializable
+  /**
+    * @param filters
+    * @param partitionByLevelSetID Activate RangePartitioning by levelSet ID, is probably more efficient than hash
+    *                              partitioning on LevelSetIDs.
+    */
+  case class TDALens(val filters: List[Filter],
+                     val partitionByLevelSetID: Boolean = true) extends Serializable
 
   object TDALens {
 

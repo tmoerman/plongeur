@@ -3,7 +3,7 @@ package org.tmoerman.plongeur.tda
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Colour.Colouring
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ScaleSelection, LocalClustering, ClusteringParams}
-import org.tmoerman.plongeur.tda.cluster.{BroadcastSmileClusteringProvider, SimpleSmileClusteringProvider}
+import org.tmoerman.plongeur.tda.cluster.SimpleSmileClusteringProvider
 import rx.lang.scala.Observable
 import Model._
 import shapeless.{::, HNil, HList}
@@ -40,6 +40,7 @@ object TDAMachine extends TDA {
 
     // combine the deconstructed parameter pieces with the computation
 
+
     val levelSetClustersRDD$ = lensCtx$.combineLatest(clusteringParams$).map(flattenTuple).map(clusterLevelSets_P.tupled)
     val localClustersRDD$    = levelSetClustersRDD$.combineLatest(scaleSelection$).map(applyScale_P.tupled)
     val clustersAndEdges$    = localClustersRDD$.combineLatest(collapseDuplicates$).map(formClusters_P.tupled)
@@ -53,7 +54,9 @@ object TDAMachine extends TDA {
   val clusterLevelSets_P = (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
     logDebug(s">>> clusterLevelSets $lens")
 
-    val rdd: RDD[(LevelSetID, (List[DataPoint], LocalClustering))] = clusterLevelSets(lens, ctx, clusteringParams)
+    val levelSets = createLevelSets(lens, ctx) // TODO factor out this step
+
+    val rdd: RDD[(LevelSetID, (List[DataPoint], LocalClustering))] = clusterLevelSets(levelSets, clusteringParams)
 
     (clusteringParams :: lens :: HNil, rdd, ctx)
   }
@@ -98,7 +101,7 @@ object TDAMachine extends TDA {
           collapseDuplicateClusters = collapseDuplicateClusters,
           colouring = colouring)
 
-      case _ => throw new IllegalStateException("dafuq?")
+      case _ => throw new Exception("dafuq?")
     }
 
     (reconstructedParams, result)

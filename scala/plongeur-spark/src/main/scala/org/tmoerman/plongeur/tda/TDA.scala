@@ -16,10 +16,8 @@ import shapeless.{::, HList, HNil}
   */
 trait TDA extends Logging {
 
-  def clusterLevelSets(lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams): RDD[(LevelSetID, (List[DataPoint], LocalClustering))] = {
+  def createLevelSets(lens: TDALens, ctx: TDAContext): RDD[(LevelSetID, DataPoint)] = {
     import ctx._
-
-    val clusterer = SimpleSmileClusteringProvider
 
     val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, ctx))
 
@@ -27,32 +25,31 @@ trait TDA extends Logging {
 
     val levelSetsInverse = levelSetsInverseFunction(boundaries, lens, filterFunctions)
 
-    val keyedByLevelSetId =
+    val levelSetsRDD =
       dataPoints
         .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
 
-    val maybeCustomPartitioned =
-      if (clusteringParams.partitionByLevelSetID)
-        keyedByLevelSetId.partitionBy(new RangePartitioner(32, keyedByLevelSetId))
+    // TODO where does this belong?
+    val result =
+      if (lens.partitionByLevelSetID)
+        levelSetsRDD.partitionBy(new RangePartitioner(32, levelSetsRDD))
       else
-        keyedByLevelSetId
+        levelSetsRDD
 
-    val rdd =
-      maybeCustomPartitioned
-        .groupByKey
-        .mapValues(levelSetPoints => {
-          val pointsList = levelSetPoints.toList
-          (pointsList, clusterer.apply(pointsList, clusteringParams))
-        })
-        .cache
-
-    rdd
+    result.cache
   }
 
-  def applyScale(levelSetClustersRDD: RDD[(LevelSetID, (List[DataPoint], LocalClustering))], scaleSelection: ScaleSelection) =
-    levelSetClustersRDD
-      .map { case (levelSetID, (clusterPoints, clustering)) => localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
+  def clusterLevelSets(levelSetsRDD: RDD[(LevelSetID, DataPoint)],
+                       clusteringParams: ClusteringParams,
+                       clusterer: LocalClusteringProvider = SimpleSmileClusteringProvider): RDD[(LevelSetID, (List[DataPoint], LocalClustering))] =
+    levelSetsRDD
+      .groupByKey
+      .mapValues(levelSetPoints => {
+        val pointsList = levelSetPoints.toList
+        (pointsList, clusterer.apply(pointsList, clusteringParams))
+      })
       .cache
+
 
   def formClusters(partitionedClustersRDD: RDD[List[Cluster]], collapseDuplicateClusters: Boolean) = {
     lazy val duplicatesAllowed: RDD[Cluster] =
@@ -77,17 +74,13 @@ trait TDA extends Logging {
         .map(_.map(_._1)) // retain only cluster ids
         .cache
 
-//    @deprecated lazy val clusterEdgesRDD =
-//      clustersRDD
-//        .flatMap(cluster => cluster.dataPoints.map(point => (point.index, cluster.id))) // melt all clusters by points
-//        .groupByKey
-//        .values
-//        .flatMap(_.toSet.subsets(2))
-//        .distinct
-//        .cache
-
     (clustersRDD, edgesRDD)
   }
+
+  def applyScale(levelSetClustersRDD: RDD[(LevelSetID, (List[DataPoint], LocalClustering))], scaleSelection: ScaleSelection) =
+    levelSetClustersRDD
+      .map { case (levelSetID, (clusterPoints, clustering)) => localClusters(levelSetID, clusterPoints, clustering.labels(scaleSelection)) }
+      .cache
 
   def applyColouring(clustersRDD: RDD[Cluster], edgesRDD: RDD[ClusterEdge], colouring: Colouring, ctx: TDAContext) = {
     import colouring._
