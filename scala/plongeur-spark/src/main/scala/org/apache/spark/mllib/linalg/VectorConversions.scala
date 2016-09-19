@@ -12,7 +12,7 @@ object VectorConversions extends Serializable {
 
   implicit class MLLibVectorConversion(val vector: MLLibVector) extends AnyVal {
 
-    def toBreeze: BreezeVector[Double] = vector.toBreeze
+    def toBreeze: BreezeVector[Double] = vector.asBreeze
 
   }
 
