@@ -52,8 +52,6 @@ object TDAMachine extends TDA {
   // TODO better naming of following functions
 
   val clusterLevelSets_P = (lens: TDALens, ctx: TDAContext, clusteringParams: ClusteringParams) => {
-    logDebug(s">>> clusterLevelSets $lens")
-
     val levelSets = createLevelSets(lens, ctx) // TODO factor out this step
 
     val rdd: RDD[(LevelSetID, (List[DataPoint], LocalClustering))] = clusterLevelSets(levelSets, clusteringParams)
@@ -62,8 +60,6 @@ object TDAMachine extends TDA {
   }
 
   val applyScale_P = (product: (HList, RDD[(LevelSetID, (List[DataPoint], LocalClustering))], TDAContext), scaleSelection: ScaleSelection) => {
-    logDebug(s">>> applyScale $scaleSelection")
-
     val (hlist, levelSetClustersRDD, ctx) = product
 
     val rdd = applyScale(levelSetClustersRDD, scaleSelection)
@@ -72,8 +68,6 @@ object TDAMachine extends TDA {
   }
 
   val formClusters_P = (product: (HList, RDD[List[Cluster]], TDAContext), collapseDuplicateClusters: Boolean) => {
-    logDebug(s">>> formCluster - collapse duplicate clusters? $collapseDuplicateClusters")
-
     val (hlist, partitionedClustersRDD, ctx) = product
 
     val (clustersRDD, edgesRDD) = formClusters(partitionedClustersRDD, collapseDuplicateClusters)
@@ -82,8 +76,6 @@ object TDAMachine extends TDA {
   }
 
   val applyColouring_P = (product: (HList, (RDD[Cluster], RDD[ClusterEdge]), TDAContext), colouring: Colouring) => {
-    logDebug(s">>> applyColouring $colouring")
-
     val (hlist, (clustersRDD, edgesRDD), ctx) = product
 
     val result = applyColouring(clustersRDD, edgesRDD, colouring, ctx)
@@ -101,7 +93,7 @@ object TDAMachine extends TDA {
           collapseDuplicateClusters = collapseDuplicateClusters,
           colouring = colouring)
 
-      case _ => throw new Exception("dafuq?")
+      case _ => throw new Exception("should be unreachable")
     }
 
     (reconstructedParams, result)
