@@ -87,8 +87,17 @@ object Distance {
     override def apply(a: DataPoint, b: DataPoint) = manhattanDistance(a.features.toBreeze, b.features.toBreeze)
   }
 
+  case class LpNormDistance(exponent: Double) extends NormBasedDistance with DistanceFunction {
+    override protected def normConstant: Double = exponent
+
+    override def apply(a: DataPoint, b: DataPoint) = apply(a.features.toBreeze, b.features.toBreeze)
+
+    override def toString = { val name = getClass.getSimpleName; s"$name($exponent)" }
+  }
+
   case class MinkowskiDistance(exponent: Double) extends DistanceFunction {
     override def apply(a: DataPoint, b: DataPoint) = minkowskiDistance(a.features.toBreeze, b.features.toBreeze, exponent)
+
     override def toString = { val name = getClass.getSimpleName; s"$name($exponent)" }
   }
 
@@ -97,13 +106,14 @@ object Distance {
     * @return Returns a DistanceFunction for specified spec.
     */
   def parseDistance(spec: HList): DistanceFunction = spec match {
-    case "chebyshev" :: HNil             => ChebyshevDistance
-    case "cosine"    :: HNil             => CosineDistance
-    case "euclidean" :: HNil             => EuclideanDistance
-    case "manhattan" :: HNil             => ManhattanDistance
-    case "minkowski" :: (e: Any) :: HNil => MinkowskiDistance(e.asInstanceOf[Double])
+    case "chebyshev" :: HNil                => ChebyshevDistance
+    case "cosine"    :: HNil                => CosineDistance
+    case "euclidean" :: HNil                => EuclideanDistance
+    case "manhattan" :: HNil                => ManhattanDistance
+    case "L_p norm"  :: (e: Double) :: HNil => LpNormDistance(e)
+    case "minkowski" :: (e: Any)    :: HNil => MinkowskiDistance(e.asInstanceOf[Double])
 
-    case _                               => EuclideanDistance
+    case _                                  => EuclideanDistance
   }
 
 }
