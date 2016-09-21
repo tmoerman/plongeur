@@ -1,6 +1,6 @@
 package org.tmoerman.plongeur.tda
 
-import java.lang.Math.min
+import java.lang.Math.{exp, sqrt, PI, min}
 
 import breeze.linalg.{Vector => MLVector}
 import org.apache.spark.Logging
@@ -79,6 +79,8 @@ object Filters extends Serializable with Logging {
     case _                           => None
   }
 
+  val EMPTY = Map[Index, Double]()
+
   /**
     * @param n The exponent
     * @param ctx
@@ -93,8 +95,6 @@ object Filters extends Serializable with Logging {
     */
   def eccentricityMap(n: Any, ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
     import ctx._
-
-    val EMPTY = Map[Index, Double]()
 
     n match {
       case "infinity" =>
@@ -127,11 +127,21 @@ object Filters extends Serializable with Logging {
       case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$n'")
     }}
 
-  // TODO density filter
-  def densityMap(ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
+  // TODO use sparse Vectors instead of maps!
+
+  def densityMap(sigma: Double, ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
     import ctx._
 
-    ???
+    val denom = -2 * sigma * sigma
+
+    dataPoints
+      .distinctComboPairs
+      .aggregate(EMPTY)(
+        { case (acc, (a, b)) => val d = distance(a, b)
+                                val v = exp( d*d / denom )
+                                Map(a.index -> v, b.index -> v).merge(_ + _)(acc) },
+        { case (acc1, acc2) => acc1.merge(_ + _)(acc2) })
+      .map{ case (i, sum) => (i, sum / N * pow(sqrt(2 * PI * sigma), dim))}
   }
 
 }
