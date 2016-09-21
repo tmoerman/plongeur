@@ -7,7 +7,7 @@ import breeze.linalg.{SparseVector, max => elmax}
 import org.apache.spark.Logging
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
-import org.apache.spark.mllib.linalg.{Vector => MLLibVector, VectorConversions}
+import org.apache.spark.mllib.linalg.{Vector => MLLibVector}
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, parseDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
@@ -93,7 +93,7 @@ object Filters extends Serializable with Logging {
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  @Deprecated("use eccentricityVec instead")
+  @deprecated("use eccentricityVec instead")
   def eccentricityMap(n: Any, ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
     import ctx._
 
