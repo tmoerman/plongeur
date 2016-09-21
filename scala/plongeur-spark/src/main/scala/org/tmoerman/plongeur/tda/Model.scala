@@ -85,7 +85,7 @@ object Model {
 
     val self = this
 
-    lazy val N = dataPoints.count
+    lazy val N = dataPoints.count.toInt
 
     lazy val dim = dataPoints.first.features.size
 

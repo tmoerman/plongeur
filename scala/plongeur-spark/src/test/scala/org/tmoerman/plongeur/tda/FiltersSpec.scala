@@ -4,6 +4,7 @@ import java.lang.Math.sqrt
 
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
+import org.tmoerman.plongeur.tda.Distance.EuclideanDistance
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.test.SparkContextSpec
@@ -36,7 +37,6 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   val rdd = sc.parallelize(dataPoints)
 
   it should "reify L_1 eccentricity" in {
-
     val ctx = TDAContext(sc, rdd)
 
     val spec: HList = "eccentricity" :: 1 :: HNil
@@ -49,7 +49,6 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   }
 
   it should "reify L_inf eccentricity in function of default distance" in {
-
     val ctx = TDAContext(sc, rdd)
 
     val spec: HList = "eccentricity" :: "infinity" :: HNil
@@ -62,7 +61,6 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   }
 
   it should "reify L_inf eccentricity in function of specified no-args distance" in {
-
     val ctx = TDAContext(sc, rdd)
 
     val spec: HList = "eccentricity" :: "infinity" :: "euclidean" :: HNil
@@ -72,6 +70,24 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
     val ff = toFilterFunction(spec, amended)
 
     dataPoints.map(ff).toSet shouldBe Set(sqrt(8))
+  }
+
+  behavior of "Maps vs. SparseVectors"
+
+  it should "yield equal results" in {
+    val ctx = TDAContext(sc, rdd)
+
+    val ns = "infinity" :: 1 :: 2 :: 3 :: HNil
+
+    ns
+      .toList
+      .foreach(n => {
+        val map = Filters.eccentricityMap(n, ctx, EuclideanDistance)
+        val vec = Filters.eccentricityVector(n, ctx, EuclideanDistance)
+
+        map.foreach{ case (i, v) => vec.apply(i) shouldBe v }
+      })
+
   }
 
 }

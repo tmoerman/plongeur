@@ -1,17 +1,18 @@
 package org.tmoerman.plongeur.tda
 
-import java.lang.Math.{exp, sqrt, PI, min}
+import java.lang.Math.{PI, exp, min, sqrt}
 
-import breeze.linalg.{Vector => MLVector}
+import breeze.linalg.{SparseVector, max => elmax}
 import org.apache.spark.Logging
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
+import org.apache.spark.mllib.linalg.{Vector => MLLibVector, VectorConversions}
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, parseDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
+import org.tmoerman.plongeur.util.RDDFunctions._
 import shapeless.HList.ListCompat._
 import shapeless._
-import org.tmoerman.plongeur.util.RDDFunctions._
 
 import scala.math.{max, pow}
 
@@ -21,8 +22,6 @@ import scala.math.{max, pow}
 object Filters extends Serializable with Logging {
 
   /**
-    *
-    *
     * @param spec
     * @param ctx
     * @return Returns a FilterFunction for the specified filter specification.
@@ -96,6 +95,8 @@ object Filters extends Serializable with Logging {
   def eccentricityMap(n: Any, ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
     import ctx._
 
+    val card = N
+
     n match {
       case "infinity" =>
         dataPoints
@@ -125,6 +126,58 @@ object Filters extends Serializable with Logging {
           .map{ case (i, sum) => (i, pow(sum, 1d / n) / N) }
 
       case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$n'")
+    }}
+
+  import VectorConversions._
+
+  def eccentricityVector(n: Any, ctx: TDAContext, distance: DistanceFunction): MLLibVector = {
+    import ctx._
+
+    val card = N
+
+    val ZEROS: SparseVector[Double] = SparseVector.zeros(N)
+
+    n match {
+      case "infinity" =>
+        val result: SparseVector[Double] =
+          dataPoints
+            .distinctComboPairs
+            .aggregate(ZEROS)(
+              { case (acc, (a, b)) => val d = distance(a, b)
+                                      elmax(acc, SparseVector(card)(a.index -> d, b.index -> d)) },
+              { case (acc1, acc2) => elmax(acc1, acc2) })
+
+        result.toDenseVector.toMLLib
+
+      case 1 =>
+        val sums: SparseVector[Double] =
+          dataPoints
+            .distinctComboPairs
+            .aggregate(ZEROS)(
+              { case (acc, (a, b)) => val d = distance(a, b)
+                                      acc += SparseVector(card)(a.index -> d, b.index -> d) },
+              { case (acc1, acc2) => acc1 += acc2 })
+
+        val result: SparseVector[Double] = sums /= card.toDouble
+
+        result.toDenseVector.toMLLib
+
+      case n: Int =>
+        val sums: SparseVector[Double] =
+          dataPoints
+            .distinctComboPairs
+            .aggregate(ZEROS)(
+              { case (acc, (a, b)) => val d = distance(a, b)
+                                      val v = pow(d, n)
+                                      acc += SparseVector(card)(a.index -> v, b.index -> v) },
+              { case (acc1, acc2) => acc1 += acc2 })
+
+        val result = (sums :^= (1d / n)) /= card.toDouble
+
+        result.toDenseVector.toMLLib
+
+      case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$n'")
+
     }}
 
   // TODO use sparse Vectors instead of maps!
