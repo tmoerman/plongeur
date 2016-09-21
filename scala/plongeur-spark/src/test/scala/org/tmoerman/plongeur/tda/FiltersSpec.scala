@@ -83,7 +83,7 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
       .toList
       .foreach(n => {
         val map = Filters.eccentricityMap(n, ctx, EuclideanDistance)
-        val vec = Filters.eccentricityVector(n, ctx, EuclideanDistance)
+        val vec = Filters.eccentricityVec(n, ctx, EuclideanDistance)
 
         map.foreach{ case (i, v) => vec.apply(i) shouldBe v }
       })

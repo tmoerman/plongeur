@@ -87,7 +87,7 @@ object Model {
 
     lazy val N = dataPoints.count.toInt
 
-    lazy val dim = dataPoints.first.features.size
+    lazy val D = dataPoints.first.features.size
 
     // TODO move to TDA package
     def addBroadcast(key: String, producer: () => Broadcast[Any]) =

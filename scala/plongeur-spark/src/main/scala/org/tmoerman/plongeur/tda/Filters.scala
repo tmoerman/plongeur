@@ -2,6 +2,7 @@ package org.tmoerman.plongeur.tda
 
 import java.lang.Math.{PI, exp, min, sqrt}
 
+import org.apache.spark.mllib.linalg.VectorConversions._
 import breeze.linalg.{SparseVector, max => elmax}
 import org.apache.spark.Logging
 import org.apache.spark.broadcast.Broadcast
@@ -58,15 +59,15 @@ object Filters extends Serializable with Logging {
 
   def toBroadcastValue(spec: HList, ctx: TDAContext): Any = spec match {
     case "PCA" #: (_: Int) #: HNil => {
-      val pcaModel = new PCA(min(MAX_PCs, ctx.dim)).fit(ctx.dataPoints.map(_.features))
+      val pcaModel = new PCA(min(MAX_PCs, ctx.D)).fit(ctx.dataPoints.map(_.features))
 
       pcaModel
     }
 
     case "eccentricity" #: n #: distanceSpec => {
-      val map = eccentricityMap(n, ctx, parseDistance(distanceSpec))
+      val vec = eccentricityVec(n, ctx, parseDistance(distanceSpec))
 
-      (d: DataPoint) => map.apply(d.index)
+      (d: DataPoint) => vec(d.index)
     }
 
     case _ => throw new IllegalArgumentException(s"No broadcast value for $spec")
@@ -92,6 +93,7 @@ object Filters extends Serializable with Logging {
     *
     *         See: http://danifold.net/mapper/filters.html
     */
+  @Deprecated("use eccentricityVec instead")
   def eccentricityMap(n: Any, ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
     import ctx._
 
@@ -128,51 +130,62 @@ object Filters extends Serializable with Logging {
       case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$n'")
     }}
 
-  import VectorConversions._
-
-  def eccentricityVector(n: Any, ctx: TDAContext, distance: DistanceFunction): MLLibVector = {
-    import ctx._
-
-    val card = N
+  /**
+    *
+    * @param n
+    * @param ctx
+    * @param distance
+    * @return Returns a MLLibVector with L_n eccentricity values of that point.
+    *
+    *         See: Extracting insights from the shape of complex data using topology
+    *              -- P. Y. Lum, G. Singh, [...], and G. Carlsson
+    *
+    *         See: http://danifold.net/mapper/filters.html
+    */
+  def eccentricityVec(n: Any, ctx: TDAContext, distance: DistanceFunction): MLLibVector = {
+    val N = ctx.N
 
     val ZEROS: SparseVector[Double] = SparseVector.zeros(N)
 
     n match {
       case "infinity" =>
         val result: SparseVector[Double] =
-          dataPoints
+          ctx
+            .dataPoints
             .distinctComboPairs
             .aggregate(ZEROS)(
               { case (acc, (a, b)) => val d = distance(a, b)
-                                      elmax(acc, SparseVector(card)(a.index -> d, b.index -> d)) },
+                                      elmax(acc, SparseVector(N)(a.index -> d, b.index -> d)) },
               { case (acc1, acc2) => elmax(acc1, acc2) })
 
         result.toDenseVector.toMLLib
 
       case 1 =>
         val sums: SparseVector[Double] =
-          dataPoints
+          ctx
+            .dataPoints
             .distinctComboPairs
             .aggregate(ZEROS)(
               { case (acc, (a, b)) => val d = distance(a, b)
-                                      acc += SparseVector(card)(a.index -> d, b.index -> d) },
+                                      acc += SparseVector(N)(a.index -> d, b.index -> d) },
               { case (acc1, acc2) => acc1 += acc2 })
 
-        val result: SparseVector[Double] = sums /= card.toDouble
+        val result: SparseVector[Double] = sums /= N.toDouble
 
         result.toDenseVector.toMLLib
 
       case n: Int =>
         val sums: SparseVector[Double] =
-          dataPoints
+          ctx
+            .dataPoints
             .distinctComboPairs
             .aggregate(ZEROS)(
               { case (acc, (a, b)) => val d = distance(a, b)
                                       val v = pow(d, n)
-                                      acc += SparseVector(card)(a.index -> v, b.index -> v) },
+                                      acc += SparseVector(N)(a.index -> v, b.index -> v) },
               { case (acc1, acc2) => acc1 += acc2 })
 
-        val result = (sums :^= (1d / n)) /= card.toDouble
+        val result = (sums :^= (1d / n)) /= N.toDouble
 
         result.toDenseVector.toMLLib
 
@@ -180,21 +193,35 @@ object Filters extends Serializable with Logging {
 
     }}
 
-  // TODO use sparse Vectors instead of maps!
+  /**
+    * @param sigma
+    * @param ctx
+    * @param distance
+    * @return TODO docs
+    *
+    *         See: http://danifold.net/mapper/filters.html
+    */
+  def densityVec(sigma: Double, ctx: TDAContext, distance: DistanceFunction): MLLibVector = {
+    val N = ctx.N
+    val D = ctx.D
 
-  def densityMap(sigma: Double, ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
-    import ctx._
+    val ZEROS: SparseVector[Double] = SparseVector.zeros(N)
 
     val denom = -2 * sigma * sigma
 
-    dataPoints
-      .distinctComboPairs
-      .aggregate(EMPTY)(
-        { case (acc, (a, b)) => val d = distance(a, b)
-                                val v = exp( d*d / denom )
-                                Map(a.index -> v, b.index -> v).merge(_ + _)(acc) },
-        { case (acc1, acc2) => acc1.merge(_ + _)(acc2) })
-      .map{ case (i, sum) => (i, sum / N * pow(sqrt(2 * PI * sigma), dim))}
+    val sums =
+      ctx
+        .dataPoints
+        .distinctComboPairs
+        .aggregate(ZEROS)(
+          { case (acc, (a, b)) => val d = distance(a, b)
+                                  val v = exp( pow(d, 2) / denom )
+                                  acc += SparseVector(N)(a.index -> v, b.index -> v) },
+          { case (acc1, acc2) => acc1 += acc2 })
+
+    val result = sums /= (N * pow(sqrt(2 * PI * sigma), D))
+
+    result.toDenseVector.toMLLib
   }
 
 }
