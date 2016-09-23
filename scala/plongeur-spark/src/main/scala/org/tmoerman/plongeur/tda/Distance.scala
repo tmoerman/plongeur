@@ -87,12 +87,12 @@ object Distance {
     override def apply(a: DataPoint, b: DataPoint) = manhattanDistance(a.features.toBreeze, b.features.toBreeze)
   }
 
-  case class LpNormDistance(exponent: Double) extends NormBasedDistance with DistanceFunction {
-    override protected def normConstant: Double = exponent
+  case class LpNormDistance(p: Double) extends NormBasedDistance with DistanceFunction {
+    override protected def normConstant: Double = p
 
     override def apply(a: DataPoint, b: DataPoint) = apply(a.features.toBreeze, b.features.toBreeze)
 
-    override def toString = { val name = getClass.getSimpleName; s"$name($exponent)" }
+    override def toString = { val name = getClass.getSimpleName; s"$name($p)" }
   }
 
   case class MinkowskiDistance(exponent: Double) extends DistanceFunction {
