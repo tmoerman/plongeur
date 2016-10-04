@@ -15,6 +15,8 @@ import shapeless._
   */
 class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
+  implicit def toFilter(spec: HList) = Filter(spec)
+
   behavior of "reifying filter specs"
 
   it should "reify a feature by index" in {

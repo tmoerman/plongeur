@@ -19,7 +19,7 @@ trait TDA extends Logging {
   def createLevelSets(lens: TDALens, ctx: TDAContext): RDD[(LevelSetID, DataPoint)] = {
     import ctx._
 
-    val filterFunctions = lens.filters.map(f => toFilterFunction(f.spec, ctx))
+    val filterFunctions = lens.filters.map(filter => toFilterFunction(filter, ctx))
 
     val boundaries = calculateBoundaries(filterFunctions, dataPoints)
 

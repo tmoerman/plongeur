@@ -1,6 +1,7 @@
 package org.tmoerman.plongeur.tda
 
 import org.scalatest.{Matchers, FlatSpec}
+import org.tmoerman.plongeur.tda.Filters.toFilterFunction
 import org.tmoerman.plongeur.test.TestResources
 
 import Covering._
@@ -25,7 +26,7 @@ class Test2DSpec extends FlatSpec with TestResources with Matchers {
 
     val boundaries = Array((0.0, size), (0.0, size))
 
-    val filterFunctions = lens.filters.map(f => Filters.toFilterFunction(f.spec, TDAContext(sc, test2DLabeledPointsRDD)))
+    val filterFunctions = lens.filters.map(filter => toFilterFunction(filter, TDAContext(sc, test2DLabeledPointsRDD)))
 
     val covering = levelSetsInverseFunction(boundaries, lens, filterFunctions)
 

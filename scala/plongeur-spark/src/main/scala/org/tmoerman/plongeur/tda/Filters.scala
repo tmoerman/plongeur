@@ -23,60 +23,72 @@ import scala.math.{max, pow}
 object Filters extends Serializable with Logging {
 
   /**
-    * @param spec
+    * @param filter
     * @param ctx
     * @return Returns a FilterFunction for the specified filter specification.
     *         Closes over TDAContext for references to SparkContext and DataPoints.
     */
-  def toFilterFunction(spec: HList, ctx: TDAContext): FilterFunction = spec match {
+  def toFilterFunction(filter: Filter, ctx: TDAContext): FilterFunction = {
+    import filter._
+
+    spec match {
       case "feature" #: (n: Int) #: HNil => (d: DataPoint) => d.features(n)
 
       case "PCA" #: (n: Int) #: HNil =>
-        toBroadcastKey(spec)
-            .flatMap(key => ctx.broadcasts.get(key))
-            .map(bc => {
-              val pcaModel = bc.value.asInstanceOf[PCAModel]
-              (d: DataPoint) => pcaModel.transform(d.features)(n)
-            })
-            .get
+        toBroadcastKey(filter)
+          .flatMap(key => ctx.broadcasts.get(key))
+          .map(bc => {
+            val pcaModel = bc.value.asInstanceOf[PCAModel]
+            (d: DataPoint) => pcaModel.transform(d.features)(n)
+          })
+          .get
 
       case _ => // broadcast value is a FilterFunction
-        toBroadcastKey(spec)
+        toBroadcastKey(filter)
           .flatMap(key => ctx.broadcasts.get(key))
           .map(bc => bc.value.asInstanceOf[FilterFunction]) // TODO incorrect ->
           .getOrElse(throw new IllegalArgumentException(
-            s"no filter function for $spec, current broadcasts: " + ctx.broadcasts.keys.mkString(", ")))
+          s"no filter function for $spec, current broadcasts: " + ctx.broadcasts.keys.mkString(", ")))
     }
+  }
 
   val MAX_PCs: Int = 10
 
-  def toBroadcastAmendment(spec: HList, ctx: TDAContext): Option[(String, () => Broadcast[Any])] =
-    toBroadcastKey(spec).map(key => (key, () => {
-      val v: Any = toBroadcastValue(spec, ctx)
+  def toBroadcastAmendment(filter: Filter, ctx: TDAContext): Option[(String, () => Broadcast[Any])] =
+    toBroadcastKey(filter).map(key => (key, () => {
+      val v: Any = toBroadcastValue(filter, ctx)
 
       ctx.sc.broadcast(v)
     }))
 
-  def toBroadcastValue(spec: HList, ctx: TDAContext): Any = spec match {
-    case "PCA" #: (_: Int) #: HNil => {
-      val pcaModel = new PCA(min(MAX_PCs, ctx.D)).fit(ctx.dataPoints.map(_.features))
+  def toBroadcastValue(filter: Filter, ctx: TDAContext): Any = {
+    import filter._
 
-      pcaModel
+    spec match {
+      case "PCA" #: (_: Int) #: HNil => {
+        val pcaModel = new PCA(min(MAX_PCs, ctx.D)).fit(ctx.dataPoints.map(_.features))
+
+        pcaModel
+      }
+
+      case "eccentricity" #: n #: distanceSpec => {
+        val vec = eccentricityVec(n, ctx, parseDistance(distanceSpec))
+
+        (d: DataPoint) => vec(d.index)
+      }
+
+      case _ => throw new IllegalArgumentException(s"No broadcast value for $spec")
     }
-
-    case "eccentricity" #: n #: distanceSpec => {
-      val vec = eccentricityVec(n, ctx, parseDistance(distanceSpec))
-
-      (d: DataPoint) => vec(d.index)
-    }
-
-    case _ => throw new IllegalArgumentException(s"No broadcast value for $spec")
   }
 
-  def toBroadcastKey(spec: HList): Option[String] = spec match {
-    case "PCA"          #: _ #: HNil => Some("PCA")
-    case "eccentricity" #: n #: _    => Some(s"ECC[$n]")
-    case _                           => None
+  def toBroadcastKey(filter: Filter): Option[String] = {
+    import filter._
+
+    (spec match {
+      case "PCA"          #: _ #: HNil => Some(s"PCA")
+      case "eccentricity" #: n #: _    => Some(s"ECC[$n]")
+      case _                           => None
+    }).map(a => sketchParams.map(p => s"$a, $p").getOrElse(a))
   }
 
   val EMPTY = Map[Index, Double]()
@@ -131,8 +143,7 @@ object Filters extends Serializable with Logging {
     }}
 
   /**
-    *
-    * @param n
+    * @param p cfr. $L_p$
     * @param ctx
     * @param distance
     * @return Returns a MLLibVector with L_n eccentricity values of that point.
@@ -142,12 +153,12 @@ object Filters extends Serializable with Logging {
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  def eccentricityVec(n: Any, ctx: TDAContext, distance: DistanceFunction): MLLibVector = {
+  def eccentricityVec(p: Any, ctx: TDAContext, distance: DistanceFunction): MLLibVector = {
     val N = ctx.N
 
     val ZEROS: SparseVector[Double] = SparseVector.zeros(N)
 
-    n match {
+    p match {
       case "infinity" =>
         val result: SparseVector[Double] =
           ctx
@@ -189,7 +200,7 @@ object Filters extends Serializable with Logging {
 
         result.toDenseVector.toMLLib
 
-      case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$n'")
+      case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$p'")
 
     }}
 

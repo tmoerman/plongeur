@@ -10,6 +10,7 @@ import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Colour.{Colouring, Constantly, Binner}
 import org.tmoerman.plongeur.tda.Filters.toBroadcastAmendment
+import org.tmoerman.plongeur.tda.Sketch.SketchParams
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import shapeless.HList
@@ -107,9 +108,9 @@ object Model {
     def amend(ctx: TDAContext): TDAContext =
       lens
         .filters
-        .map(f => toBroadcastAmendment(f.spec, ctx))
+        .map(filter => toBroadcastAmendment(filter, ctx))
         .flatten
-        .foldLeft(ctx){ case (c, (key, fn)) => c.addBroadcast(key, fn) }
+        .foldLeft(ctx){ case (acc, (key, fn)) => acc.addBroadcast(key, fn) }
 
   }
 
@@ -163,12 +164,17 @@ object Model {
   }
 
   case class Filter(val spec: HList,
-                    val nrBins: Int,
-                    val overlap: Percentage,
+                    val nrBins: Int = 20,
+                    val overlap: Percentage = 0.25,
+                    val sketchParams: Option[SketchParams] = None,
                     val balanced: Boolean = false) extends Serializable {
 
     require(nrBins > 0, "nrBins must be greater than 0")
     require(overlap >= 0, "overlap cannot be negative")
+  }
+
+  trait SimpleName {
+    override def toString = getClass.getSimpleName
   }
 
 }
