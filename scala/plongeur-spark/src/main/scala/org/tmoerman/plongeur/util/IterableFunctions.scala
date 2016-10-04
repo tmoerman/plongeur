@@ -9,7 +9,6 @@ object IterableFunctions {
     * @param ordering Implicit Ordering on type T.
     * @tparam T The generic type with an implicit Ordering.
     * @tparam IterableLike Generic type for collections that inherit from Iterable.
-    *
     * @return Returns an Ordering defined on IterableLike collections of a generic type T with implicit Ordering.
     */
   implicit def pimpIterableOrdering[T, IterableLike[T] <: Iterable[T]](implicit ordering: Ordering[T]): Ordering[IterableLike[T]] =
@@ -47,8 +46,14 @@ class IterableFunctions[V](it: Iterable[V]) extends Serializable {
     it.sliding(2).map(t => (t.head, t.tail.head)).toIterable
 
   /**
+    * @return
+    */
+  def cartesian: Iterable[(V, V)]  = for (
+    a <- it;
+    b <- it; if a != b) yield (a, b)
+
+  /**
     * @param selector Selector function, defaults to the identity function.
-    *
     * @return List of Lists of V instances,
     *         grouping repeats of the result of the selector function applied to the V instances.
     */

@@ -1,18 +1,22 @@
 package org.tmoerman.plongeur.tda
 
 import java.io.Serializable
-import java.util.Random
+import java.lang.Math.{min, pow, sqrt}
 
 import breeze.linalg.DenseVector.fill
-import com.github.karlhigley.spark.neighbors.lsh.{ScalarRandomProjectionFunction, SignRandomProjectionFunction}
+import com.github.karlhigley.spark.neighbors.lsh.{LSHFunction, ScalarRandomProjectionFunction, SignRandomProjectionFunction, Signature}
 import org.apache.spark.mllib.linalg.VectorConversions._
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distance._
-import org.tmoerman.plongeur.tda.Model.{SimpleName, DataPoint, Index, TDAContext}
-import org.tmoerman.plongeur.tda.Sketch.{SketchParams, Prototype}
+import org.tmoerman.plongeur.tda.Model.{DataPoint, Index, SimpleName, TDAContext}
+import org.tmoerman.plongeur.tda.Sketch.SketchParams
 
+import scala.annotation.tailrec
+import scala.util.Random
 import scala.util.hashing.MurmurHash3
+
+import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
   * @author Thomas Moerman
@@ -96,11 +100,40 @@ object Sketch extends Serializable {
 
   }
 
-  case class ApproximateMedian(random: Random = new Random()) extends PrototypeStrategy {
+  /**
+    * See: "AN EFFICIENT APPROXIMATE ALGORITHM FOR THE 1-MEDIAN PROBLEM IN METRIC SPACES"
+    *   -- D. CANTONE†, G. CINCOTTI†, A. FERRO†, AND A. PULVIRENTI†
+    *
+    * @param t The size of groups on which exactWinner is applied.
+    * @param distance The distance function to determine the exact winner.
+    * @param random A random generator.
+    */
+  case class ApproximateMedian(t: Int, distance: DistanceFunction, random: Random = new Random()) extends PrototypeStrategy {
 
-    def winner(set: Set[DataPoint]): DataPoint = ???
+    def exactWinner(S: Iterable[DataPoint]): DataPoint =
+      S
+        .cartesian
+        .map{ case (a, b) => (distance(a, b), a) }
+        .minBy(_._1)
+        ._2
 
-    def approximateMedian(set: Set[DataPoint]): DataPoint = ???
+    def approximateMedian(S: List[DataPoint]): DataPoint = {
+      val threshold = min(pow(t, 2), sqrt(S.size)).toInt
+
+      @tailrec def recur(currS: List[DataPoint]): DataPoint =
+        if (currS.size < threshold)
+          exactWinner(currS)
+        else {
+          val subs = random.shuffle(currS).grouped(t).toList.reverse match {
+            case list @ (x :: y :: rest) => if (x.size < t) (x ++ y) :: rest else list
+            case list => list
+          }
+
+          recur(subs.map(exactWinner))
+        }
+
+      recur(S)
+    }
 
     override def apply(pointsByHashKey: RDD[(Any, DataPoint)]) =
       pointsByHashKey
@@ -108,7 +141,7 @@ object Sketch extends Serializable {
         .map{ case (key, candidatePoints) =>
           val indices = candidatePoints.map(_.index).toList
 
-          val prototype = approximateMedian(candidatePoints.toSet)
+          val prototype = approximateMedian(candidatePoints.toList)
 
           (indices, prototype)
         }
@@ -159,17 +192,19 @@ object Sketch extends Serializable {
 
     val prototypesByOrigin = prototypes.flatMap{ case (ids, dp) => ids.map(id => (id, dp)) }.cache
 
-    Sketch(params, N, prototypesByOrigin)
+    Sketch(params, hashFunction, N, prototypesByOrigin)
   }
 
 }
 
 /**
   * @param params The SketchParams that were used to create this Sketch.
+  * @param hashFunction The randomly selected LSH hash function.
   * @param N The number of prototypes. Note: this is not equal to the size of the RDD.
   * @param prototypesByOrigin An RDD keyed by the indices of the original DataPoint instances to (non-unique)
   *                           collapsed prototypes.
   */
 case class Sketch(params: SketchParams,
+                  hashFunction: LSHFunction[Signature[Any]],
                   N: Int,
                   prototypesByOrigin: RDD[(Index, DataPoint)])
