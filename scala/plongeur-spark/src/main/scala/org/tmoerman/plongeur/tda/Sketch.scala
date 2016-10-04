@@ -117,6 +117,11 @@ object Sketch extends Serializable {
         .minBy(_._1)
         ._2
 
+    def mergeTail(l: List[List[DataPoint]]) = l.reverse match {
+      case list @ (x :: y :: rest) => if (x.size < t) (x ++ y) :: rest else list
+      case list => list
+    }
+
     def approximateMedian(S: List[DataPoint]): DataPoint = {
       val threshold = min(pow(t, 2), sqrt(S.size)).toInt
 
@@ -124,12 +129,9 @@ object Sketch extends Serializable {
         if (currS.size < threshold)
           exactWinner(currS)
         else {
-          val subs = random.shuffle(currS).grouped(t).toList.reverse match {
-            case list @ (x :: y :: rest) => if (x.size < t) (x ++ y) :: rest else list
-            case list => list
-          }
+          val grouped = random.shuffle(currS).grouped(t).toList
 
-          recur(subs.map(exactWinner))
+          recur(mergeTail(grouped).map(exactWinner))
         }
 
       recur(S)
