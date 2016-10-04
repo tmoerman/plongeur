@@ -21,11 +21,6 @@ object TDA_LSH extends TDA with Logging {
     val amendedCtx = params.amend(ctx)
 
     val levelSetsRDD = createLevelSets(lens, amendedCtx)
-
-    levelSetsRDD.glom()
-
-
-
   }
 
   case class LSHLinkParams(phase: Int,
@@ -33,7 +28,7 @@ object TDA_LSH extends TDA with Logging {
                            k: Int,
                            r: Double,
                            A: Double = 1.4,
-                           distanceSpec: HList = "euclidean" :: HNil) extends Serializable {
+                           distanceSpec: HList = "manhattan" :: HNil) extends Serializable {
     // TODO verify only euclidean or manhattan distances.
   }
 
@@ -52,6 +47,10 @@ object TDA_LSH extends TDA with Logging {
     val n = levelSetPoints.size
     val L = 50
     val k = 100
+
+    val map = levelSetPoints.map(p => (p.index, p)).toMap
+
+
 
     def recur(phasePoints: Iterable[(DataPoint, Option[Cluster])],
               phaseParams: LSHLinkParams) = {

@@ -37,6 +37,9 @@ object SmileClustering extends Serializable {
 
           Try(attempt).getOrElse(backup)
       }
+
+    override def debug = hierarchicalClustering.getTree.map(_.mkString(", ")).mkString("\n")
+
   }
 
   private def createLinkage(method: String, distanceMatrix: Array[Array[Double]]) =
