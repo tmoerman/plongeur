@@ -63,9 +63,7 @@ object Distance {
     case _                        => None
   }
 
-  trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with Serializable {
-    override def toString = getClass.getSimpleName
-  }
+  trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with SimpleName with Serializable
 
   // TODO Pearson correlation, closing over ~~TDAContext~~ / over broadcast variable
 
@@ -106,12 +104,13 @@ object Distance {
     * @return Returns a DistanceFunction for specified spec.
     */
   def parseDistance(spec: HList): DistanceFunction = spec match {
-    case "chebyshev" :: HNil                => ChebyshevDistance
-    case "cosine"    :: HNil                => CosineDistance
-    case "euclidean" :: HNil                => EuclideanDistance
-    case "manhattan" :: HNil                => ManhattanDistance
-    case "L_p norm"  :: (e: Double) :: HNil => LpNormDistance(e)
-    case "minkowski" :: (e: Any)    :: HNil => MinkowskiDistance(e.asInstanceOf[Double])
+    case "chebyshev"  :: HNil                => ChebyshevDistance
+    case "cosine"     :: HNil                => CosineDistance
+    case "euclidean"  :: HNil                => EuclideanDistance
+    case "manhattan"  :: HNil                => ManhattanDistance
+    case "fractional" :: HNil                => LpNormDistance(0.5)
+    case "L_p norm"   :: (e: Double) :: HNil => LpNormDistance(e)
+    case "minkowski"  :: (e: Any)    :: HNil => MinkowskiDistance(e.asInstanceOf[Double])
 
     case _                                  => EuclideanDistance
   }
