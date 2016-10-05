@@ -63,7 +63,7 @@ object Distance {
     case _                        => None
   }
 
-  val DEFAULT: DistanceFunction = EuclideanDistance
+  val DEFAULT: DistanceFunction = ManhattanDistance
 
   trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with SimpleName with Serializable
 

@@ -2,6 +2,7 @@ package org.tmoerman.plongeur.tda
 
 import java.io.Serializable
 import java.lang.Math.{min, pow, sqrt}
+import java.util
 import java.util.{Random => JavaRandom}
 
 import breeze.linalg.DenseVector.fill
@@ -14,6 +15,7 @@ import org.tmoerman.plongeur.tda.Model.{DataPoint, Index, SimpleName, TDAContext
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
 
 import scala.annotation.tailrec
+import scala.collection.BitSet
 import scala.util.Random._
 import scala.util.hashing.MurmurHash3
 
@@ -22,6 +24,11 @@ import scala.util.hashing.MurmurHash3
   */
 object Sketch extends Serializable {
 
+  type SignatureLength = Int
+  type Radius = Double
+  type HashKey = Serializable
+  type Count = Int
+
   /**
     * @param k The signature length.
     * @param r The radius.
@@ -29,30 +36,51 @@ object Sketch extends Serializable {
     * @param prototypeStrategy The strategy for collapsing colliding points into a prototype point.
     * @param random A JVM random.
     */
-  case class SketchParams(k: Int,
-                          r: Double,
-                          distance: DistanceFunction = Distance.DEFAULT,
+  case class SketchParams(k: SignatureLength,
+                          r: Radius,
                           prototypeStrategy: PrototypeStrategy,
+                          distance: DistanceFunction = Distance.DEFAULT,
                           random: JavaRandom = new JavaRandom) {
 
-    override def toString = s"Sketch(dist=$distance, "
+    override def toString = s"Sketch(k=$k, r=$r, proto=$prototypeStrategy)"
 
   }
 
-  def estimateSketchParams(ctx: TDAContext): SketchParams = {
+  def estimateRadius(ctx: TDAContext): Radius = {
     ???
   }
 
   case class Prototype(val features: MLVector,
-                       final val index: Int = -1,
-                       final val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable
+                       val index: Index = -1,
+                       val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable
 
-  type HashKey = Serializable
+//  TODO evolve to this implementation instead of tuples
+//  case class Prototype(val features: MLVector,
+//                       val indices: List[Index] = Nil,
+//                       val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable {
+//
+//    def index: Index = throw new UnsupportedOperationException("index has no meaning for a Prototype")
+//
+//  }
 
-  trait PrototypeStrategy extends (RDD[(HashKey, DataPoint)] => RDD[(List[Index], DataPoint)]) with SimpleName with Serializable
+  /**
+    * Abstract type describing the strategy to choose a representant (a.k.a. Prototype) of a collection of DataPoints
+    * that collide in the same hash bucket.
+    */
+  trait PrototypeStrategy extends SimpleName with Serializable {
+
+    /**
+      * @param rdd
+      * @param distance
+      * @return Returns an RDD of DataPoints and
+      */
+    def apply(rdd: RDD[(HashKey, DataPoint)], distance: DistanceFunction): RDD[(List[Index], DataPoint)]
+
+  }
 
   /**
     * PrototypeStrategy that reduces to a random data point per key.
+    *
     * @param random
     */
   case class RandomCandidate(random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
@@ -69,7 +97,8 @@ object Sketch extends Serializable {
       case ((indices1, proto1), (indices2, proto2)) => (indices1 ::: indices2, if (random.nextBoolean) proto1 else proto2)
     }
 
-    override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)]) =
+    override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)],
+                       distance: DistanceFunction = Distance.DEFAULT) =
       pointsByHashKey
         .combineByKey(init, concat, merge)
         .values
@@ -81,8 +110,6 @@ object Sketch extends Serializable {
     * It is possible (and likely) that the arithmetic mean is not a member of the input data.
     */
   case object ArithmeticMean extends PrototypeStrategy {
-
-    type Count = Int
 
     type ACC = (List[Index], Count, DataPoint)
 
@@ -101,7 +128,8 @@ object Sketch extends Serializable {
       case ((indices1, count1, proto1), (indices2, count2, proto2)) => (indices1 ::: indices2, count1 + count2, sum(proto1, proto2))
     }
 
-    override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)]) =
+    override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)],
+                       distance: DistanceFunction = Distance.DEFAULT) =
       pointsByHashKey
         .combineByKey(init, concat, merge)
         .values
@@ -114,14 +142,11 @@ object Sketch extends Serializable {
     *   -- D. CANTONE†, G. CINCOTTI†, A. FERRO†, AND A. PULVIRENTI†
     *
     * @param t The size of groups on which exactWinner is applied.
-    * @param distance The distance function to determine the exact winner.
     * @param random A random generator.
     */
-  case class ApproximateMedian(t: Int,
-                               distance: DistanceFunction,
-                               random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
+  case class ApproximateMedian(t: Int, random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
 
-    def exactWinner(S: Iterable[DataPoint]): DataPoint =
+    def exactWinner(distance: DistanceFunction)(S: Iterable[DataPoint]): DataPoint =
       S
         .map(a => (a, S.filter(b => b != a).map(b => distance(a,b)).sum))
         .minBy(_._2)
@@ -132,28 +157,31 @@ object Sketch extends Serializable {
       case list => list
     }
 
-    def approximateMedian(S: List[DataPoint]): DataPoint = {
-      val threshold = min(pow(t, 2), sqrt(S.size)).toInt
+    def approximateMedian(S: List[DataPoint], distance: DistanceFunction): DataPoint = {
+      val threshold = min(pow(t, 2) - 1, sqrt(S.size)).toInt
+
+      val winner = exactWinner(distance) _
 
       @tailrec def recur(currS: List[DataPoint]): DataPoint =
-        if (currS.size < threshold)
-          exactWinner(currS)
+        if (currS.size <= threshold)
+          winner(currS)
         else {
           val grouped = random.shuffle(currS).grouped(t).toList
 
-          recur(mergeTail(grouped).map(exactWinner))
+          recur(mergeTail(grouped).map(winner))
         }
 
       recur(S)
     }
 
-    override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)]) =
+    override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)],
+                       distance: DistanceFunction = Distance.DEFAULT) =
       pointsByHashKey
         .groupByKey
         .map{ case (key, candidatePoints) =>
           val indices = candidatePoints.map(_.index).toList
 
-          val prototype = approximateMedian(candidatePoints.toList)
+          val prototype = approximateMedian(candidatePoints.toList, distance)
 
           (indices, prototype)
         }
@@ -178,33 +206,39 @@ object Sketch extends Serializable {
     }
   }
 
-  def apply(ctx: TDAContext, sketchParams: Option[SketchParams] = None): Sketch = {
-    val params = sketchParams.getOrElse(estimateSketchParams(ctx))
+  /**
+    * @param ctx
+    * @param params
+    * @return Returns a Sketch of the data in the TDAContext with respect to the SketchParams.
+    */
+  def apply(ctx: TDAContext, params: SketchParams): Sketch = {
+    import params._
 
     val hashFunction = makeHashFunction(ctx.D, params)
 
     def computeCollisionKey(point: DataPoint): HashKey = {
-      val sig = hashFunction.signature(point.features)
+      val sig: Signature[_] = hashFunction.signature(point.features)
 
-      MurmurHash3.arrayHash(sig.asInstanceOf[Array[Int]])
+      val array: Array[Int] = sig.elements match {
+        case b: BitSet     => b.toArray
+        case a: Array[Int] => a
+        case _ => throw new IllegalArgumentException("Cannot convert signature into Array[Int]")
+      }
+
+      MurmurHash3.arrayHash(array)
     }
 
-    val pointsByHashKey: RDD[(Serializable, DataPoint)] =
+    val pointsByHashKey =
       ctx
         .dataPoints
         .map(point => (computeCollisionKey(point), point))
 
     val prototypes =
-      params
-        .prototypeStrategy
-        .apply(pointsByHashKey)
+      prototypeStrategy
+        .apply(pointsByHashKey, distance)
         .cache
 
-    val N = prototypes.count.toInt
-
-    val prototypesByOrigin = prototypes.flatMap{ case (ids, dp) => ids.map(id => (id, dp)) }.cache
-
-    Sketch(params, hashFunction, N, prototypesByOrigin)
+    Sketch(params, hashFunction, prototypes)
   }
 
 }
@@ -212,11 +246,19 @@ object Sketch extends Serializable {
 /**
   * @param params The SketchParams that were used to create this Sketch.
   * @param hashFunction The randomly selected LSH hash function.
-  * @param N The number of prototypes. Note: this is not equal to the size of the RDD.
-  * @param prototypesByOrigin An RDD keyed by the indices of the original DataPoint instances to (non-unique)
-  *                           collapsed prototypes.
+  * @param prototypes An RDD keyed by the list of indices of the original DataPoint instances to (non-unique)
+  *                   collapsed prototypes.
   */
 case class Sketch(params: SketchParams,
                   hashFunction: LSHFunction[Signature[Any]],
-                  N: Int,
-                  prototypesByOrigin: RDD[(Index, DataPoint)])
+                  prototypes: RDD[(List[Index], DataPoint)]) {
+
+  lazy val N = prototypes.count.toInt
+
+  lazy val prototypesByOrigin = prototypes.flatMap{ case (ids, dp) => ids.map(id => (id, dp)) }.cache
+
+  lazy val frequencies = prototypes.map(_._1.size).collect.toList
+
+  override def toString = s"Sketch(N=$N)"
+
+}

@@ -2,7 +2,7 @@ package org.tmoerman.plongeur.tda
 
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Distance.EuclideanDistance
+import org.tmoerman.plongeur.tda.Distance.{ManhattanDistance, EuclideanDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.Sketch._
 import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
@@ -47,7 +47,7 @@ class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with 
 
   behavior of "RandomCandidate"
 
-  it should "return a random data point" in {
+  it should "return a random data point from a non-trivial data set" in {
     val data   = dps(square)
     val rdd    = keyed(data)
     val result = new RandomCandidate().apply(rdd).first
@@ -71,13 +71,20 @@ class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with 
 
   behavior of "ApproximateMedian"
 
-  val approximateMedian = new ApproximateMedian(4, EuclideanDistance)
+  val approximateMedian = new ApproximateMedian(4)
+
+  it should "correctly compute the exact winner from a singleton" in {
+    val data  = dps(center :: Nil)
+    val exact = approximateMedian.exactWinner(EuclideanDistance)(data)
+
+    exact.features shouldBe dense(2.0, 2.0)
+  }
 
   it should "correctly compute the exact winner" in {
-    val data  = dps(offCenter :: square)
-    val exact = approximateMedian.exactWinner(data)
+    val data  = dps(center :: square)
+    val exact = approximateMedian.exactWinner(EuclideanDistance)(data)
 
-    exact.features shouldBe dense(1.9, 2.1)
+    exact.features shouldBe dense(2.0, 2.0)
   }
 
   it should "return a candidate with the correct indices" in {
@@ -88,14 +95,30 @@ class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with 
     result._1.toSet shouldBe (0 to 16).toSet
   }
 
+  it should "return a candidate from a singleton" in {
+    val data   = dps(center :: Nil)
+    val rdd    = keyed(data)
+    val result = approximateMedian.apply(rdd).first
+
+    result._1.toSet    shouldBe Set(0)
+    result._2.features shouldBe dense(2.0, 2.0)
+  }
+
   behavior of "Sketch"
 
-  it should "bla" in {
-    val signatureLength = 20
+  it should "pass the smoke test for Iris dataset" in {
+    val k = 2
+    val r = 2.0
 
-    val params = new SketchParams(signatureLength, )
+    val ctx = TDAContext(sc, irisDataPointsRDD)
 
+    val params = new SketchParams(k, r, new ApproximateMedian(5))
 
+    val sketch = Sketch(ctx, params)
+
+    println(sketch.frequencies)
+
+    println(s"ctx.N=${ctx.N}] -> sketch.N=[${sketch.N}]")
   }
 
 }
