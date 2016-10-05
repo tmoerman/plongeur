@@ -12,7 +12,6 @@ import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distance._
 import org.tmoerman.plongeur.tda.Model.{DataPoint, Index, SimpleName, TDAContext}
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
-import org.tmoerman.plongeur.util.IterableFunctions._
 
 import scala.annotation.tailrec
 import scala.util.Random._
@@ -52,6 +51,10 @@ object Sketch extends Serializable {
 
   trait PrototypeStrategy extends (RDD[(HashKey, DataPoint)] => RDD[(List[Index], DataPoint)]) with SimpleName with Serializable
 
+  /**
+    * PrototypeStrategy that reduces to a random data point per key.
+    * @param random
+    */
   case class RandomCandidate(random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
 
     type ACC = (List[Index], DataPoint)
@@ -73,13 +76,17 @@ object Sketch extends Serializable {
 
   }
 
+  /**
+    * PrototypeStrategy that reduces to the arithmetic mean (center of gravity) data point per key.
+    * It is possible (and likely) that the arithmetic mean is not a member of the input data.
+    */
   case object ArithmeticMean extends PrototypeStrategy {
 
     type Count = Int
 
     type ACC = (List[Index], Count, DataPoint)
 
-    def init(d: DataPoint): ACC = (Nil, 1, d)
+    def init(d: DataPoint): ACC = (d.index :: Nil, 1, d)
 
     def sum(d1: DataPoint, d2: DataPoint) = Prototype((d1.features.toBreeze + d2.features.toBreeze).toMLLib)
 
@@ -110,14 +117,15 @@ object Sketch extends Serializable {
     * @param distance The distance function to determine the exact winner.
     * @param random A random generator.
     */
-  case class ApproximateMedian(t: Int, distance: DistanceFunction, random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
+  case class ApproximateMedian(t: Int,
+                               distance: DistanceFunction,
+                               random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
 
     def exactWinner(S: Iterable[DataPoint]): DataPoint =
       S
-        .cartesian
-        .map{ case (a, b) => (distance(a, b), a) }
-        .minBy(_._1)
-        ._2
+        .map(a => (a, S.filter(b => b != a).map(b => distance(a,b)).sum))
+        .minBy(_._2)
+        ._1
 
     def mergeTail(l: List[List[DataPoint]]) = l.reverse match {
       case list @ (x :: y :: rest) => if (x.size < t) (x ++ y) :: rest else list
