@@ -108,7 +108,7 @@ class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with 
 
   it should "pass the smoke test for Iris dataset" in {
     val k = 2
-    val r = 2.0
+    val r = 1.0
 
     val ctx = TDAContext(sc, irisDataPointsRDD)
 
@@ -116,8 +116,9 @@ class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with 
 
     val sketch = Sketch(ctx, params)
 
-    println(sketch.frequencies)
+    sketch.N should be < ctx.N
 
+    println(sketch.frequencies)
     println(s"ctx.N=${ctx.N}] -> sketch.N=[${sketch.N}]")
   }
 

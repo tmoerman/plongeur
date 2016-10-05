@@ -2,7 +2,6 @@ package org.tmoerman.plongeur.tda
 
 import java.io.Serializable
 import java.lang.Math.{min, pow, sqrt}
-import java.util
 import java.util.{Random => JavaRandom}
 
 import breeze.linalg.DenseVector.fill
