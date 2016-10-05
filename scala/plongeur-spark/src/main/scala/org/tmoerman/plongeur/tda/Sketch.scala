@@ -2,6 +2,7 @@ package org.tmoerman.plongeur.tda
 
 import java.io.Serializable
 import java.lang.Math.{min, pow, sqrt}
+import java.util.{Random => JavaRandom}
 
 import breeze.linalg.DenseVector.fill
 import com.github.karlhigley.spark.neighbors.lsh.{LSHFunction, ScalarRandomProjectionFunction, SignRandomProjectionFunction, Signature}
@@ -11,12 +12,11 @@ import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distance._
 import org.tmoerman.plongeur.tda.Model.{DataPoint, Index, SimpleName, TDAContext}
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
+import org.tmoerman.plongeur.util.IterableFunctions._
 
 import scala.annotation.tailrec
-import scala.util.Random
+import scala.util.Random._
 import scala.util.hashing.MurmurHash3
-
-import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
   * @author Thomas Moerman
@@ -34,7 +34,7 @@ object Sketch extends Serializable {
                           r: Double,
                           distance: DistanceFunction,
                           prototypeStrategy: PrototypeStrategy,
-                          random: Random = new Random()) {
+                          random: JavaRandom = new JavaRandom) {
 
     override def toString = s"Sketch(dist=$distance, "
 
@@ -48,23 +48,25 @@ object Sketch extends Serializable {
                        final val index: Int = -1,
                        final val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable
 
-  trait PrototypeStrategy extends (RDD[(Any, DataPoint)] => RDD[(List[Index], DataPoint)]) with SimpleName with Serializable
+  type HashKey = Serializable
 
-  case class RandomCandidate(random: Random = new Random()) extends PrototypeStrategy {
+  trait PrototypeStrategy extends (RDD[(HashKey, DataPoint)] => RDD[(List[Index], DataPoint)]) with SimpleName with Serializable
+
+  case class RandomCandidate(random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
 
     type ACC = (List[Index], DataPoint)
 
-    def init(d: DataPoint): ACC = (Nil, d)
+    def init(d: DataPoint): ACC = (d.index :: Nil, d)
 
     def concat(acc: ACC, d: DataPoint): ACC = acc match {
-      case (indices, proto) => (d.index :: indices, Prototype((if (random.nextBoolean) proto else d).features))
+      case (indices, proto) => (d.index :: indices, if (random.nextBoolean) proto else d)
     }
 
     def merge(acc1: ACC, acc2: ACC): ACC = (acc1, acc2) match {
-      case ((indices1, proto1), (indices2, proto2)) => (indices1 ::: indices2, Prototype((if (random.nextBoolean) proto1 else proto2).features))
+      case ((indices1, proto1), (indices2, proto2)) => (indices1 ::: indices2, if (random.nextBoolean) proto1 else proto2)
     }
 
-    override def apply(pointsByHashKey: RDD[(Any, DataPoint)]) =
+    override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)]) =
       pointsByHashKey
         .combineByKey(init, concat, merge)
         .values
@@ -92,7 +94,7 @@ object Sketch extends Serializable {
       case ((indices1, count1, proto1), (indices2, count2, proto2)) => (indices1 ::: indices2, count1 + count2, sum(proto1, proto2))
     }
 
-    override def apply(pointsByHashKey: RDD[(Any, DataPoint)]) =
+    override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)]) =
       pointsByHashKey
         .combineByKey(init, concat, merge)
         .values
@@ -108,7 +110,7 @@ object Sketch extends Serializable {
     * @param distance The distance function to determine the exact winner.
     * @param random A random generator.
     */
-  case class ApproximateMedian(t: Int, distance: DistanceFunction, random: Random = new Random()) extends PrototypeStrategy {
+  case class ApproximateMedian(t: Int, distance: DistanceFunction, random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
 
     def exactWinner(S: Iterable[DataPoint]): DataPoint =
       S
@@ -137,7 +139,7 @@ object Sketch extends Serializable {
       recur(S)
     }
 
-    override def apply(pointsByHashKey: RDD[(Any, DataPoint)]) =
+    override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)]) =
       pointsByHashKey
         .groupByKey
         .map{ case (key, candidatePoints) =>
@@ -173,13 +175,13 @@ object Sketch extends Serializable {
 
     val hashFunction = makeHashFunction(ctx.D, params)
 
-    def computeCollisionKey(point: DataPoint): Any = {
+    def computeCollisionKey(point: DataPoint): HashKey = {
       val sig = hashFunction.signature(point.features)
 
       MurmurHash3.arrayHash(sig.asInstanceOf[Array[Int]])
     }
 
-    val pointsByHashKey: RDD[(Any, DataPoint)] =
+    val pointsByHashKey: RDD[(Serializable, DataPoint)] =
       ctx
         .dataPoints
         .map(point => (computeCollisionKey(point), point))

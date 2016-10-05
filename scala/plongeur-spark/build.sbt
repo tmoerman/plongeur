@@ -35,7 +35,7 @@ libraryDependencies ++= Seq(
   "com.chuusai"            %% "shapeless"        % "2.3.0",
   "org.typelevel"          %% "shapeless-scalaz" % "0.4",
 
-  "com.github.karlhigley"  %% "spark-neighbors"  % "0.3.2-FORK",
+  "com.github.karlhigley"  %% "spark-neighbors"  % "0.3.3-FORK",
 
   "com.softwaremill.quicklens" %% "quicklens" % "1.4.4",
   
