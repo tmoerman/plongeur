@@ -31,7 +31,7 @@ object Sketch extends Serializable {
     */
   case class SketchParams(k: Int,
                           r: Double,
-                          distance: DistanceFunction,
+                          distance: DistanceFunction = Distance.DEFAULT,
                           prototypeStrategy: PrototypeStrategy,
                           random: JavaRandom = new JavaRandom) {
 

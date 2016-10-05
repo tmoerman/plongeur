@@ -4,13 +4,13 @@ import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distance.EuclideanDistance
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.Sketch.{ApproximateMedian, ArithmeticMean, HashKey, RandomCandidate}
-import org.tmoerman.plongeur.test.SparkContextSpec
+import org.tmoerman.plongeur.tda.Sketch._
+import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
 
 /**
   * @author Thomas Moerman
   */
-class SketchSpec extends FlatSpec with SparkContextSpec with Matchers {
+class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
 
   val square = List(
     (0.0, 0.0), // lower row
@@ -45,7 +45,9 @@ class SketchSpec extends FlatSpec with SparkContextSpec with Matchers {
     sc.parallelize(data)
       .keyBy(_ => "key".asInstanceOf[HashKey])
 
-  "RandomCandidate" should "return a random data point" in {
+  behavior of "RandomCandidate"
+
+  it should "return a random data point" in {
     val data   = dps(square)
     val rdd    = keyed(data)
     val result = new RandomCandidate().apply(rdd).first
@@ -55,7 +57,9 @@ class SketchSpec extends FlatSpec with SparkContextSpec with Matchers {
     data should contain (result._2)
   }
 
-  "ArithmeticMean" should "return the center of gravity" in {
+  behavior of "ArithmeticMean"
+
+  it should "return the center of gravity" in {
     val data   = dps(square)
     val rdd    = keyed(data)
     val result = ArithmeticMean.apply(rdd).first
@@ -76,12 +80,22 @@ class SketchSpec extends FlatSpec with SparkContextSpec with Matchers {
     exact.features shouldBe dense(1.9, 2.1)
   }
 
-  it should "return the one closest to the center of gravity" in {
+  it should "return a candidate with the correct indices" in {
     val data   = dps(center :: square)
     val rdd    = keyed(data)
     val result = approximateMedian.apply(rdd).first
 
     result._1.toSet shouldBe (0 to 16).toSet
+  }
+
+  behavior of "Sketch"
+
+  it should "bla" in {
+    val signatureLength = 20
+
+    val params = new SketchParams(signatureLength, )
+
+
   }
 
 }

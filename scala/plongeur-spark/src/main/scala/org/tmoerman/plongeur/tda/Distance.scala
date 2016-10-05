@@ -63,6 +63,8 @@ object Distance {
     case _                        => None
   }
 
+  val DEFAULT: DistanceFunction = EuclideanDistance
+
   trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with SimpleName with Serializable
 
   // TODO Pearson correlation, closing over ~~TDAContext~~ / over broadcast variable
@@ -112,7 +114,7 @@ object Distance {
     case "L_p norm"   :: (e: Double) :: HNil => LpNormDistance(e)
     case "minkowski"  :: (e: Any)    :: HNil => MinkowskiDistance(e.asInstanceOf[Double])
 
-    case _                                  => EuclideanDistance
+    case _                                   => DEFAULT
   }
 
 }
