@@ -10,7 +10,7 @@ import org.apache.spark.mllib.linalg.VectorConversions._
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distance._
-import org.tmoerman.plongeur.tda.Model.{DataPoint, Index, SimpleName, TDAContext}
+import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
 
 import scala.annotation.tailrec
@@ -48,19 +48,6 @@ object Sketch extends Serializable {
   def estimateRadius(ctx: TDAContext): Radius = {
     ???
   }
-
-  case class Prototype(val features: MLVector,
-                       val index: Index = -1,
-                       val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable
-
-//  TODO evolve to this implementation instead of tuples
-//  case class Prototype(val features: MLVector,
-//                       val indices: List[Index] = Nil,
-//                       val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable {
-//
-//    def index: Index = throw new UnsupportedOperationException("index has no meaning for a Prototype")
-//
-//  }
 
   /**
     * Abstract type describing the strategy to choose a representant (a.k.a. Prototype) of a collection of DataPoints
@@ -114,9 +101,9 @@ object Sketch extends Serializable {
 
     def init(d: DataPoint): ACC = (d.index :: Nil, 1, d)
 
-    def sum(d1: DataPoint, d2: DataPoint) = Prototype((d1.features.toBreeze + d2.features.toBreeze).toMLLib)
+    def sum(d1: DataPoint, d2: DataPoint) = IndexedDataPoint(-1, (d1.features.toBreeze + d2.features.toBreeze).toMLLib)
 
-    def div(d: DataPoint, scalar: Int) = Prototype((d.features.toBreeze / fill(d.features.size, scalar.toDouble)).toMLLib)
+    def div(d: DataPoint, scalar: Int) = IndexedDataPoint(-1, (d.features.toBreeze / fill(d.features.size, scalar.toDouble)).toMLLib)
 
     def concat(acc: ACC, d: DataPoint): ACC = acc match {
       case (indices, count, proto) =>
@@ -254,9 +241,23 @@ case class Sketch(params: SketchParams,
 
   lazy val N = prototypes.count.toInt
 
-  lazy val prototypesByOrigin = prototypes.flatMap{ case (ids, dp) => ids.map(id => (id, dp)) }.cache
-
   lazy val frequencies = prototypes.map(_._1.size).collect.toList
+
+  lazy val indexedPrototypes =
+    prototypes
+      .zipWithUniqueId
+      .map{ case ((ids, prototype: IndexedDataPoint), id: Long) => (ids, prototype.copy(index = id.toInt)) }
+      .cache
+
+  /**
+    * A Map that maps sketch DataPoint ids to original DataPoint ids.
+    */
+  lazy val originLookup = indexedPrototypes.map{ case (ids, p) => (p.index, ids) }.collectAsMap
+
+  lazy val prototypesByOrigin =
+    indexedPrototypes
+      .flatMap{ case (ids, prototype: IndexedDataPoint) => ids.map(id => (id, prototype)) }
+      .cache
 
   override def toString = s"Sketch(N=$N)"
 

@@ -118,8 +118,7 @@ class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with 
 
     sketch.N should be < ctx.N
 
-    println(sketch.frequencies)
-    println(s"ctx.N=${ctx.N}] -> sketch.N=[${sketch.N}]")
+    sketch.originLookup.size shouldBe sketch.N
   }
 
 }
