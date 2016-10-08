@@ -7,9 +7,8 @@ import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
-import org.tmoerman.plongeur.tda.cluster.{Clustering, SimpleSmileClusteringProvider}
+import org.tmoerman.plongeur.tda.cluster.SimpleSmileClusteringProvider
 import org.tmoerman.plongeur.util.IterableFunctions._
-import shapeless.{::, HList, HNil}
 
 /**
   * @author Thomas Moerman

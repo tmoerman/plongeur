@@ -32,8 +32,8 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
     val tdaParams =
       TDAParams(
         lens = TDALens(
-          Filter("feature" :: 0 :: HNil, 1, 0.5),
-          Filter("feature" :: 1 :: HNil, 1, 0.5)),
+          Filter(Feature(0), 1, 0.5),
+          Filter(Feature(1), 1, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
@@ -49,7 +49,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
   it should "recover the 100 entries circle topology" in {
     val tdaParams =
       TDAParams(
-        lens = TDALens(Filter("feature" :: 0 :: HNil, 10, 0.5)),
+        lens = TDALens(Filter(Feature(0), 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
@@ -63,7 +63,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
   it should "pass smoke test with eccentricity filter" in {
     val tdaParams =
       TDAParams(
-        lens = TDALens(Filter("eccentricity" :: 1 :: HNil, 10, 0.5)),
+        lens = TDALens(Filter(Eccentricity(Left(1)), 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
@@ -73,7 +73,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
   it should "pass smoke test with pca filter" in {
     val tdaParams =
       TDAParams(
-        lens = TDALens(Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+        lens = TDALens(Filter(PrincipalComponent(0), 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
@@ -87,7 +87,7 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
 
     val tdaParams =
       TDAParams(
-        lens = TDALens(Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+        lens = TDALens(Filter(PrincipalComponent(0), 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10),
         colouring = Colouring(palettes("Blues").get(9), LocalPercentage(9, setosa)))

@@ -69,10 +69,8 @@ object SimpleSmileClusteringProvider extends LocalClusteringProvider with Serial
     */
   def apply(localDataPoints: Seq[DataPoint], params: ClusteringParams = ClusteringParams()): LocalClustering = {
     import params._
-
-    val distanceFunction = parseDistance(distanceSpec)
-
-    val distances = distanceMatrix(localDataPoints, distanceFunction)
+    
+    val distances = distanceMatrix(localDataPoints, distance)
 
     createLocalClustering(localDataPoints, distances, clusteringMethod)
   }

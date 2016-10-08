@@ -57,8 +57,8 @@ class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
     val inParams =
       TDAParams(
         lens = TDALens(
-          Filter("PCA" :: 0 :: HNil, 20, 0.33),
-          Filter("PCA" :: 1 :: HNil, 20, 0.33)),
+          Filter(PrincipalComponent(0), 20, 0.33),
+          Filter(PrincipalComponent(1), 20, 0.33)),
         clusteringParams = ClusteringParams(),
         collapseDuplicateClusters = false,
         colouring = Colouring(Brewer.palettes("Blues").get(9), LocalPercentage(9, cat)))

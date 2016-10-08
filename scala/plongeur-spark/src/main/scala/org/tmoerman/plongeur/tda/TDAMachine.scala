@@ -2,11 +2,10 @@ package org.tmoerman.plongeur.tda
 
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Colour.Colouring
-import org.tmoerman.plongeur.tda.cluster.Clustering.{ScaleSelection, LocalClustering, ClusteringParams}
-import org.tmoerman.plongeur.tda.cluster.SimpleSmileClusteringProvider
+import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, LocalClustering, ScaleSelection}
 import rx.lang.scala.Observable
-import Model._
-import shapeless.{::, HNil, HList}
+import shapeless.{::, HList, HNil}
 
 /**
   * @author Thomas Moerman

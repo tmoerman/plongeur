@@ -47,10 +47,10 @@ object Clustering extends Serializable {
   }
 
   /**
-    * @param distanceSpec Distance function in the hierarchical clustering effort.
+    * @param distance Distance function in the hierarchical clustering effort.
     * @param clusteringMethod Single, Complete, etc...
     */
-  case class ClusteringParams(distanceSpec: HList = "euclidean" :: HNil,
+  case class ClusteringParams(distance: DistanceFunction = DEFAULT,
                               clusteringMethod: String = "single") extends Serializable
 
   /**

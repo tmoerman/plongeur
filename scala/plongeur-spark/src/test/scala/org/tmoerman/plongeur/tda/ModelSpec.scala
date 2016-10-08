@@ -18,13 +18,12 @@ class ModelSpec extends FlatSpec with Matchers {
     DataPoint(
       index = 10,
       features = dense(1, 2, 3),
-      meta = Some(Map("int" -> 1,
-                      "str" -> "a")))
+      meta = Some(Map("int" -> 1, "str" -> "a")))
   }
 
   "a FilterFunction" should "not be instantiable with an illegal overlap value" in {
     intercept[IllegalArgumentException] {
-      Filter(HNil, 0, -100)
+      Filter(Feature(0), 0, -100)
     }
   }
 
@@ -33,20 +32,20 @@ class ModelSpec extends FlatSpec with Matchers {
   val base =
     TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 10, 0.6),
-        Filter("feature" :: 1 :: HNil, 20, 0.6)),
+        Filter(Feature(0), 10, 0.6),
+        Filter(Feature(1), 20, 0.6)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
   behavior of "lenses"
 
   it should "be able to update a filter" in {
-    val updated = modFilter(0)(base).setTo(Filter("feature" :: 0 :: HNil, 30, 0.8))
+    val updated = modFilter(0)(base).setTo(Filter(Feature(0), 30, 0.8))
 
     updated shouldBe TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 30, 0.8),
-        Filter("feature" :: 1 :: HNil, 20, 0.6)),
+        Filter(Feature(0), 30, 0.8),
+        Filter(Feature(1), 20, 0.6)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
   }
@@ -54,8 +53,8 @@ class ModelSpec extends FlatSpec with Matchers {
   it should "be able to update nrBins in a filter" in {
     setFilterNrBins(0, 100)(base) shouldBe TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 100, 0.6),
-        Filter("feature" :: 1 :: HNil, 20,  0.6)),
+        Filter(Feature(0), 100, 0.6),
+        Filter(Feature(1), 20,  0.6)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
   }
@@ -63,8 +62,8 @@ class ModelSpec extends FlatSpec with Matchers {
   it should "be able to update overlap in a filter" in {
     setFilterOverlap(1, 0.666)(base) shouldBe TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 10, 0.6),
-        Filter("feature" :: 1 :: HNil, 20, 0.666)),
+        Filter(Feature(0), 10, 0.6),
+        Filter(Feature(1), 20, 0.666)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
   }
@@ -78,8 +77,8 @@ class ModelSpec extends FlatSpec with Matchers {
   it should "be able to update subtypes of ScaleSelection" in {
     setHistogramScaleSelectionNrBins(666)(base) shouldBe TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 10, 0.6),
-        Filter("feature" :: 1 :: HNil, 20, 0.6)),
+        Filter(Feature(0), 10, 0.6),
+        Filter(Feature(1), 20, 0.6)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(666))
   }

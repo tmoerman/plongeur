@@ -19,8 +19,8 @@ class Test2DSpec extends FlatSpec with TestResources with Matchers {
   it should "associate points with the correct HyperCubeCoordinateVectors" in {
     val lens =
       TDALens(
-        Filter("feature" :: 0 :: HNil, 1, 0.5),
-        Filter("feature" :: 1 :: HNil, 1, 0.5))
+        Filter(Feature(0), 1, 0.5),
+        Filter(Feature(1), 1, 0.5))
 
     val size = 12.0
 

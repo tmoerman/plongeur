@@ -9,11 +9,11 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Colour.Colouring
+import org.tmoerman.plongeur.tda.Distance.{DEFAULT, DistanceFunction}
 import org.tmoerman.plongeur.tda.Filters.toContextAmendment
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
 import org.tmoerman.plongeur.tda.cluster.Scale._
-import shapeless.HList
 
 import scala.collection.immutable.Map.empty
 import scala.util.Try
@@ -73,9 +73,8 @@ object Model {
 
   type Percentage = BigDecimal
 
-  type BroadcastKey = String
-
-  type SketchKey = String
+  type BroadcastKey = Serializable
+  type SketchKey    = Serializable
 
   type ContextAmendment = TDAContext => TDAContext
 
@@ -85,10 +84,13 @@ object Model {
     def dataPoints: RDD[DataPoint]
   }
 
+  type Broadcasts = Map[BroadcastKey, Broadcast[_]]
+  type Sketches   = Map[SketchKey,    Sketch]
+
   case class TDAContext(val sc: SparkContext,
                         val dataPoints: RDD[DataPoint],
-                        val broadcasts: Map[BroadcastKey, Broadcast[_]] = empty,
-                        val sketches:   Map[SketchKey,    Sketch]       = empty) extends ContextLike with Serializable {
+                        val broadcasts: Broadcasts = empty,
+                        val sketches: Sketches = empty) extends ContextLike with Serializable {
 
     val self = this
 
@@ -164,7 +166,21 @@ object Model {
 
   }
 
-  case class Filter(val spec: HList,
+  case object INFINITY extends Serializable
+
+  sealed trait FilterSpec extends Serializable
+
+  case class Feature(n: Int) extends FilterSpec
+
+  case class PrincipalComponent(n: Int) extends FilterSpec
+
+  case class Eccentricity(p: Either[Int, _], distance: DistanceFunction = DEFAULT) extends FilterSpec
+
+  case class Density(sigma: Double, distance: DistanceFunction = DEFAULT) extends FilterSpec
+
+  implicit def toFilter(spec: FilterSpec): Filter = Filter(spec)
+
+  case class Filter(val spec: FilterSpec,
                     val nrBins: Int = 20,
                     val overlap: Percentage = 0.25,
                     val sketchParams: Option[SketchParams] = None,

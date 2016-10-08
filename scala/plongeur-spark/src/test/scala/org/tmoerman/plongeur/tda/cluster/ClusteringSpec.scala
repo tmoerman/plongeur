@@ -4,7 +4,9 @@ import java.lang.Math.sqrt
 
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
+import org.tmoerman.plongeur.tda.Distance.EuclideanDistance
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.test.FileResources
 
@@ -15,10 +17,12 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
 
   behavior of "clustering with histogram(10) scale selection"
 
+  val params = ClusteringParams(EuclideanDistance)
+
   it should "yield 1 cluster for homogeneous data points" in {
     val homogeneous = heuristicData.take(4)
 
-    val clustering = SimpleSmileClusteringProvider.apply(homogeneous)
+    val clustering = SimpleSmileClusteringProvider.apply(homogeneous, params)
 
     clustering.heights() shouldBe Seq(1.0, 1.0, 1.0, sqrt(2))
 
@@ -26,7 +30,7 @@ class ClusteringSpec extends FlatSpec with FileResources with Matchers {
   }
 
   it should "yield 2 cluster for bipartite data points" in {
-    val clustering = SimpleSmileClusteringProvider.apply(heuristicData)
+    val clustering = SimpleSmileClusteringProvider.apply(heuristicData, params)
 
     println(clustering.debug)
 

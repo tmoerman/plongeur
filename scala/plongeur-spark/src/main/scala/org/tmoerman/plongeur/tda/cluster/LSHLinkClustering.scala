@@ -1,7 +1,7 @@
 package org.tmoerman.plongeur.tda.cluster
 
+import org.tmoerman.plongeur.tda.Distance.{DEFAULT, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model.DataPoint
-import shapeless.{HList, HNil}
 
 /**
   * @author Thomas Moerman
@@ -11,7 +11,7 @@ object LSHLinkClustering {
   case class LSHLinkClusteringParams(val k: Int,
                                      val L: Int,
                                      val A: Double,
-                                     val distanceSpec: HList = "manhattan" :: HNil) extends Serializable {
+                                     val distance: DistanceFunction = DEFAULT) extends Serializable {
 
   }
 

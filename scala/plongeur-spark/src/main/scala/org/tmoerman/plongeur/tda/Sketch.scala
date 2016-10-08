@@ -33,21 +33,13 @@ object Sketch extends Serializable {
     * @param r The radius.
     * @param distance The distance function, necessary for choosing the hashing strategy.
     * @param prototypeStrategy The strategy for collapsing colliding points into a prototype point.
-    * @param random A JVM random.
     */
   case class SketchParams(k: SignatureLength,
                           r: Radius,
                           prototypeStrategy: PrototypeStrategy,
-                          distance: DistanceFunction = Distance.DEFAULT,
-                          random: JavaRandom = new JavaRandom) {
+                          distance: DistanceFunction = DEFAULT)
 
-    override def toString = s"Sketch(k=$k, r=$r, proto=$prototypeStrategy)"
-
-  }
-
-  def estimateRadius(ctx: TDAContext): Radius = {
-    ???
-  }
+  def estimateRadius(ctx: TDAContext): Radius = ???
 
   /**
     * Abstract type describing the strategy to choose a representant (a.k.a. Prototype) of a collection of DataPoints
@@ -84,7 +76,7 @@ object Sketch extends Serializable {
     }
 
     override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)],
-                       distance: DistanceFunction = Distance.DEFAULT) =
+                       distance: DistanceFunction = DEFAULT) =
       pointsByHashKey
         .combineByKey(init, concat, merge)
         .values
@@ -115,7 +107,7 @@ object Sketch extends Serializable {
     }
 
     override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)],
-                       distance: DistanceFunction = Distance.DEFAULT) =
+                       distance: DistanceFunction = DEFAULT) =
       pointsByHashKey
         .combineByKey(init, concat, merge)
         .values
@@ -161,7 +153,7 @@ object Sketch extends Serializable {
     }
 
     override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)],
-                       distance: DistanceFunction = Distance.DEFAULT) =
+                       distance: DistanceFunction = DEFAULT) =
       pointsByHashKey
         .groupByKey
         .map{ case (key, candidatePoints) =>
@@ -181,6 +173,8 @@ object Sketch extends Serializable {
     */
   def makeHashFunction(d: Int, params: SketchParams) = {
     import params._
+
+    lazy val random = new JavaRandom
 
     distance match {
       case CosineDistance      => SignRandomProjectionFunction.generate(d, k, random)

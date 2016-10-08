@@ -36,7 +36,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   it should "work with one input" in {
     val inParams =
       TDAParams(
-        lens = TDALens(Filter("feature" :: 0 :: HNil, 10, 0.5)),
+        lens = TDALens(Filter(Feature(0), 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
@@ -55,15 +55,15 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   val params_1 =
     TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 10, 0.5)),
+        Filter(Feature(0), 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
   val params_2 =
     TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 10, 0.5),
-        Filter("feature" :: 1 :: HNil, 10, 0.5)),
+        Filter(Feature(0), 10, 0.5),
+        Filter(Feature(1), 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
@@ -89,7 +89,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   val p_pca_0 =
     TDAParams(
       lens = TDALens(
-        Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+        Filter(PrincipalComponent(0), 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
@@ -114,7 +114,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   val p_ecc_1 =
     TDAParams(
       lens = TDALens(
-        Filter("eccentricity" :: 1 :: HNil, 10, 0.5)),
+        Filter(Eccentricity(Left(1)), 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
