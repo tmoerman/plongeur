@@ -8,13 +8,14 @@ import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Colour.{Colouring, Constantly, Binner}
-import org.tmoerman.plongeur.tda.Filters.toBroadcastAmendment
+import org.tmoerman.plongeur.tda.Colour.Colouring
+import org.tmoerman.plongeur.tda.Filters.toContextAmendment
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import shapeless.HList
 
+import scala.collection.immutable.Map.empty
 import scala.util.Try
 
 /**
@@ -24,28 +25,20 @@ object Model {
 
   def feature(n: Int) = (p: DataPoint) => p.features(n)
 
+  type Index = Int
+
   implicit def pimp(in: (Index, MLVector)): DataPoint = dp(in._1, in._2)
 
   def dp(index: Long,
-         features: MLVector): DataPoint = IndexedDataPoint(index.toInt, features)
+         features: MLVector) = DataPoint(index.toInt, features)
 
   def dp(index: Long,
          features: MLVector,
-         meta: Map[String, _ <: Serializable]): DataPoint = IndexedDataPoint(index.toInt, features, Some(meta))
+         meta: Map[String, _ <: Serializable]) = DataPoint(index.toInt, features, Some(meta))
 
-  type Index = Int
-
-  trait DataPoint {
-    def index: Index
-
-    def features: MLVector
-
-    def meta: Option[Map[String, _ <: Serializable]]
-  }
-
-  case class IndexedDataPoint(val index: Index,
-                              val features: MLVector,
-                              val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable
+  case class DataPoint(val index: Index,
+                       val features: MLVector,
+                       val meta: Option[Map[String, _ <: Serializable]] = None) extends Serializable
 
   type LevelSetID = Vector[BigDecimal]
 

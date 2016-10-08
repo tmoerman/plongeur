@@ -15,7 +15,7 @@ import TDAParams._
 class ModelSpec extends FlatSpec with Matchers {
 
   "initializing a DataPoint with meta data" should "allow Serializable values" in {
-    IndexedDataPoint(
+    DataPoint(
       index = 10,
       features = dense(1, 2, 3),
       meta = Some(Map("int" -> 1,
