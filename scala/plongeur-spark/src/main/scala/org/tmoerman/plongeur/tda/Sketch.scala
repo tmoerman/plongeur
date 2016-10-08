@@ -101,9 +101,9 @@ object Sketch extends Serializable {
 
     def init(d: DataPoint): ACC = (d.index :: Nil, 1, d)
 
-    def sum(d1: DataPoint, d2: DataPoint) = IndexedDataPoint(-1, (d1.features.toBreeze + d2.features.toBreeze).toMLLib)
+    def sum(d1: DataPoint, d2: DataPoint) = DataPoint(-1, (d1.features.toBreeze + d2.features.toBreeze).toMLLib)
 
-    def div(d: DataPoint, scalar: Int) = IndexedDataPoint(-1, (d.features.toBreeze / fill(d.features.size, scalar.toDouble)).toMLLib)
+    def div(d: DataPoint, scalar: Int) = DataPoint(-1, (d.features.toBreeze / fill(d.features.size, scalar.toDouble)).toMLLib)
 
     def concat(acc: ACC, d: DataPoint): ACC = acc match {
       case (indices, count, proto) =>
@@ -219,9 +219,11 @@ object Sketch extends Serializable {
         .dataPoints
         .map(point => (computeCollisionKey(point), point))
 
-    val prototypes =
+    val prototypes: RDD[(List[Index], DataPoint)] =
       prototypeStrategy
         .apply(pointsByHashKey, distance)
+        .zipWithUniqueId
+        .map{ case ((ids, prototype: DataPoint), id: Long) => (ids, prototype.copy(index = id.toInt)) }
         .cache
 
     Sketch(params, hashFunction, prototypes)
@@ -237,28 +239,25 @@ object Sketch extends Serializable {
   */
 case class Sketch(params: SketchParams,
                   hashFunction: LSHFunction[Signature[Any]],
-                  prototypes: RDD[(List[Index], DataPoint)]) {
+                  prototypes: RDD[(List[Index], DataPoint)]) extends ContextLike with Serializable {
 
   lazy val N = prototypes.count.toInt
 
+  lazy val D = prototypes.first._2.features.size
+
   lazy val frequencies = prototypes.map(_._1.size).collect.toList
 
-  lazy val indexedPrototypes =
-    prototypes
-      .zipWithUniqueId
-      .map{ case ((ids, prototype: IndexedDataPoint), id: Long) => (ids, prototype.copy(index = id.toInt)) }
-      .cache
-
-  /**
-    * A Map that maps sketch DataPoint ids to original DataPoint ids.
-    */
-  lazy val originLookup = indexedPrototypes.map{ case (ids, p) => (p.index, ids) }.collectAsMap
-
-  lazy val prototypesByOrigin =
-    indexedPrototypes
-      .flatMap{ case (ids, prototype: IndexedDataPoint) => ids.map(id => (id, prototype)) }
-      .cache
+  lazy val dataPoints = prototypes.map(_._2).cache
 
   override def toString = s"Sketch(N=$N)"
+
+  def toBroadcastValue = prototypes.collectAsMap
+
+  lazy val originLookup = prototypes.map{ case (ids, p) => (p.index, ids) }.collectAsMap
+
+  //  lazy val prototypesByOrigin =
+  //    indexedPrototypes
+  //      .flatMap{ case (ids, prototype: IndexedDataPoint) => ids.map(id => (id, prototype)) }
+  //      .cache
 
 }

@@ -8,6 +8,7 @@ import org.apache.spark.Logging
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
 import org.apache.spark.mllib.linalg.{Vector => MLLibVector}
+import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distance.{DistanceFunction, parseDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
@@ -39,57 +40,101 @@ object Filters extends Serializable with Logging {
           .flatMap(key => ctx.broadcasts.get(key))
           .map(bc => {
             val pcaModel = bc.value.asInstanceOf[PCAModel]
-            (d: DataPoint) => pcaModel.transform(d.features)(n)
-          })
+
+            (d: DataPoint) => pcaModel.transform(d.features)(n) })
           .get
 
       case _ => // broadcast value is a FilterFunction
         toBroadcastKey(filter)
           .flatMap(key => ctx.broadcasts.get(key))
           .map(bc => bc.value.asInstanceOf[FilterFunction]) // TODO incorrect ->
-          .getOrElse(throw new IllegalArgumentException(
-          s"no filter function for $spec, current broadcasts: " + ctx.broadcasts.keys.mkString(", ")))
+          .getOrElse(
+            throw new IllegalArgumentException(s"no filter function for $spec, current broadcasts: " + ctx.broadcasts.keys.mkString(", ")))
     }
   }
 
   val MAX_PCs: Int = 10
 
-  def toBroadcastAmendment(filter: Filter, ctx: TDAContext): Option[(String, () => Broadcast[Any])] =
-    toBroadcastKey(filter).map(key => (key, () => {
-      val v: Any = toBroadcastValue(filter, ctx)
+  def toContextAmendment(filter: Filter) = toSketchAmendment(filter) andThen toBroadcastAmendment(filter)
 
-      ctx.sc.broadcast(v)
-    }))
+  def toSketchAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
+    val amended = for {
+      sketchKey <- toSketchKey(filter);
 
-  def toBroadcastValue(filter: Filter, ctx: TDAContext): Any = {
+      ctx1 <- ctx.sketches
+                 .get(sketchKey)
+                 .orElse(filter.sketchParams.map(params => Sketch(ctx, params)))
+                 .map(sketch => ctx.copy(sketches = ctx.sketches + (sketchKey -> sketch)));
+
+      ctx2 <- ctx1.broadcasts
+                  .get(sketchKey)
+                  .orElse(ctx1.sketches.get(sketchKey).map(sketch => ctx1.sc.broadcast(sketch.toBroadcastValue)))
+                  .map(value => ctx1.copy(broadcasts = ctx1.broadcasts + (sketchKey -> value)))
+
+    } yield ctx2
+
+    amended.getOrElse(ctx)
+  }
+
+
+  def toBroadcastAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
+    val amended = for {
+      broadcastKey <- toBroadcastKey(filter);
+
+      ctx1 <- ctx.broadcasts
+                 .get(broadcastKey)
+                 .orElse(toBroadcastValue(filter, ctx).map(value => ctx.sc.broadcast(value)))
+                 .map(value => ctx.copy(broadcasts = ctx.broadcasts + (broadcastKey -> value)))
+    } yield ctx1
+
+    amended.getOrElse(ctx)
+  }
+
+  def toBroadcastValue(filter: Filter, ctx: TDAContext): Option[_] = {
     import filter._
 
-    spec match {
-      case "PCA" #: (_: Int) #: HNil => {
-        val pcaModel = new PCA(min(MAX_PCs, ctx.D)).fit(ctx.dataPoints.map(_.features))
+    val ctxLike: ContextLike = toSketchKey(filter).flatMap(key => ctx.sketches.get(key)).getOrElse(ctx)
 
-        pcaModel
+    spec match {
+      case "PCA" #: _ => {
+        val pcaModel = new PCA(min(MAX_PCs, ctxLike.D)).fit(ctxLike.dataPoints.map(_.features))
+
+        Some(pcaModel)
       }
 
       case "eccentricity" #: n #: distanceSpec => {
-        val vec = eccentricityVec(n, ctx, parseDistance(distanceSpec))
+        val vec = eccentricityVec(n, ctxLike, parseDistance(distanceSpec))
 
-        (d: DataPoint) => vec(d.index)
+        val fn = (d: DataPoint) => vec(d.index)
+
+        Some(fn)
       }
 
-      case _ => throw new IllegalArgumentException(s"No broadcast value for $spec")
+      case "density" #: (sigma: Double) #: distanceSpec => {
+        val vec = densityVec(sigma, ctxLike, parseDistance(distanceSpec))
+
+        val fn = (d: DataPoint) => vec(d.index)
+
+        Some(fn)
+      }
+
+      case _ => None
     }
   }
 
-  def toBroadcastKey(filter: Filter): Option[String] = {
-    import filter._
+  def toSketchKey(filter: Filter): Option[SketchKey] = filter.sketchParams.map(_.toString)
 
-    (spec match {
-      case "PCA"          #: _ #: HNil => Some(s"PCA")
-      case "eccentricity" #: n #: _    => Some(s"ECC[$n]")
-      case _                           => None
-    }).map(a => sketchParams.map(p => s"$a, $p").getOrElse(a))
-  }
+  def toFilterSpecKey(filter: Filter): Option[BroadcastKey] =
+    filter.spec match {
+      case "PCA"          #: _                 => Some(s"PCA")
+      case "eccentricity" #: n #: distanceSpec => Some(s"Eccentricity(n=$n, distance=${parseDistance(distanceSpec)})")
+      case "density"      #: s #: distanceSpec => Some(s"Density(sigma=$s, distance=${parseDistance(distanceSpec)})")
+      case _                                   => None
+    }
+
+  def toBroadcastKey(filter: Filter): Option[BroadcastKey] =
+    toFilterSpecKey(filter).map(broadcastKey =>
+      toSketchKey(filter).map(sketchKey => s"$broadcastKey, $sketchKey").getOrElse(broadcastKey))
 
   val EMPTY = Map[Index, Double]()
 
@@ -106,14 +151,13 @@ object Filters extends Serializable with Logging {
     *         See: http://danifold.net/mapper/filters.html
     */
   @deprecated("use eccentricityVec instead")
-  def eccentricityMap(n: Any, ctx: TDAContext, distance: DistanceFunction): Map[Index, Double] = {
-    import ctx._
-
-    val card = N
+  def eccentricityMap(n: Any, ctx: ContextLike, distance: DistanceFunction): Map[Index, Double] = {
+    val N = ctx.N
 
     n match {
       case "infinity" =>
-        dataPoints
+        ctx
+          .dataPoints
           .distinctComboPairs
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
@@ -121,7 +165,8 @@ object Filters extends Serializable with Logging {
             { case (acc1, acc2) => acc1.merge(max)(acc2) })
 
       case 1 =>
-        dataPoints
+        ctx
+          .dataPoints
           .distinctComboPairs
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
@@ -130,7 +175,8 @@ object Filters extends Serializable with Logging {
           .map{ case (i, sum) => (i, sum / N) }
 
       case n: Int =>
-        dataPoints
+        ctx
+          .dataPoints
           .distinctComboPairs
           .aggregate(EMPTY)(
             { case (acc, (a, b)) => val d = distance(a, b)
@@ -143,7 +189,7 @@ object Filters extends Serializable with Logging {
     }}
 
   /**
-    * @param p cfr. $L_p$
+    * @param p cfr. $L_p$ - the exponent of the norm
     * @param ctx
     * @param distance
     * @return Returns a MLLibVector with L_n eccentricity values of that point.
@@ -153,7 +199,7 @@ object Filters extends Serializable with Logging {
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  def eccentricityVec(p: Any, ctx: TDAContext, distance: DistanceFunction): MLLibVector = {
+  def eccentricityVec(p: Any, ctx: ContextLike, distance: DistanceFunction): MLLibVector = {
     val N = ctx.N
 
     val ZEROS: SparseVector[Double] = SparseVector.zeros(N)
@@ -212,7 +258,7 @@ object Filters extends Serializable with Logging {
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  def densityVec(sigma: Double, ctx: TDAContext, distance: DistanceFunction): MLLibVector = {
+  def densityVec(sigma: Double, ctx: ContextLike, distance: DistanceFunction): MLLibVector = {
     val N = ctx.N
     val D = ctx.D
 

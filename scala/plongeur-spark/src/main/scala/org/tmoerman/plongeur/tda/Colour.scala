@@ -42,18 +42,18 @@ object Colour extends Serializable {
 
   trait BinningStrategy extends Serializable {
 
-    def toBinner(broadcasts: Map[String, Broadcast[Any]]): Binner
+    def toBinner(broadcasts: Map[String, Broadcast[_]]): Binner
 
   }
 
   trait Binner extends (Cluster => Iterable[Int]) with Serializable
 
-  def dataPointPredicate[T](selector: Selector[T], broadcasts: Map[String, Broadcast[Any]]) = (dp: DataPoint) => selector match {
+  def dataPointPredicate[T](selector: Selector[T], broadcasts: Map[String, Broadcast[_]]) = (dp: DataPoint) => selector match {
     case DataPointSelector(fn)      => fn(dp) == true
     case BroadcastSelector(key, fn) => broadcasts.get(key).exists(bc => fn(bc)(dp) == true)
   }
 
-  def dataPointCategorizer[T](selector: Selector[T], broadcasts: Map[String, Broadcast[Any]]) = (dp: DataPoint) => selector match {
+  def dataPointCategorizer[T](selector: Selector[T], broadcasts: Map[String, Broadcast[_]]) = (dp: DataPoint) => selector match {
     case DataPointSelector(fn)      => fn(dp)
     case BroadcastSelector(key, fn) => broadcasts.get(key).map(bc => fn(bc)(dp)).get
   }
@@ -66,7 +66,7 @@ object Colour extends Serializable {
     */
   case class LocalPercentage(nrBinsResolution: Int, selectorPredicate: Selector[Boolean]) extends BinningStrategy {
 
-    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) =
+    override def toBinner(broadcasts: Map[String, Broadcast[_]]) =
       new Binner {
         override def apply(cluster: Cluster) = {
           val predicate = dataPointPredicate(selectorPredicate, broadcasts)
@@ -91,7 +91,7 @@ object Colour extends Serializable {
     */
   case class LocalOccurrence(selectorPredicate: Selector[Boolean]) extends BinningStrategy {
 
-    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) =
+    override def toBinner(broadcasts: Map[String, Broadcast[_]]) =
       new Binner {
         override def apply(cluster: Cluster) = {
           val predicate = dataPointPredicate(selectorPredicate, broadcasts)
@@ -112,7 +112,7 @@ object Colour extends Serializable {
     */
   case class LocalMaxFreq(categorySelector: Selector[Int]) extends BinningStrategy {
 
-    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) =
+    override def toBinner(broadcasts: Map[String, Broadcast[_]]) =
       new Binner {
         override def apply(cluster: Cluster) = {
           val selector = dataPointCategorizer(categorySelector, broadcasts)
@@ -138,7 +138,7 @@ object Colour extends Serializable {
       override def apply(v1: Cluster) = Some(bin)
     }
 
-    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) = binner
+    override def toBinner(broadcasts: Map[String, Broadcast[_]]) = binner
 
   }
 
@@ -151,7 +151,7 @@ object Colour extends Serializable {
       override def apply(v1: Cluster) = None
     }
 
-    override def toBinner(broadcasts: Map[String, Broadcast[Any]]) = binner
+    override def toBinner(broadcasts: Map[String, Broadcast[_]]) = binner
 
   }
 

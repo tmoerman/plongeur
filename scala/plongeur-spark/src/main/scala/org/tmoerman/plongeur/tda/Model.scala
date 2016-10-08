@@ -73,9 +73,22 @@ object Model {
 
   type Percentage = BigDecimal
 
+  type BroadcastKey = String
+
+  type SketchKey = String
+
+  type ContextAmendment = TDAContext => TDAContext
+
+  trait ContextLike {
+    def N: Int
+    def D: Int
+    def dataPoints: RDD[DataPoint]
+  }
+
   case class TDAContext(val sc: SparkContext,
                         val dataPoints: RDD[DataPoint],
-                        val broadcasts: Map[String, Broadcast[Any]] = Map.empty) extends Serializable {
+                        val broadcasts: Map[BroadcastKey, Broadcast[_]] = empty,
+                        val sketches:   Map[SketchKey,    Sketch]       = empty) extends ContextLike with Serializable {
 
     val self = this
 
@@ -83,12 +96,6 @@ object Model {
 
     lazy val D = dataPoints.first.features.size
 
-    // TODO move to TDA package
-    def addBroadcast(key: String, producer: () => Broadcast[Any]) =
-      broadcasts
-        .get(key)
-        .map(_ => self)
-        .getOrElse(self.copy(broadcasts = broadcasts + (key -> producer.apply())))
   }
 
   case class TDAParams(val lens: TDALens,
@@ -97,13 +104,11 @@ object Model {
                        val scaleSelection: ScaleSelection = histogram(),
                        val colouring: Colouring = Colouring()) extends Serializable {
 
-    // TODO move to TDA package
     def amend(ctx: TDAContext): TDAContext =
       lens
         .filters
-        .map(filter => toBroadcastAmendment(filter, ctx))
-        .flatten
-        .foldLeft(ctx){ case (acc, (key, fn)) => acc.addBroadcast(key, fn) }
+        .map(toContextAmendment)
+        .foldLeft(ctx){ case (acc, amendment) => amendment.apply(acc) }
 
   }
 
@@ -152,6 +157,9 @@ object Model {
 
   object TDALens {
 
+    /**
+      * Vararg factory function.
+      */
     def apply(filters: Filter*): TDALens = TDALens(filters.toList)
 
   }
@@ -167,7 +175,7 @@ object Model {
   }
 
   trait SimpleName {
-    override def toString = getClass.getSimpleName
+    override def toString = getClass.getSimpleName.split("\\$").last
   }
 
 }

@@ -7,6 +7,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distance.EuclideanDistance
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.Sketch.{RandomCandidate, SketchParams}
 import org.tmoerman.plongeur.test.SparkContextSpec
 import shapeless._
 
@@ -16,6 +17,42 @@ import shapeless._
 class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   implicit def toFilter(spec: HList) = Filter(spec)
+
+  behavior of "toBroadcastKey"
+
+  it should "return None when no broadcast is available for the filter" in {
+    val filter = Filter("feature" :: 0 :: HNil)
+
+    val broadcastKey = toBroadcastKey(filter)
+
+    broadcastKey shouldBe None
+  }
+
+  it should "return filter key when no sketch is specified" in {
+    val filter = Filter("eccentricity" :: 1 :: HNil)
+
+    val broadcastKey = toBroadcastKey(filter)
+
+    broadcastKey shouldBe Some("Eccentricity(n=1, distance=ManhattanDistance)")
+  }
+
+  it should "return filter key with sketch key if specified" in {
+    val filter = Filter("eccentricity" :: 1 :: HNil, sketchParams = Some(SketchParams(10, 1.0, new RandomCandidate())))
+
+    val broadcastKey = toBroadcastKey(filter)
+
+    broadcastKey shouldBe Some("Eccentricity(n=1, distance=ManhattanDistance), Sketch(k=10, r=1.0, proto=RandomCandidate)")
+  }
+
+  behavior of "toSketchKey"
+
+  it should "return the key for the sketch params in the filter" in {
+    val filter = Filter("eccentricity" :: 1 :: HNil, sketchParams = Some(SketchParams(10, 1.0, new RandomCandidate())))
+
+    val sketchKey = toSketchKey(filter)
+
+    sketchKey shouldBe Some("Sketch(k=10, r=1.0, proto=RandomCandidate)")
+  }
 
   behavior of "reifying filter specs"
 
@@ -41,9 +78,9 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   it should "reify L_1 eccentricity" in {
     val ctx = TDAContext(sc, rdd)
 
-    val spec: HList = "eccentricity" :: 1 :: HNil
+    val spec: HList = "eccentricity" :: 1 :: "euclidean" :: HNil
 
-    val amended = toBroadcastAmendment(spec, ctx).map{ case (k, fn) => ctx.addBroadcast(k, fn) }.get
+    val amended = toContextAmendment(spec).apply(ctx)
 
     val ff = toFilterFunction(spec, amended)
 
@@ -55,11 +92,11 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
     val spec: HList = "eccentricity" :: "infinity" :: HNil
 
-    val amended = toBroadcastAmendment(spec, ctx).map{ case (k, fn) => ctx.addBroadcast(k, fn) }.get
+    val amended = toContextAmendment(spec).apply(ctx)
 
     val ff = toFilterFunction(spec, amended)
 
-    dataPoints.map(ff).toSet shouldBe Set(sqrt(8))
+    dataPoints.map(ff).toSet shouldBe Set(4.0)
   }
 
   it should "reify L_inf eccentricity in function of specified no-args distance" in {
@@ -67,11 +104,26 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
     val spec: HList = "eccentricity" :: "infinity" :: "euclidean" :: HNil
 
-    val amended = toBroadcastAmendment(spec, ctx).map{ case (k, fn) => ctx.addBroadcast(k, fn) }.get
+    val amended = toContextAmendment(spec).apply(ctx)
 
     val ff = toFilterFunction(spec, amended)
 
     dataPoints.map(ff).toSet shouldBe Set(sqrt(8))
+  }
+
+  it should "reify L_inf different filter functions for different specs" in {
+    val ctx = TDAContext(sc, rdd)
+
+    val spec1: HList = "eccentricity" :: "infinity" :: "euclidean" :: HNil
+    val spec2: HList = "eccentricity" :: 1 :: HNil
+
+    val amended = (toContextAmendment(spec1) andThen toContextAmendment(spec2)).apply(ctx)
+
+    val ff1 = toFilterFunction(spec1, amended)
+    val ff2 = toFilterFunction(spec2, amended)
+
+    dataPoints.map(ff1).toSet shouldBe Set(sqrt(8))
+    dataPoints.map(ff2).toSet shouldBe Set(2.0)
   }
 
   behavior of "Maps vs. SparseVectors"
