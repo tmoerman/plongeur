@@ -8,12 +8,14 @@ import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Colour.{Colouring, Constantly, Binner}
-import org.tmoerman.plongeur.tda.Filters.toBroadcastAmendment
+import org.tmoerman.plongeur.tda.Colour.Colouring
+import org.tmoerman.plongeur.tda.Distance.{DEFAULT, DistanceFunction}
+import org.tmoerman.plongeur.tda.Filters.toContextAmendment
+import org.tmoerman.plongeur.tda.Sketch.SketchParams
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
 import org.tmoerman.plongeur.tda.cluster.Scale._
-import shapeless.HList
 
+import scala.collection.immutable.Map.empty
 import scala.util.Try
 
 /**
@@ -23,28 +25,20 @@ object Model {
 
   def feature(n: Int) = (p: DataPoint) => p.features(n)
 
+  type Index = Int
+
   implicit def pimp(in: (Index, MLVector)): DataPoint = dp(in._1, in._2)
 
   def dp(index: Long,
-         features: MLVector): DataPoint = IndexedDataPoint(index.toInt, features)
+         features: MLVector) = DataPoint(index.toInt, features)
 
   def dp(index: Long,
          features: MLVector,
-         meta: Map[String, _ <: Serializable]): DataPoint = IndexedDataPoint(index.toInt, features, Some(meta))
+         meta: Map[String, _ <: Serializable]) = DataPoint(index.toInt, features, Some(meta))
 
-  type Index = Int
-
-  trait DataPoint {
-    def index: Index
-
-    def features: MLVector
-
-    def meta: Option[Map[String, _ <: Serializable]]
-  }
-
-  case class IndexedDataPoint(val index: Index,
-                              val features: MLVector,
-                              val meta: Option[Map[String, _ <: Serializable]] = None) extends DataPoint with Serializable
+  case class DataPoint(val index: Index,
+                       val features: MLVector,
+                       val meta: Option[Map[String, _ <: Serializable]] = None) extends Serializable
 
   type LevelSetID = Vector[BigDecimal]
 
@@ -79,22 +73,31 @@ object Model {
 
   type Percentage = BigDecimal
 
+  type BroadcastKey = Serializable
+  type SketchKey    = Serializable
+
+  type ContextAmendment = TDAContext => TDAContext
+
+  trait ContextLike {
+    def N: Int
+    def D: Int
+    def dataPoints: RDD[DataPoint]
+  }
+
+  type Broadcasts = Map[BroadcastKey, Broadcast[_]]
+  type Sketches   = Map[SketchKey,    Sketch]
+
   case class TDAContext(val sc: SparkContext,
                         val dataPoints: RDD[DataPoint],
-                        val broadcasts: Map[String, Broadcast[Any]] = Map.empty) extends Serializable {
+                        val broadcasts: Broadcasts = empty,
+                        val sketches: Sketches = empty) extends ContextLike with Serializable {
 
     val self = this
 
-    lazy val N = dataPoints.count
+    lazy val N = dataPoints.count.toInt
 
-    lazy val dim = dataPoints.first.features.size
+    lazy val D = dataPoints.first.features.size
 
-    // TODO move to TDA package
-    def addBroadcast(key: String, producer: () => Broadcast[Any]) =
-      broadcasts
-        .get(key)
-        .map(_ => self)
-        .getOrElse(self.copy(broadcasts = broadcasts + (key -> producer.apply())))
   }
 
   case class TDAParams(val lens: TDALens,
@@ -103,13 +106,11 @@ object Model {
                        val scaleSelection: ScaleSelection = histogram(),
                        val colouring: Colouring = Colouring()) extends Serializable {
 
-    // TODO move to TDA package
     def amend(ctx: TDAContext): TDAContext =
       lens
         .filters
-        .map(f => toBroadcastAmendment(f.spec, ctx))
-        .flatten
-        .foldLeft(ctx){ case (c, (key, fn)) => c.addBroadcast(key, fn) }
+        .map(toContextAmendment)
+        .foldLeft(ctx){ case (acc, amendment) => amendment.apply(acc) }
 
   }
 
@@ -148,21 +149,49 @@ object Model {
 
   }
 
-  case class TDALens(val filters: List[Filter]) extends Serializable
+  /**
+    * @param filters
+    * @param partitionByLevelSetID Activate RangePartitioning by levelSet ID, is probably more efficient than hash
+    *                              partitioning on LevelSetIDs.
+    */
+  case class TDALens(val filters: List[Filter],
+                     val partitionByLevelSetID: Boolean = true) extends Serializable
 
   object TDALens {
 
+    /**
+      * Vararg factory function.
+      */
     def apply(filters: Filter*): TDALens = TDALens(filters.toList)
 
   }
 
-  case class Filter(val spec: HList,
-                    val nrBins: Int,
-                    val overlap: Percentage,
+  case object INFINITY extends Serializable
+
+  sealed trait FilterSpec extends Serializable
+
+  case class Feature(n: Int) extends FilterSpec
+
+  case class PrincipalComponent(n: Int) extends FilterSpec
+
+  case class Eccentricity(p: Either[Int, _], distance: DistanceFunction = DEFAULT) extends FilterSpec
+
+  case class Density(sigma: Double, distance: DistanceFunction = DEFAULT) extends FilterSpec
+
+  implicit def toFilter(spec: FilterSpec): Filter = Filter(spec)
+
+  case class Filter(val spec: FilterSpec,
+                    val nrBins: Int = 20,
+                    val overlap: Percentage = 0.25,
+                    val sketchParams: Option[SketchParams] = None,
                     val balanced: Boolean = false) extends Serializable {
 
     require(nrBins > 0, "nrBins must be greater than 0")
     require(overlap >= 0, "overlap cannot be negative")
+  }
+
+  trait SimpleName {
+    override def toString = getClass.getSimpleName.split("\\$").last
   }
 
 }

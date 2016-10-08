@@ -8,12 +8,14 @@ import org.tmoerman.plongeur.tda.Model._
   */
 object TDAProcedure extends TDA {
 
-  def apply(tdaParams: TDAParams, ctx: TDAContext): TDAResult = {
-    import tdaParams._
+  def apply(params: TDAParams, ctx: TDAContext): TDAResult = {
+    import params._
 
-    val amendedCtx = tdaParams.amend(ctx)
+    val amendedCtx = params.amend(ctx)
 
-    val levelSetClustersRDD = clusterLevelSets(lens, amendedCtx, clusteringParams)
+    val levelSetsRDD = createLevelSets(lens, amendedCtx)
+
+    val levelSetClustersRDD = clusterLevelSets(levelSetsRDD, clusteringParams)
 
     val partitionedClustersRDD = applyScale(levelSetClustersRDD, scaleSelection)
 

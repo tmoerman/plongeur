@@ -2,7 +2,6 @@ package org.tmoerman.plongeur.tda.cluster
 
 import org.tmoerman.plongeur.tda.cluster.Clustering.ScaleSelection
 import org.tmoerman.plongeur.util.IterableFunctions._
-import shapeless.{HNil, HList}
 import shapeless.HList.ListCompat._
 
 /**

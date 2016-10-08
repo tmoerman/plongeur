@@ -36,7 +36,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   it should "work with one input" in {
     val inParams =
       TDAParams(
-        lens = TDALens(Filter("feature" :: 0 :: HNil, 10, 0.5)),
+        lens = TDALens(Filter(Feature(0), 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
@@ -55,15 +55,15 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   val params_1 =
     TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 10, 0.5)),
+        Filter(Feature(0), 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
   val params_2 =
     TDAParams(
       lens = TDALens(
-        Filter("feature" :: 0 :: HNil, 10, 0.5),
-        Filter("feature" :: 1 :: HNil, 10, 0.5)),
+        Filter(Feature(0), 10, 0.5),
+        Filter(Feature(1), 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
@@ -89,7 +89,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   val p_pca_0 =
     TDAParams(
       lens = TDALens(
-        Filter("PCA" :: 0 :: HNil, 10, 0.5)),
+        Filter(PrincipalComponent(0), 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
@@ -114,7 +114,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
   val p_ecc_1 =
     TDAParams(
       lens = TDALens(
-        Filter("eccentricity" :: 1 :: HNil, 10, 0.5)),
+        Filter(Eccentricity(Left(1)), 10, 0.5)),
       clusteringParams = ClusteringParams(),
       scaleSelection = histogram(10))
 
@@ -160,55 +160,5 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
 
     updated shouldBe updated2
   }
-
-
-
-//  it should "work in dryRun" in {
-//    val in = PublishSubject[TDAParams]
-//
-//    val out = dryRun(in).toVector
-//
-//    //val latch = new CountDownLatch(1)
-//
-//    val out_sub = out.subscribe(onNext = (t) => {
-//      println(t)
-//
-//      t.size shouldBe 5
-//      //latch.countDown()
-//    })
-//
-//    in.onNext(params_1)
-//    in.onNext(params_2)
-//    in.onNext(params_1)
-//    in.onNext(params_2)
-//    in.onNext(params_1)
-//    in.onCompleted()
-//
-//    waitFor(out)
-//  }
-//
-//  def dryRun(tdaParam$: Observable[TDAParams]) = {
-//
-//    // source observable with backpressure
-//
-//    val tdaParamsSource$ = tdaParam$//.distinct
-//
-//    // deconstructing the parameters
-//
-//    val lens$               = tdaParamsSource$.map(_.lens                     ).distinctUntilChanged
-//    val clusteringParams$   = tdaParamsSource$.map(_.clusteringParams         ).distinctUntilChanged
-//    val scaleSelection$     = tdaParamsSource$.map(_.scaleSelection           ).distinct//.map(bla)
-//    val collapseDuplicates$ = tdaParamsSource$.map(_.collapseDuplicateClusters).distinct//.map(bla)
-//
-//    // TDA computation merges in parameter changes
-//
-//    //val ctx$                 = Observable.just(TDAContext(null, null))
-//
-//    lens$
-//      //.combineLatestWith(ctx$)((lens, ctx) => (lens, lens.assocFilterMemos(ctx)) )
-//      //.combineLatest(clusteringParams$)
-//      //.combineLatest(scaleSelection$)
-//      //.combineLatest(collapseDuplicates$)
-//  }
 
 }

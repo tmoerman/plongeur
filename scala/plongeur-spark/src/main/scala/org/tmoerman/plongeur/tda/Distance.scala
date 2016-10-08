@@ -1,12 +1,8 @@
 package org.tmoerman.plongeur.tda
 
 import breeze.linalg.functions._
-import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.VectorConversions._
-import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Model._
-import shapeless._
-import org.tmoerman.plongeur.util.RDDFunctions._
 
 /**
   * @author Thomas Moerman
@@ -14,14 +10,13 @@ import org.tmoerman.plongeur.util.RDDFunctions._
 object Distance {
 
   /**
-    * See smile-scala.
+    * See Smile-scala.
     *
     * @param dataPoints       The data points.
     * @param distanceFunction The distance function, e.g. Euclidean.
     * @return Returns a distance matrix, represented as an array of arrays of doubles.
     */
-  def distanceMatrix(dataPoints: Seq[DataPoint],
-                     distanceFunction: DistanceFunction): Array[Array[Double]] = {
+  def distanceMatrix(dataPoints: Seq[DataPoint], distanceFunction: DistanceFunction): Array[Array[Double]] = {
     val n = dataPoints.length
     val result = new Array[Array[Double]](n)
 
@@ -35,37 +30,9 @@ object Distance {
     result
   }
 
-  /**
-    * @param dataPoints An RDD of data points.
-    * @param distanceFunction The distance function, e.g. Euclidean.
-    * @return Returns a distance matrix, represented by an RDD of pairs keyed by
-    *         the set of DataPoint indices and value the distance ith respect to the distance function.
-    */
-  def distanceMatrix(dataPoints: RDD[DataPoint],
-                     distanceFunction: DistanceFunction): RDD[(Set[Index], Double)] =
-    dataPoints
-      .distinctComboPairs
-      .map{ case ((p1, p2)) => (Set(p1.index, p2.index), distanceFunction(p1, p2)) }
+  val DEFAULT: DistanceFunction = ManhattanDistance
 
-  def toBroadcastAmendment(spec: HList, ctx: TDAContext): Option[(String, () => Broadcast[Any])] =
-    toBroadcastKey(spec).map(key => (key, () => {
-      val v: Any = toBroadcastDistanceMatrix(spec, ctx)
-
-      ctx.sc.broadcast(v)
-    }))
-
-  def toBroadcastDistanceMatrix(spec: HList, ctx: TDAContext) =
-    distanceMatrix(ctx.dataPoints, parseDistance(spec)).collectAsMap
-
-  def toBroadcastKey(spec: HList): Option[String] = spec match {
-    case name :: HNil             => Some(s"$name")
-    case name :: (e: Any) :: HNil => Some(s"$name[$e]")
-    case _                        => None
-  }
-
-  trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with Serializable {
-    override def toString = getClass.getSimpleName
-  }
+  trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with SimpleName with Serializable
 
   // TODO Pearson correlation, closing over ~~TDAContext~~ / over broadcast variable
 
@@ -87,23 +54,18 @@ object Distance {
     override def apply(a: DataPoint, b: DataPoint) = manhattanDistance(a.features.toBreeze, b.features.toBreeze)
   }
 
-  case class MinkowskiDistance(exponent: Double) extends DistanceFunction {
-    override def apply(a: DataPoint, b: DataPoint) = minkowskiDistance(a.features.toBreeze, b.features.toBreeze, exponent)
-    override def toString = { val name = getClass.getSimpleName; s"$name($exponent)" }
+  case class LpNormDistance(p: Double) extends NormBasedDistance with DistanceFunction {
+    override protected def normConstant: Double = p
+
+    override def apply(a: DataPoint, b: DataPoint) = apply(a.features.toBreeze, b.features.toBreeze)
+
+    override def toString = { val name = getClass.getSimpleName; s"$name($p)" }
   }
 
-  /**
-    * @param spec
-    * @return Returns a DistanceFunction for specified spec.
-    */
-  def parseDistance(spec: HList): DistanceFunction = spec match {
-    case "chebyshev" :: HNil             => ChebyshevDistance
-    case "cosine"    :: HNil             => CosineDistance
-    case "euclidean" :: HNil             => EuclideanDistance
-    case "manhattan" :: HNil             => ManhattanDistance
-    case "minkowski" :: (e: Any) :: HNil => MinkowskiDistance(e.asInstanceOf[Double])
+  case class MinkowskiDistance(exponent: Double) extends DistanceFunction {
+    override def apply(a: DataPoint, b: DataPoint) = minkowskiDistance(a.features.toBreeze, b.features.toBreeze, exponent)
 
-    case _                               => EuclideanDistance
+    override def toString = { val name = getClass.getSimpleName; s"$name($exponent)" }
   }
 
 }

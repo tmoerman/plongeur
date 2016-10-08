@@ -10,7 +10,6 @@ import org.tmoerman.plongeur.tda.cluster.Scale.histogram
 import org.tmoerman.plongeur.util.RxUtils._
 import rx.lang.scala.Subscription
 import rx.lang.scala.subjects.PublishSubject
-import shapeless.HNil
 
 /**
   * @author Thomas Moerman
@@ -138,7 +137,7 @@ class RxLab extends FlatSpec with Matchers {
     val base =
       TDAParams(
         lens = TDALens(
-          Filter("feature" :: 0 :: HNil, 10, 0.6)),
+          Filter(Feature(0), 10, 0.6)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 

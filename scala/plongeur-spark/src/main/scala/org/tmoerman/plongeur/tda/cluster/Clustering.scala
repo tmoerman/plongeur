@@ -41,18 +41,17 @@ object Clustering extends Serializable {
       * @return Returns the cluster labels in function of the
       */
     def labels(scaleSelection: ScaleSelection): Seq[Any]
-    
+
+    def debug: String
+
   }
 
   /**
-    * @param distanceSpec Distance function in the hierarchical clustering effort.
+    * @param distance Distance function in the hierarchical clustering effort.
     * @param clusteringMethod Single, Complete, etc...
-    * @param partitionByLevelSetID Activate RangePartitioning by levelSet ID, is probably more efficient than hash
-    *                              partitioning on LevelSetIDs.
     */
-  case class ClusteringParams(distanceSpec: HList  = "euclidean" :: HNil,
-                              clusteringMethod: String = "single",
-                              partitionByLevelSetID: Boolean = true) extends Serializable
+  case class ClusteringParams(distance: DistanceFunction = DEFAULT,
+                              clusteringMethod: String = "single") extends Serializable
 
   /**
     * Protocol for constructing Clustering instances.
