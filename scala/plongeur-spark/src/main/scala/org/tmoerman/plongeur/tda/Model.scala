@@ -183,7 +183,7 @@ object Model {
   case class Filter(val spec: FilterSpec,
                     val nrBins: Int = 20,
                     val overlap: Percentage = 0.25,
-                    val sketchParams: Option[SketchParams] = None,
+                    val sketch: Option[SketchParams] = None,
                     val balanced: Boolean = false) extends Serializable {
 
     require(nrBins > 0, "nrBins must be greater than 0")

@@ -16,6 +16,24 @@ import shapeless._
   */
 class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
+  behavior of "toFilterSpecKey"
+
+  it should "yield a Some(_) in cases" in {
+    val pc0 = PrincipalComponent(0)
+    toFilterSpecKey(pc0) shouldBe Some(pc0)
+
+    val ecc = Eccentricity(Left(1))
+    toFilterSpecKey(ecc) shouldBe Some(ecc)
+
+    val den = Density(1.0)
+    toFilterSpecKey(den) shouldBe Some(den)
+  }
+
+  it should "yield 0 in cases" in {
+    val feat0 = Feature(0)
+    toFilterSpecKey(feat0) shouldBe None
+  }
+
   behavior of "toBroadcastKey"
 
   it should "return None when no broadcast is available for the filter" in {
@@ -35,32 +53,24 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   }
 
   it should "return filter key with sketch key if specified" in {
-    val filter = Filter(Eccentricity(Left(1)), sketchParams = Some(SketchParams(10, 1.0, new RandomCandidate())))
+    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(10, 1.0, new RandomCandidate())))
 
     val broadcastKey = toBroadcastKey(filter)
 
-    broadcastKey shouldBe Some((filter.spec, filter.sketchParams.get))
+    broadcastKey shouldBe Some((filter.spec, filter.sketch.get))
   }
 
   behavior of "toSketchKey"
 
   it should "return the key for the sketch params in the filter" in {
-    val filter = Filter(Eccentricity(Left(1)), sketchParams = Some(SketchParams(10, 1.0, new RandomCandidate())))
+    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(10, 1.0, new RandomCandidate())))
 
     val sketchKey = toSketchKey(filter)
 
-    sketchKey shouldBe filter.sketchParams
+    sketchKey shouldBe filter.sketch
   }
 
   behavior of "reifying filter specs"
-
-  it should "reify a feature by index" in {
-    val f: FilterFunction = toFilterFunction(Feature(1), null)
-
-    val dataPoint = (0, dense(1, 2, 3))
-
-    f(dataPoint) shouldBe 2
-  }
 
   val dataPoints =
     Seq(
@@ -71,9 +81,17 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   val rdd = sc.parallelize(dataPoints)
 
-  it should "reify L_1 eccentricity" in {
-    val ctx = TDAContext(sc, rdd)
+  it should "reify a feature by index" in {
+    val f = toFilterFunction(Feature(1), ctx)
 
+    val dataPoint = (0, dense(1, 2, 3))
+
+    f(dataPoint) shouldBe 2
+  }
+
+  val ctx = TDAContext(sc, rdd)
+
+  it should "reify L_1 eccentricity" in {
     val spec = Eccentricity(Left(1), distance = EuclideanDistance) // "eccentricity" :: 1 :: "euclidean" :: HNil
 
     val amended = toContextAmendment(spec).apply(ctx)
@@ -84,8 +102,6 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   }
 
   it should "reify L_inf eccentricity in function of default distance" in {
-    val ctx = TDAContext(sc, rdd)
-
     val spec = Eccentricity(Right(INFINITY))
 
     val amended = toContextAmendment(spec).apply(ctx)
@@ -96,8 +112,6 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   }
 
   it should "reify L_inf eccentricity in function of specified no-args distance" in {
-    val ctx = TDAContext(sc, rdd)
-
     val spec = Eccentricity(Right(INFINITY), distance = EuclideanDistance)
 
     val amended = toContextAmendment(spec).apply(ctx)
@@ -108,8 +122,6 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   }
 
   it should "reify L_inf different filter functions for different specs" in {
-    val ctx = TDAContext(sc, rdd)
-
     val spec1 = Eccentricity(Right(INFINITY), distance = EuclideanDistance)
     val spec2 = Eccentricity(Left(1))
 
@@ -125,8 +137,6 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   behavior of "Maps vs. SparseVectors"
 
   it should "yield equal results" in {
-    val ctx = TDAContext(sc, rdd)
-
     val ps = Right(INFINITY) :: Left(1) :: Left(2) :: Left(3) :: HNil
 
     ps
@@ -137,7 +147,6 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
         map.foreach{ case (i, v) => vec.apply(i) shouldBe v }
       })
-
   }
 
 }

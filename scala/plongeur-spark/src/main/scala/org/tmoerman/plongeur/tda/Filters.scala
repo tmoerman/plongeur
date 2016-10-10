@@ -28,45 +28,62 @@ object Filters extends Serializable with Logging {
   def toFilterFunction(filter: Filter, ctx: TDAContext): FilterFunction = {
     import filter._
 
-    spec match {
-      case Feature(n) => (d: DataPoint) => d.features(n)
+    val broadcasts = ctx.broadcasts
 
-      case PrincipalComponent(n) =>
-        toBroadcastKey(filter)
-          .flatMap(key => ctx.broadcasts.get(key))
-          .map(bc => {
-            val pcaModel = bc.value.asInstanceOf[PCAModel]
+    val result = (spec, sketch) match {
 
-            (d: DataPoint) => pcaModel.transform(d.features)(n) })
-          .get
+      case (Feature(n), _) =>
+        val fn = (d: DataPoint) => d.features(n)
+        Some(fn)
 
-      // TODO weave in multi-broadcast filter functions.
+      case (PrincipalComponent(n), _) => for {
+        broadcastKey      <- toBroadcastKey(filter)
+        broadcastPCAModel <- broadcasts.get(broadcastKey).map(_.value.asInstanceOf[PCAModel]) }
 
-      case _ => // broadcast value is a FilterFunction
-        toBroadcastKey(filter)
-          .flatMap(key => ctx.broadcasts.get(key))
-          .map(bc => bc.value.asInstanceOf[FilterFunction]) // TODO incorrect ->
-          .getOrElse(
-            throw new IllegalArgumentException(s"no filter function for $spec, current broadcasts: " + ctx.broadcasts.keys.mkString(", ")))
+        yield (d: DataPoint) => broadcastPCAModel.transform(d.features)(n)
+
+      case (_: Eccentricity | _: Density, None) => for {
+        broadcastKey    <- toBroadcastKey(filter)
+        broadcastVector <- broadcasts.get(broadcastKey).map(_.value.asInstanceOf[MLLibVector]) }
+
+        yield (d: DataPoint) => broadcastVector(d.index)
+
+      case (_: Eccentricity | _: Density, Some(params)) => for {
+        broadcastKey    <- toBroadcastKey(filter)
+        broadcastVector <- broadcasts.get(broadcastKey).map(_.value.asInstanceOf[MLLibVector])
+        sketchKey       <- toSketchKey(filter)
+        broadcastLookup <- broadcasts.get(sketchKey).map(_.value.asInstanceOf[Map[Index, Index]])}
+
+        yield (d: DataPoint) => broadcastVector(broadcastLookup(d.index))
+
+      case _ => None
     }
+
+    result.getOrElse(throw new IllegalArgumentException(
+      s"No filter function for ($spec, $sketch). Current broadcasts: ${broadcasts.keys.mkString(", ")}."))
   }
 
   val MAX_PCs: Int = 10
 
   def toContextAmendment(filter: Filter) = toSketchAmendment(filter) andThen toBroadcastAmendment(filter)
 
+  /**
+    * @param filter
+    * @return Returns a ContextAmendment function that updates both the specified TDAContext's sketches and broadcasts
+    *         in function of the
+    */
   def toSketchAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
     val amended = for {
       sketchKey <- toSketchKey(filter);
 
       ctx1 <- ctx.sketches
                  .get(sketchKey)
-                 .orElse(filter.sketchParams.map(params => Sketch(ctx, params)))
+                 .orElse(filter.sketch.map(params => Sketch(ctx, params)))
                  .map(sketch => ctx.copy(sketches = ctx.sketches + (sketchKey -> sketch)));
 
       ctx2 <- ctx1.broadcasts
                   .get(sketchKey)
-                  .orElse(ctx1.sketches.get(sketchKey).map(sketch => ctx1.sc.broadcast(sketch.toBroadcastValue)))
+                  .orElse(ctx1.sketches.get(sketchKey).map(sketch => ctx1.sc.broadcast(sketch.lookupMap)))
                   .map(value => ctx1.copy(broadcasts = ctx1.broadcasts + (sketchKey -> value)))
 
     } yield ctx2
@@ -74,7 +91,10 @@ object Filters extends Serializable with Logging {
     amended.getOrElse(ctx)
   }
 
-
+  /**
+    * @param filter
+    * @return
+    */
   def toBroadcastAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
     val amended = for {
       broadcastKey <- toBroadcastKey(filter);
@@ -96,46 +116,40 @@ object Filters extends Serializable with Logging {
     spec match {
       case PrincipalComponent(_) => {
         val pcaModel = new PCA(min(MAX_PCs, ctxLike.D)).fit(ctxLike.dataPoints.map(_.features))
-
         Some(pcaModel)
       }
 
       case Eccentricity(n, distance) => {
         val vec = eccentricityVec(n, ctxLike, distance)
-
-        val fn = (d: DataPoint) => vec(d.index)
-
-        Some(fn)
+        Some(vec)
       }
 
       case Density(sigma, distance) => {
         val vec = densityVec(sigma, ctxLike, distance)
-
-        val fn = (d: DataPoint) => vec(d.index)
-
-        Some(fn)
+        Some(vec)
       }
 
       case _ => None
     }
   }
 
-  def toSketchKey(filter: Filter): Option[SketchKey] = filter.sketchParams
+  def toSketchKey(filter: Filter): Option[SketchKey] = filter.sketch
 
-  def toFilterSpecKey(filter: Filter): Option[BroadcastKey] =
-    filter.spec match {
+  def toFilterSpecKey(spec: FilterSpec): Option[BroadcastKey] =
+    spec match {
       case _: PrincipalComponent |
            _: Eccentricity       |
-           _: Density => Some(filter.spec)
+           _: Density => Some(spec)
 
       case _: Feature => None
     }
 
   def toBroadcastKey(filter: Filter): Option[BroadcastKey] =
-    toFilterSpecKey(filter).map(broadcastKey =>
-      toSketchKey(filter).map(sketchKey => (broadcastKey, sketchKey)).getOrElse(broadcastKey))
-
-  val EMPTY = Map[Index, Double]()
+    toFilterSpecKey(filter.spec)
+      .map(broadcastKey =>
+        toSketchKey(filter)
+          .map(sketchKey => (broadcastKey, sketchKey))
+          .getOrElse(broadcastKey))
 
   /**
     * @param p The exponent
@@ -152,6 +166,8 @@ object Filters extends Serializable with Logging {
   @deprecated("use eccentricityVec instead")
   def eccentricityMap(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): Map[Index, Double] = {
     val N = ctx.N
+
+    val EMPTY: Map[Index, Double] = Map.empty
 
     p match {
       case Right(INFINITY) =>

@@ -239,19 +239,18 @@ case class Sketch(params: SketchParams,
 
   lazy val D = prototypes.first._2.features.size
 
-  lazy val frequencies = prototypes.map(_._1.size).collect.toList
-
   lazy val dataPoints = prototypes.map(_._2).cache
 
-  override def toString = s"Sketch(N=$N)"
+  def frequencies =
+    prototypes
+      .map{ case (originalIds, p) => (p.index, originalIds.size) }
+      .collect
+      .sortBy(_._2)
 
-  def toBroadcastValue = prototypes.collectAsMap
-
-  lazy val originLookup = prototypes.map{ case (ids, p) => (p.index, ids) }.collectAsMap
-
-  //  lazy val prototypesByOrigin =
-  //    indexedPrototypes
-  //      .flatMap{ case (ids, prototype: IndexedDataPoint) => ids.map(id => (id, prototype)) }
-  //      .cache
+  def lookupMap: Map[Index, Index] =
+    prototypes
+      .flatMap{ case (originalIds, p) => originalIds.map(id => (id, p.index)) }
+      .collectAsMap
+      .toMap
 
 }
