@@ -18,6 +18,8 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   behavior of "toFilterSpecKey"
 
+  implicit val seed: Long = 666
+
   it should "yield a Some(_) in cases" in {
     val pc0 = PrincipalComponent(0)
     toFilterSpecKey(pc0) shouldBe Some(pc0)

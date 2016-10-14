@@ -38,6 +38,7 @@ object Sketch extends Serializable {
                           r: Radius,
                           prototypeStrategy: PrototypeStrategy,
                           distance: DistanceFunction = DEFAULT)
+                         (implicit val seed: Long)
 
   def estimateRadius(ctx: TDAContext): Radius = ???
 
@@ -59,9 +60,10 @@ object Sketch extends Serializable {
   /**
     * PrototypeStrategy that reduces to a random data point per key.
     *
-    * @param random
+    * @param seed
     */
-  case class RandomCandidate(random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
+  case class RandomCandidate(implicit seed: Long) extends PrototypeStrategy {
+    val random = new JavaRandom(seed)
 
     type ACC = (List[Index], DataPoint)
 
@@ -120,9 +122,10 @@ object Sketch extends Serializable {
     *   -- D. CANTONE†, G. CINCOTTI†, A. FERRO†, AND A. PULVIRENTI†
     *
     * @param t The size of groups on which exactWinner is applied.
-    * @param random A random generator.
+    * @param seed A seed value.
     */
-  case class ApproximateMedian(t: Int, random: JavaRandom = new JavaRandom) extends PrototypeStrategy {
+  case class ApproximateMedian(t: Int)(implicit seed: Long) extends PrototypeStrategy {
+    val random: JavaRandom = new JavaRandom(seed)
 
     def exactWinner(distance: DistanceFunction)(S: Iterable[DataPoint]): DataPoint =
       S
@@ -174,7 +177,7 @@ object Sketch extends Serializable {
   def makeHashFunction(d: Int, params: SketchParams) = {
     import params._
 
-    lazy val random = new JavaRandom
+    lazy val random = new JavaRandom(seed)
 
     distance match {
       case CosineDistance      => SignRandomProjectionFunction.generate(d, k, random)
@@ -202,7 +205,7 @@ object Sketch extends Serializable {
       val array: Array[Int] = sig.elements match {
         case b: BitSet     => b.toArray
         case a: Array[Int] => a
-        case _ => throw new IllegalArgumentException("Cannot convert signature into Array[Int]")
+        case _             => throw new IllegalArgumentException("Cannot convert signature into Array[Int]")
       }
 
       MurmurHash3.arrayHash(array)
