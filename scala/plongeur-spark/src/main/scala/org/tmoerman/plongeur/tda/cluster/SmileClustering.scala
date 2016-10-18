@@ -1,6 +1,6 @@
 package org.tmoerman.plongeur.tda.cluster
 
-import org.tmoerman.plongeur.tda.Distance._
+import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.SmileClustering.createLocalClustering

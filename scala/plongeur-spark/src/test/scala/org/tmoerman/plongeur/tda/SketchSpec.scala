@@ -2,7 +2,8 @@ package org.tmoerman.plongeur.tda
 
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Distance.{ManhattanDistance, EuclideanDistance}
+import org.tmoerman.plongeur.tda.Distances.{ManhattanDistance, EuclideanDistance}
+import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.Sketch._
 import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
@@ -114,9 +115,10 @@ class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with 
 
     val ctx = TDAContext(sc, irisDataPointsRDD)
 
-    val params = new SketchParams(k, r, new ApproximateMedian(5))
+    val lshParams    = LSHParams(k, r)
+    val sketchParams = SketchParams(lshParams, new ApproximateMedian(5))
 
-    val sketch = Sketch(ctx, params)
+    val sketch = Sketch(ctx, sketchParams)
 
     sketch.N should be < ctx.N
 

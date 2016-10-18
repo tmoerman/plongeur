@@ -5,42 +5,33 @@ import java.lang.Math.{min, pow, sqrt}
 import java.util.{Random => JavaRandom}
 
 import breeze.linalg.DenseVector.fill
-import com.github.karlhigley.spark.neighbors.lsh.{LSHFunction, ScalarRandomProjectionFunction, SignRandomProjectionFunction, Signature}
+import com.github.karlhigley.spark.neighbors.lsh.{LSHFunction, Signature}
+import org.apache.spark.RangePartitioner
 import org.apache.spark.mllib.linalg.VectorConversions._
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Distance._
+import org.tmoerman.plongeur.tda.Distances._
+import org.tmoerman.plongeur.tda.LSH.{LSHParams, toArray}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
 
 import scala.annotation.tailrec
-import scala.collection.BitSet
 import scala.util.Random._
-import scala.util.hashing.MurmurHash3
+import scala.util.hashing.MurmurHash3.arrayHash
 
 /**
   * @author Thomas Moerman
   */
 object Sketch extends Serializable {
 
-  type SignatureLength = Int
-  type Radius = Double
-  type HashKey = Serializable
-  type Count = Int
+  type HashKey = Int
 
   /**
-    * @param k The signature length.
-    * @param r The radius.
-    * @param distance The distance function, necessary for choosing the hashing strategy.
+    * @param lshParams
     * @param prototypeStrategy The strategy for collapsing colliding points into a prototype point.
     */
-  case class SketchParams(k: SignatureLength,
-                          r: Radius,
-                          prototypeStrategy: PrototypeStrategy,
-                          distance: DistanceFunction = DEFAULT)
-                         (implicit val seed: Long)
-
-  def estimateRadius(ctx: TDAContext): Radius = ???
+  case class SketchParams(lshParams: LSHParams,
+                          prototypeStrategy: PrototypeStrategy)
 
   /**
     * Abstract type describing the strategy to choose a representant (a.k.a. Prototype) of a collection of DataPoints
@@ -170,60 +161,43 @@ object Sketch extends Serializable {
   }
 
   /**
-    * @param d The original dimensionality of the data points.
-    * @param params
-    * @return Returns a random projection LSH function.
-    */
-  def makeHashFunction(d: Int, params: SketchParams) = {
-    import params._
-
-    lazy val random = new JavaRandom(seed)
-
-    distance match {
-      case CosineDistance      => SignRandomProjectionFunction.generate(d, k, random)
-      case EuclideanDistance   => ScalarRandomProjectionFunction.generateL2(d, k, r, random)
-      case ManhattanDistance   => ScalarRandomProjectionFunction.generateL1(d, k, r, random)
-      case LpNormDistance(0.5) => ScalarRandomProjectionFunction.generateFractional(d, k, r, random)
-
-      case _ => throw new IllegalArgumentException(s"No sketch available for distance function: $distance")
-    }
-  }
-
-  /**
     * @param ctx
-    * @param params
+    * @param sketchParams
     * @return Returns a Sketch of the data in the TDAContext with respect to the SketchParams.
     */
-  def apply(ctx: TDAContext, params: SketchParams): Sketch = {
-    import params._
+  def apply(ctx: TDAContext, sketchParams: SketchParams): Sketch = {
+    import sketchParams._
+    import lshParams._
 
-    val hashFunction = makeHashFunction(ctx.D, params)
+    val nrPartitions = ctx.sc.defaultParallelism
 
-    def computeCollisionKey(point: DataPoint): HashKey = {
-      val sig: Signature[_] = hashFunction.signature(point.features)
+    val hashFunctionTry = LSH.makeHashFunction(ctx.D, lshParams)
 
-      val array: Array[Int] = sig.elements match {
-        case b: BitSet     => b.toArray
-        case a: Array[Int] => a
-        case _             => throw new IllegalArgumentException("Cannot convert signature into Array[Int]")
-      }
-
-      MurmurHash3.arrayHash(array)
-    }
+    def computeCollisionKey(point: DataPoint): HashKey =
+      hashFunctionTry
+        .map(_.signature(point.features))
+        .flatMap(toArray)
+        .map(arrayHash)
+        .get // TODO propagate failure correctly
 
     val pointsByHashKey =
       ctx
         .dataPoints
         .map(point => (computeCollisionKey(point), point))
+        .cache
+
+    val partitionedByHashKey =
+      pointsByHashKey
+        .partitionBy(new RangePartitioner(nrPartitions, pointsByHashKey))
 
     val prototypes: RDD[(List[Index], DataPoint)] =
       prototypeStrategy
-        .apply(pointsByHashKey, distance)
+        .apply(partitionedByHashKey, distance)
         .zipWithUniqueId
         .map{ case ((ids, prototype: DataPoint), id: Long) => (ids, prototype.copy(index = id.toInt)) }
         .cache
 
-    Sketch(params, hashFunction, prototypes)
+    Sketch(sketchParams, hashFunctionTry.get, prototypes)
   }
 
 }

@@ -4,8 +4,9 @@ import java.lang.Math.sqrt
 
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Distance.EuclideanDistance
+import org.tmoerman.plongeur.tda.Distances.EuclideanDistance
 import org.tmoerman.plongeur.tda.Filters._
+import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.Sketch.{RandomCandidate, SketchParams}
 import org.tmoerman.plongeur.test.SparkContextSpec
@@ -55,7 +56,7 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   }
 
   it should "return filter key with sketch key if specified" in {
-    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(10, 1.0, new RandomCandidate())))
+    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(LSHParams(10, 1.0), new RandomCandidate())))
 
     val broadcastKey = toBroadcastKey(filter)
 
@@ -65,7 +66,7 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   behavior of "toSketchKey"
 
   it should "return the key for the sketch params in the filter" in {
-    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(10, 1.0, new RandomCandidate())))
+    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(LSHParams(10, 1.0), new RandomCandidate())))
 
     val sketchKey = toSketchKey(filter)
 

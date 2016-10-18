@@ -1,6 +1,6 @@
 package org.tmoerman.plongeur.tda.cluster
 
-import org.tmoerman.plongeur.tda.Distance.{DEFAULT, DistanceFunction}
+import org.tmoerman.plongeur.tda.Distances.{DEFAULT, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model.DataPoint
 
 /**

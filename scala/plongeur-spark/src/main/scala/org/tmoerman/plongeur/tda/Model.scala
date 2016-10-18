@@ -9,7 +9,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Colour.Colouring
-import org.tmoerman.plongeur.tda.Distance.{DEFAULT, DistanceFunction}
+import org.tmoerman.plongeur.tda.Distances.{DEFAULT, DistanceFunction}
 import org.tmoerman.plongeur.tda.Filters.toContextAmendment
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
@@ -25,6 +25,7 @@ object Model {
 
   def feature(n: Int) = (p: DataPoint) => p.features(n)
 
+  type Count = Int
   type Index = Int
 
   implicit def pimp(in: (Index, MLVector)): DataPoint = dp(in._1, in._2)
