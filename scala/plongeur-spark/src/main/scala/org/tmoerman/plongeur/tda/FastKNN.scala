@@ -47,7 +47,7 @@ object FastKNN extends Serializable {
 
   /**
     * Assumption: acc1 and acc2 both are sorted and have equal size
- *
+    *
     * @return Returns G = combine{G_1, G_2, ..., G_l}
     */
   def combine(acc1: ACC, acc2: ACC): ACC =
@@ -98,16 +98,17 @@ object FastKNN extends Serializable {
       .values
       .zipWithIndex
       .map { case (p, idx) => (toBlockId(idx), p) } // key by block ID
-      .combineByKey(init, concat, union)            // bipartite merge within block ID
+      .combineByKey(init, concat, bipartiteMerge)            // bipartite merge within block ID
       .values
-      .treeReduce(union)                            // bipartite merge across block IDs
+      .treeReduce(bipartiteMerge)                            // bipartite merge across block IDs
       .sortBy(_._1.index)
   }
 
   type PQEntry = (Index, Distance)
   type BPQ = BoundedPriorityQueue[PQEntry]
   type ACC = List[(DataPoint, BPQ)]
-  implicit val ORD = Ordering.by[PQEntry, Distance](_._2)
+
+  implicit val ORD = Ordering.by[PQEntry, Distance](_._2).reverse
 
   /**
     * @return Returns a new accumulator.
@@ -130,15 +131,11 @@ object FastKNN extends Serializable {
     * @return Returns a merged accumulator,
     *         cfr. G = U{g_1}, cfr. basic_ann_by_lsh(X, k, block-sz), p666 Y.-M. Zhang et al.
     */
-  def union(acc1: ACC, acc2: ACC)(implicit distance: DistanceFunction): ACC = for {
-    (p1, bpq1) <- acc1
-    (p2, bpq2) <- acc2
+  def bipartiteMerge(a: ACC, b: ACC)(implicit distance: DistanceFunction): ACC = {
+    def merge(base: ACC, arg: ACC): ACC =
+      base.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, distance(p, q)) } ) }
 
-    p_bpq <- {
-      val d = distance(p1, p2)
-
-      (p1, bpq1 += ((p2.index, d))) :: (p2, bpq2 += ((p1.index, d))) :: Nil
-    }
-  } yield p_bpq
+    merge(a, b) ::: merge(b, a)
+  }
 
 }
