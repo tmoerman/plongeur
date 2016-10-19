@@ -18,7 +18,7 @@ object KNN extends Serializable {
   implicit val ORD = Ordering.by[PQEntry, Distance](_._2).reverse
 
   /**
-    * @return Returns a Breeze sparse matrix (BSM) in function of the calculated kNN data structure.
+    * @return Returns a SparseMatrix in function of the calculated kNN data structure.
     */
   def toSparseMatrix(N: Int, acc: ACC) =
     SparseMatrix.fromCOO(N, N, for { (p, bpq) <- acc; (q, dist) <- bpq } yield (p.index, q, dist))

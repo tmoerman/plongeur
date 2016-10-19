@@ -31,9 +31,9 @@ class FastKNNSpec extends KNNSpec {
     implicit val d: DistanceFunction = EuclideanDistance
 
     val acc = toAcc(points)
-    val bsm = toSparseMatrix(points.size, acc)
+    val m = toSparseMatrix(points.size, acc)
 
-    assertDistanceFrequencies(bsm)
+    assertDistanceFrequencies(m)
   }
 
   def toAcc(points: Seq[DataPoint])(implicit k: Int = 2, d: DistanceFunction): ACC =

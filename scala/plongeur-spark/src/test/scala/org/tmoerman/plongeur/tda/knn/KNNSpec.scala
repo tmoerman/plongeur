@@ -41,20 +41,11 @@ trait KNNSpec extends FlatSpec with Matchers {
       .flatMap(_._2.map(_._2))
       .frequencies shouldBe k2ExpectedFreqs
 
-  def assertDistanceFrequencies(m: SparseMatrix): Unit = {
-
-    val bla = m.toArray
-
-    val s = bla.mkString(", ")
-
-    println(s)
-
-//    m
-//      .iterator
-//      .map(_._2)
-//      .toIterable
-//      .frequencies shouldBe k2ExpectedFreqs
-  }
-
+  def assertDistanceFrequencies(m: SparseMatrix): Unit =
+    m
+      .values
+      .toIterable
+      .filter(_ > 0.0)
+      .frequencies shouldBe k2ExpectedFreqs
 
 }
