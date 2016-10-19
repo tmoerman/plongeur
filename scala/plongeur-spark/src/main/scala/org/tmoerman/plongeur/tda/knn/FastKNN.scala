@@ -1,15 +1,17 @@
-package org.tmoerman.plongeur.tda
+package org.tmoerman.plongeur.tda.knn
 
-import breeze.linalg.{DenseVector => BDV}
+import breeze.linalg.{CSCMatrix => BSM, DenseVector => BDV}
 import org.tmoerman.plongeur.tda.Distances._
+import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.{LSHParams, toVector}
 import org.tmoerman.plongeur.tda.Model._
-import breeze.linalg.{CSCMatrix => BSM}
-import org.tmoerman.plongeur.util.BoundedPriorityQueue
+import org.tmoerman.plongeur.tda.knn.KNN._
 
 /**
-  * See Fast kNN Graph Construction with Locality Sensitive Hashing
+  * See "Fast kNN Graph Construction with Locality Sensitive Hashing"
   *   -- Yan-Ming Zhang, Kaizhu Huang, Guanggang Geng, and Cheng-Lin Liu
+  *
+  * Implementation powered by Spark.
   *
   * @author Thomas Moerman
   */
@@ -21,17 +23,17 @@ object FastKNN extends Serializable {
     * @param blockSize
     * @param lshParams
     */
-  case class KNNParams(k: Int,
-                       blockSize: Int,
-                       nrHashTables: Int = 1,
-                       lshParams: LSHParams)
+  case class FastKNNParams(k: Int,
+                           blockSize: Int,
+                           nrHashTables: Int = 1,
+                           lshParams: LSHParams)
 
   /**
     * @param ctx
     * @param kNNParams
     * @return Returns a kNN sparse matrix.
     */
-  def apply(ctx: TDAContext, kNNParams: KNNParams): BSM[Distance] = {
+  def apply(ctx: TDAContext, kNNParams: FastKNNParams): BSM[Distance] = {
     import kNNParams._
 
     val combined =
@@ -59,20 +61,7 @@ object FastKNN extends Serializable {
         (p, bpq1 ++= bpq2)
       }}
 
-  /**
-    * @return Returns a Breeze sparse matrix (BSM) in function of the calculated kNN data structure.
-    */
-  def toSparseMatrix(N: Int, acc: ACC): BSM[Distance] = {
-    val kNN = acc.map{ case (_, bpq) => bpq.toSeq.sortBy(_._1) }
-
-    val distances   = kNN.flatMap(_.map(_._2)).toArray
-    val rowIndices  = kNN.map(_.size).toArray
-    val colPointers = kNN.flatMap(_.map(_._1)).toArray
-
-    new BSM[Distance](distances, N, N, colPointers, rowIndices)
-  }
-
-  def basic(ctx: TDAContext, kNNParams: KNNParams): ACC = {
+  def basic(ctx: TDAContext, kNNParams: FastKNNParams): ACC = {
     import kNNParams._
     import lshParams._
 
@@ -98,17 +87,11 @@ object FastKNN extends Serializable {
       .values
       .zipWithIndex
       .map { case (p, idx) => (toBlockId(idx), p) } // key by block ID
-      .combineByKey(init, concat, bipartiteMerge)            // bipartite merge within block ID
+      .combineByKey(init, concat, union)            // bipartite merge within block ID
       .values
-      .treeReduce(bipartiteMerge)                            // bipartite merge across block IDs
+      .treeReduce(union)                            // bipartite merge across block IDs
       .sortBy(_._1.index)
   }
-
-  type PQEntry = (Index, Distance)
-  type BPQ = BoundedPriorityQueue[PQEntry]
-  type ACC = List[(DataPoint, BPQ)]
-
-  implicit val ORD = Ordering.by[PQEntry, Distance](_._2).reverse
 
   /**
     * @return Returns a new accumulator.
@@ -128,12 +111,16 @@ object FastKNN extends Serializable {
   }
 
   /**
+    * Assumes accumulators a and b's data points are mutually exclusive.
+    *
     * @return Returns a merged accumulator,
     *         cfr. G = U{g_1}, cfr. basic_ann_by_lsh(X, k, block-sz), p666 Y.-M. Zhang et al.
     */
-  def bipartiteMerge(a: ACC, b: ACC)(implicit distance: DistanceFunction): ACC = {
-    def merge(base: ACC, arg: ACC): ACC =
-      base.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, distance(p, q)) } ) }
+  def union(a: ACC, b: ACC)(implicit distance: DistanceFunction): ACC = {
+    assert((a.map(_._1).toSet intersect b.map(_._1).toSet).isEmpty) // TODO remove after simplification
+
+    def merge(base: ACC, arg: ACC) =
+      base.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, distance(p, q)) }) }
 
     merge(a, b) ::: merge(b, a)
   }
