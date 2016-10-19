@@ -6,6 +6,7 @@ import org.apache.spark.mllib.linalg.Vectors._
 import org.scalatest.{Matchers, FlatSpec}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.KNN._
+import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
   * @author Thomas Moerman
@@ -32,7 +33,7 @@ trait KNNSpec extends FlatSpec with Matchers {
     dp(7, dense(6.0, 5.0)) ::
     dp(8, dense(6.0, 6.0)) :: Nil
 
-  def assertDistanceFrequencies(acc: ACC): Unit =
+  def assertDistanceFrequencies(acc: ACCLike): Unit =
     acc
       .flatMap(_._2.map(_._2))
       .frequencies shouldBe Map(1.0 -> 16, sqrt(2) -> 2)

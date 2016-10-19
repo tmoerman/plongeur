@@ -19,22 +19,25 @@ object ExactKNN {
   case class ExactKNNParams(k: Int, distance: DistanceFunction = DEFAULT)
 
   def apply(ctx: TDAContext, kNNParams: ExactKNNParams): BSM[Distance] = {
+    val acc = toACC(ctx, kNNParams)
+
+    toSparseMatrix(ctx.N, acc)
+  }
+
+  def toACC(ctx: TDAContext, kNNParams: ExactKNNParams): ACCLike = {
     implicit val k = kNNParams.k
     implicit val distance = kNNParams.distance
 
-    val acc =
-      ctx
-        .dataPoints
-        .distinctComboPairs
-        .flatMap{ case (a, b) =>
-          val d = distance(a, b)
+    ctx
+      .dataPoints
+      .distinctComboPairs
+      .flatMap{ case (a, b) =>
+        val d = distance(a, b)
 
-          (a, (b.index, d)) ::
+        (a, (b.index, d)) ::
           (b, (a.index, d)) :: Nil }
-        .combineByKey(init, concat, union)
-        .collect
-
-    toSparseMatrix(ctx.N, acc)
+      .combineByKey(init, concat, union)
+      .collect
   }
 
   def init(entry: PQEntry)(implicit k: Int) = new BPQ(k) += entry
