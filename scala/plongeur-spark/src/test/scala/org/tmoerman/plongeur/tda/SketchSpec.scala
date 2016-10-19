@@ -45,8 +45,7 @@ class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with 
       .map{ case ((x, y), idx) => dp(idx, dense(x, y)) }
 
   private def keyed(data: Seq[DataPoint]) =
-    sc.parallelize(data)
-      .keyBy(_ => "key".asInstanceOf[HashKey])
+    sc.parallelize(data).keyBy(_ => 666)
 
   behavior of "RandomCandidate"
 
@@ -115,7 +114,7 @@ class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with 
 
     val ctx = TDAContext(sc, irisDataPointsRDD)
 
-    val lshParams    = LSHParams(k, r)
+    val lshParams    = LSHParams(k, Some(r))
     val sketchParams = SketchParams(lshParams, new ApproximateMedian(5))
 
     val sketch = Sketch(ctx, sketchParams)

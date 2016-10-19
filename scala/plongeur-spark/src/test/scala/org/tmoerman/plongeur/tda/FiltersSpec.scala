@@ -56,7 +56,7 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   }
 
   it should "return filter key with sketch key if specified" in {
-    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(LSHParams(10, 1.0), new RandomCandidate())))
+    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(LSHParams(10, Some(1.0)), new RandomCandidate())))
 
     val broadcastKey = toBroadcastKey(filter)
 
@@ -66,7 +66,7 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   behavior of "toSketchKey"
 
   it should "return the key for the sketch params in the filter" in {
-    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(LSHParams(10, 1.0), new RandomCandidate())))
+    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(LSHParams(10, Some(1.0)), new RandomCandidate())))
 
     val sketchKey = toSketchKey(filter)
 

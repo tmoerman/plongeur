@@ -30,7 +30,7 @@ object LSH extends Serializable {
     * @param seed Implicit random seed.
     */
   case class LSHParams(signatureLength: SignatureLength,
-                       radius: Radius,
+                       radius: Option[Radius] = None,
                        distance: DistanceFunction = DEFAULT)
                       (implicit val seed: Long) extends Serializable
 
@@ -44,11 +44,13 @@ object LSH extends Serializable {
 
     lazy val random = new JavaRandom(seed)
 
+    lazy val r = radius.get
+
     Try(distance match {
-      case CosineDistance      => SignRandomProjectionFunction.generate(d, signatureLength, random)
-      case EuclideanDistance   => ScalarRandomProjectionFunction.generateL2(d, signatureLength, radius, random)
-      case ManhattanDistance   => ScalarRandomProjectionFunction.generateL1(d, signatureLength, radius, random)
-      case LpNormDistance(0.5) => ScalarRandomProjectionFunction.generateFractional(d, signatureLength, radius, random)
+      case CosineDistance      => SignRandomProjectionFunction   generate           (d, signatureLength, random)
+      case EuclideanDistance   => ScalarRandomProjectionFunction generateL2         (d, signatureLength, r, random)
+      case ManhattanDistance   => ScalarRandomProjectionFunction generateL1         (d, signatureLength, r, random)
+      case LpNormDistance(0.5) => ScalarRandomProjectionFunction generateFractional (d, signatureLength, r, random)
 
       case _ => throw new IllegalArgumentException(s"No hash function available for distance function: $distance")
     })
