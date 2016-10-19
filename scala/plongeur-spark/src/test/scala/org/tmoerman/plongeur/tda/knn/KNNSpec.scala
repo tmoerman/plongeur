@@ -2,8 +2,9 @@ package org.tmoerman.plongeur.tda.knn
 
 import java.lang.Math._
 
+import org.apache.spark.mllib.linalg.SparseMatrix
 import org.apache.spark.mllib.linalg.Vectors._
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.KNN._
 import org.tmoerman.plongeur.util.IterableFunctions._
@@ -33,9 +34,27 @@ trait KNNSpec extends FlatSpec with Matchers {
     dp(7, dense(6.0, 5.0)) ::
     dp(8, dense(6.0, 6.0)) :: Nil
 
+  val k2ExpectedFreqs = Map(1.0 -> 16, sqrt(2) -> 2)
+
   def assertDistanceFrequencies(acc: ACCLike): Unit =
     acc
       .flatMap(_._2.map(_._2))
-      .frequencies shouldBe Map(1.0 -> 16, sqrt(2) -> 2)
+      .frequencies shouldBe k2ExpectedFreqs
+
+  def assertDistanceFrequencies(m: SparseMatrix): Unit = {
+
+    val bla = m.toArray
+
+    val s = bla.mkString(", ")
+
+    println(s)
+
+//    m
+//      .iterator
+//      .map(_._2)
+//      .toIterable
+//      .frequencies shouldBe k2ExpectedFreqs
+  }
+
 
 }

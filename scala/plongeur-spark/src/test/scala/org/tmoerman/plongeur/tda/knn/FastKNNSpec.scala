@@ -27,6 +27,15 @@ class FastKNNSpec extends KNNSpec {
     assertDistanceFrequencies(acc)
   }
 
+  "Breeze sparse matrix" should "yield correct frequencies" in {
+    implicit val d: DistanceFunction = EuclideanDistance
+
+    val acc = toAcc(points)
+    val bsm = toSparseMatrix(points.size, acc)
+
+    assertDistanceFrequencies(bsm)
+  }
+
   def toAcc(points: Seq[DataPoint])(implicit k: Int = 2, d: DistanceFunction): ACC =
     (points: @unchecked) match {
       case x :: xs => xs.foldLeft(init(x))(concat)

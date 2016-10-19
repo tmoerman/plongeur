@@ -1,6 +1,7 @@
 package org.tmoerman.plongeur.tda.knn
 
-import breeze.linalg.{CSCMatrix => BSM, DenseVector => BDV}
+import breeze.linalg.{DenseVector => BDV}
+import org.apache.spark.mllib.linalg.SparseMatrix
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.{LSHParams, toVector}
@@ -33,7 +34,7 @@ object FastKNN extends Serializable {
     * @param kNNParams
     * @return Returns a kNN sparse matrix.
     */
-  def apply(ctx: TDAContext, kNNParams: FastKNNParams): BSM[Distance] = {
+  def apply(ctx: TDAContext, kNNParams: FastKNNParams): SparseMatrix = {
     import kNNParams._
 
     val combined =
@@ -102,10 +103,10 @@ object FastKNN extends Serializable {
     * @return Returns an updated accumulator.
     */
   def concat(acc: ACC, p: DataPoint)(implicit k: Int, distance: DistanceFunction): ACC = {
-    val distancesByIndex = acc.map{ case (q, pq) => (q.index, distance(p, q)) }
+    val distances = acc.map(_._1).map(q => ((p.index, q.index), distance(p, q)))
 
-    (p, new BPQ(k) ++= distancesByIndex) ::
-    (acc, distancesByIndex)
+    (p, new BPQ(k) ++= distances.map{ case ((p, q), d) => (q, d) }) ::
+    (acc, distances.map{ case ((p, q), d) => (p, d) })
       .zipped
       .map{ case ((q, pq), entry) => (q, pq += entry) }
   }

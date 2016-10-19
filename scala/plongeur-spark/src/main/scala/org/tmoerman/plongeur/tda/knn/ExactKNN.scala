@@ -1,6 +1,6 @@
 package org.tmoerman.plongeur.tda.knn
 
-import breeze.linalg.{CSCMatrix => BSM}
+import org.apache.spark.mllib.linalg.SparseMatrix
 import org.tmoerman.plongeur.tda.Distances.{DEFAULT, Distance, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
@@ -18,13 +18,13 @@ object ExactKNN {
 
   case class ExactKNNParams(k: Int, distance: DistanceFunction = DEFAULT)
 
-  def apply(ctx: TDAContext, kNNParams: ExactKNNParams): BSM[Distance] = {
+  def apply(ctx: TDAContext, kNNParams: ExactKNNParams): SparseMatrix = {
     val acc = toACC(ctx, kNNParams)
 
     toSparseMatrix(ctx.N, acc)
   }
 
-  def toACC(ctx: TDAContext, kNNParams: ExactKNNParams): ACCLike = {
+  def toACC(ctx: TDAContext, kNNParams: ExactKNNParams): ACC = {
     implicit val k = kNNParams.k
     implicit val distance = kNNParams.distance
 
@@ -38,6 +38,7 @@ object ExactKNN {
           (b, (a.index, d)) :: Nil }
       .combineByKey(init, concat, union)
       .collect
+      .toList
   }
 
   def init(entry: PQEntry)(implicit k: Int) = new BPQ(k) += entry
