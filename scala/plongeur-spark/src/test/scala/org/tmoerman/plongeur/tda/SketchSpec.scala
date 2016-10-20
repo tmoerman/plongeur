@@ -13,8 +13,6 @@ import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
   */
 class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
 
-  implicit val seed: Long = 666
-
   val square = List(
     (0.0, 0.0), // lower row
     (1.0, 0.0),

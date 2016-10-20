@@ -9,6 +9,7 @@ import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model.TDAContext
 
 import scala.collection.BitSet
+import scala.util.Random.nextLong
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -32,7 +33,7 @@ object LSH extends Serializable {
   case class LSHParams(signatureLength: SignatureLength,
                        radius: Option[Radius] = None,
                        distance: DistanceFunction = DEFAULT)
-                      (implicit val seed: Long) extends Serializable
+                      (implicit val seed: Long = nextLong) extends Serializable
 
   /**
     * @param d The original dimensionality of the data points.

@@ -19,6 +19,8 @@ import scala.annotation.tailrec
 import scala.util.Random._
 import scala.util.hashing.MurmurHash3.arrayHash
 
+import scala.util.Random.nextLong
+
 /**
   * @author Thomas Moerman
   */
@@ -53,7 +55,7 @@ object Sketch extends Serializable {
     *
     * @param seed
     */
-  case class RandomCandidate(implicit seed: Long) extends PrototypeStrategy {
+  case class RandomCandidate(implicit seed: Long = nextLong) extends PrototypeStrategy {
     val random = new JavaRandom(seed)
 
     type ACC = (List[Index], DataPoint)
@@ -115,7 +117,7 @@ object Sketch extends Serializable {
     * @param t The size of groups on which exactWinner is applied.
     * @param seed A seed value.
     */
-  case class ApproximateMedian(t: Int)(implicit seed: Long) extends PrototypeStrategy {
+  case class ApproximateMedian(t: Int)(implicit seed: Long = nextLong) extends PrototypeStrategy {
     val random: JavaRandom = new JavaRandom(seed)
 
     def exactWinner(distance: DistanceFunction)(S: Iterable[DataPoint]): DataPoint =
