@@ -4,13 +4,16 @@ import org.tmoerman.plongeur.tda.Distances.{DistanceFunction, EuclideanDistance}
 import org.tmoerman.plongeur.tda.Model.DataPoint
 import org.tmoerman.plongeur.tda.knn.FastKNN._
 import org.tmoerman.plongeur.tda.knn.KNN._
+import org.tmoerman.plongeur.util.MatrixFunctions._
 
 /**
   * @author Thomas Moerman
   */
 class FastKNNSpec extends KNNSpec {
 
-  "init and concat" should "yield correct frequencies" in {
+  behavior of "brute force kNN functions"
+
+  it should "yield correct frequencies for partition accumulators" in {
     implicit val d: DistanceFunction = EuclideanDistance
 
     val acc = toAcc(points)
@@ -18,7 +21,7 @@ class FastKNNSpec extends KNNSpec {
     assertDistanceFrequencies(acc)
   }
 
-  "init, concat and union" should "yield correct frequencies" in {
+  it should "yield correct frequencies for combined partition accumulators" in {
     implicit val d: DistanceFunction = EuclideanDistance
 
     val (a, b) = points.splitAt(4)
@@ -27,18 +30,36 @@ class FastKNNSpec extends KNNSpec {
     assertDistanceFrequencies(acc)
   }
 
-  "Breeze sparse matrix" should "yield correct frequencies" in {
+  it should "yield correct frequencies for the sparse matrix" in {
     implicit val d: DistanceFunction = EuclideanDistance
 
     val acc = toAcc(points)
-    val m = toSparseMatrix(points.size, acc)
+    val sparse = toSparseMatrix(points.size, acc)
 
-    assertDistanceFrequencies(m)
+    assertDistanceFrequencies(sparse)
   }
 
-  def toAcc(points: Seq[DataPoint])(implicit k: Int = 2, d: DistanceFunction): ACC =
+  private def toAcc(points: Seq[DataPoint])(implicit k: Int = 2, d: DistanceFunction): ACC =
     (points: @unchecked) match {
       case x :: xs => xs.foldLeft(init(x))(concat)
     }
+
+  behavior of "sparse matrix row iterator"
+
+  it should "yield correct rows" in {
+    implicit val d: DistanceFunction = EuclideanDistance
+
+    val acc    = toAcc(points)
+    val sparse = toSparseMatrix(points.size, acc)
+    val rows   = sparse.rowVectors.toList
+
+    rows.size shouldBe 9
+  }
+
+  "FastKNN" should "pass a smoke test on iris data set" in {
+
+    // TODO implement
+
+  }
 
 }

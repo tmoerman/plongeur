@@ -94,10 +94,14 @@ object FastKNN extends Serializable {
       .sortBy(_._1.index)
   }
 
+  val ORD = Ordering.by[PQEntry, Distance](_._2).reverse
+
+  def bpq(k: Int) = new BPQ(k)(ORD)
+
   /**
     * @return Returns a new accumulator.
     */
-  def init(p: DataPoint)(implicit k: Int): ACC = (p, new BPQ(k)) :: Nil
+  def init(p: DataPoint)(implicit k: Int): ACC = (p, bpq(k)) :: Nil
 
   /**
     * @return Returns an updated accumulator.
@@ -105,7 +109,7 @@ object FastKNN extends Serializable {
   def concat(acc: ACC, p: DataPoint)(implicit k: Int, distance: DistanceFunction): ACC = {
     val distances = acc.map(_._1).map(q => ((p.index, q.index), distance(p, q)))
 
-    (p, new BPQ(k) ++= distances.map{ case ((p, q), d) => (q, d) }) ::
+    (p, bpq(k) ++= distances.map{ case ((p, q), d) => (q, d) }) ::
     (acc, distances.map{ case ((p, q), d) => (p, d) })
       .zipped
       .map{ case ((q, pq), entry) => (q, pq += entry) }

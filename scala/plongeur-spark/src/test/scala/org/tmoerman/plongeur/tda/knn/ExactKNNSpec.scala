@@ -21,4 +21,6 @@ class ExactKNNSpec extends KNNSpec with SparkContextSpec {
     assertDistanceFrequencies(acc)
   }
 
+
+
 }

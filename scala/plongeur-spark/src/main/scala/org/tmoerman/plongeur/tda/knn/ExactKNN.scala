@@ -34,8 +34,7 @@ object ExactKNN {
       .flatMap{ case (a, b) =>
         val d = distance(a, b)
 
-        (a, (b.index, d)) ::
-          (b, (a.index, d)) :: Nil }
+        (a, (b.index, d)) :: (b, (a.index, d)) :: Nil }
       .combineByKey(init, concat, union)
       .collect
       .toList
