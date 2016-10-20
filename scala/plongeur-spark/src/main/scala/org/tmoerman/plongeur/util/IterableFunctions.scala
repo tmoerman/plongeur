@@ -54,13 +54,13 @@ class IterableFunctions[T](it: Iterable[T]) extends Serializable {
 
   /**
     * @param selector Selector function, defaults to the identity function.
-    * @return List of Lists of V instances,
-    *         grouping repeats of the result of the selector function applied to the V instances.
+    * @return List of Lists of T instances,
+    *         grouping repeats of the result of the selector function applied to the T instances.
     */
   def groupRepeats(selector: (T) => Any = (v: T) => v): List[List[T]] = groupWhile((a: T, b: T) => selector(a) == selector(b))
 
   /**
-    * @param f The functional invariant for consecutive elements in the specified list
+    * @param invariant The functional invariant for consecutive elements in the specified list
     * @return Returns a List of Lists, where the nested lists group consecutive elements where the functional invariant
     *         is maintained.
     *
@@ -70,19 +70,18 @@ class IterableFunctions[T](it: Iterable[T]) extends Serializable {
     *
     *         groupWhile[Int](_ < _)(list)  yields  List(List(0, 1, 2), List(0, 1, 4), List(2, 7, 9), List(1))
     */
-  def groupWhile(f: (T, T) => Boolean): List[List[T]]  =
+  def groupWhile(invariant: (T, T) => Boolean): List[List[T]]  =
     it
-      .toList
-      .reverse
       .foldLeft(List[List[T]]()){
         case (Nil, i) => (i :: Nil) :: Nil
 
         case ((head@(x :: _)) :: tail, t) =>
-          if (f(t, x))
+          if (invariant(x, t))
             (t :: head) :: tail
           else
             (t :: Nil) :: head :: tail
 
         case _ => Nil }
+      .reverseMap(_.reverse)
 
 }
