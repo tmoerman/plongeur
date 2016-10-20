@@ -72,7 +72,7 @@ class IterableFunctions[T](it: Iterable[T]) extends Serializable {
     */
   def groupWhile(invariant: (T, T) => Boolean): List[List[T]]  =
     it
-      .foldLeft(List[List[T]]()){
+      .foldLeft(List[List[T]]()) {
         case (Nil, i) => (i :: Nil) :: Nil
 
         case ((head@(x :: _)) :: tail, t) =>
@@ -81,7 +81,8 @@ class IterableFunctions[T](it: Iterable[T]) extends Serializable {
           else
             (t :: Nil) :: head :: tail
 
-        case _ => Nil }
+        case _ => Nil
+      }
       .reverseMap(_.reverse)
 
 }
