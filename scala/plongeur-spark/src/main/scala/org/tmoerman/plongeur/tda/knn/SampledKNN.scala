@@ -2,40 +2,58 @@ package org.tmoerman.plongeur.tda.knn
 
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model.TDAContext
+import org.tmoerman.plongeur.tda.knn.ExactKNN._
 import org.tmoerman.plongeur.tda.knn.KNN._
 
 import scala.util.Random.nextLong
-import ExactKNN._
 
 /**
   * @author Thomas Moerman
   */
 object SampledKNN {
 
+  type Amount = Int
+  type Fraction = Double
+
   case class SampledKNNParams(k: Int,
-                              fraction: Double = 0.10,
+                              sampleSize: Either[Amount, Fraction] = Right(0.10),
                               distance: DistanceFunction = DEFAULT)
                              (implicit val seed: Long = nextLong)
 
-  def toACC(ctx: TDAContext, kNNParams: SampledKNNParams): ACC = {
+  /**
+    * @param ctx
+    * @param kNNParams
+    * @return Returns a partial sampleSize*N
+    */
+  def sampledACC(ctx: TDAContext, kNNParams: SampledKNNParams): ACC = {
     import kNNParams._
 
     implicit val k = kNNParams.k
     implicit val distance = kNNParams.distance
 
-    val full   = ctx.dataPoints.keyBy(_.index)
-    val sample = full.sample(false, fraction)
+    val full = ctx.dataPoints
 
-    sample
-      .join(full)
-      .values
-      .map{ case (s, f) =>
-        val d = distance(s, f)
+    lazy val taken =
+      full
+        .zipWithIndex
+        .flatMap{ case (e, idx) => if (idx < sampleSize.left.get) e :: Nil else Nil }
 
-        (s, (f.index, d)) }
+    lazy val sampled =
+      full
+        .sample(withReplacement = false, fraction = sampleSize.right.get)
+
+    val sample = if (sampleSize.isLeft) taken else sampled
+
+    (sample cartesian full)
+      .filter{ case (p, q) => p.index != q.index }
+      .map{ case (p, q) =>
+        val d = distance(p, q)
+
+        (p, (q.index, d))
+      }
       .combineByKey(init, concat, union)
       .collect
-      .toList
+      .toList // TODO sort?
   }
 
 }

@@ -40,7 +40,7 @@ object FastKNN extends Serializable {
     val combined =
       (1 to nrHashTables)
         .par
-        .map(_ => basic(ctx, kNNParams))
+        .map(_ => fastACC(ctx, kNNParams))
         .reduce(combine)
 
     // TODO neighbour propagation?
@@ -62,7 +62,12 @@ object FastKNN extends Serializable {
         (p, bpq1 ++= bpq2)
       }}
 
-  def basic(ctx: TDAContext, kNNParams: FastKNNParams): ACC = {
+  /**
+    * @param ctx
+    * @param kNNParams
+    * @return TODO
+    */
+  def fastACC(ctx: TDAContext, kNNParams: FastKNNParams): ACC = {
     import kNNParams._
     import lshParams._
 
@@ -93,10 +98,6 @@ object FastKNN extends Serializable {
       .treeReduce(union)                            // bipartite merge across block IDs
       .sortBy(_._1.index)
   }
-
-  val ORD = Ordering.by[PQEntry, Distance](_._2).reverse
-
-  def bpq(k: Int) = new BPQ(k)(ORD)
 
   /**
     * @return Returns a new accumulator.

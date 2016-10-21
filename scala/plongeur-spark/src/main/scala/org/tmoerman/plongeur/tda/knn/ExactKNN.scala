@@ -38,7 +38,7 @@ object ExactKNN {
         (a, (b.index, d)) :: (b, (a.index, d)) :: Nil }
       .combineByKey(init, concat, union)
       .collect
-      .toList
+      .toList // TODO sort?
   }
 
   def init(entry: PQEntry)(implicit k: Int) = bpq(k) += entry

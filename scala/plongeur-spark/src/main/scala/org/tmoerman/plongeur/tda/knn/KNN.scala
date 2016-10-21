@@ -3,8 +3,6 @@ package org.tmoerman.plongeur.tda.knn
 import org.apache.spark.mllib.linalg.SparseMatrix
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
-import org.tmoerman.plongeur.tda.knn.SampledKNN.SampledKNNParams
 import org.tmoerman.plongeur.util.BoundedPriorityQueue
 
 /**
@@ -28,58 +26,33 @@ object KNN extends Serializable {
     SparseMatrix.fromCOO(N, N, for { (p, bpq) <- acc; (q, dist) <- bpq } yield (p.index, q, dist))
 
   /**
-    * @param ctx TDAContext
     * @param candidate Candidate accumulator of which to assess the accuracy.
-    * @param kNNParams Params for exact kNN calculation.
-    * @return Returns the accuracy of specified accumulator acc with respect to the truth accumulator
-    *         (calculated with a brute-force approach).
+    * @param baseLine Ground truth accumulator to which the candidate will be compared.
+    * @return Returns the accuracy of the candidate with respect to the baseline accumulator.
     */
-  def accuracy(ctx: TDAContext, candidate: ACCLike, kNNParams: ExactKNNParams): Double = {
-    val groundTruth = ExactKNN.exactACC(ctx, kNNParams)
+  def accuracy(candidate: ACCLike, baseLine: ACCLike): Double = {
+    val baseLineMap = baseLine.map{ case (p, bpq) => (p.index, bpq.map(_._1).toSet) }.toMap
 
-    (candidate, groundTruth) // TODO careful with sort orders!
-      .zipped
-      .map{ case ((c, c_NN), (t, t_NN)) =>
-        val common = c_NN.map(_._1).toSet intersect t_NN.map(_._1).toSet
-        common.size.toDouble / c_NN.size }
-      .sum / candidate.size
+    val sum =
+      candidate
+        .filter{ case (p, _) => baseLineMap.contains(p.index) }
+        .map{ case (p, bpq) => (bpq.map(_._1).toSet intersect baseLineMap(p.index)).size.toDouble / bpq.size }.sum
+
+    sum / baseLine.size
   }
 
+  import org.tmoerman.plongeur.util.MatrixFunctions._
+
   /**
-    * @param ctx TDAContext
-    * @param candidate Candidate accumulator of which to assess the accuracy.
-    * @param kNNParams Params for sampled kNN calculation.
-    * @return Returns
+    * @param candidate Candidate SparseMatrix of which to assess the accuracy.
+    * @param baseLine Ground truth SparseMatrix to which the candidate will be compared.
+    * @return Returns the accuracy of the candidate with respect to the baseline SparseMatrix.
     */
-  def sampledAccuracy(ctx: TDAContext, candidate: ACCLike, kNNParams: SampledKNNParams): Double = {
-    val sampledGroundTruth =
-      SampledKNN
-        .sampledACC(ctx, kNNParams)
-        .map{ case (p, bpq) => (p.index, bpq.map(_._1).toSet) }
-        .toMap
-
-    val sampledIndexSet = sampledGroundTruth.keySet
-
-    candidate
-      .filter{ case (p, _) => sampledIndexSet.contains(p.index) }
-
-
-
+  def accuracy(candidate: SparseMatrix, baseLine: SparseMatrix): Double = {
+    (candidate.rowVectors.toSeq, baseLine.rowVectors.toSeq)
+      .zipped
 
     ???
   }
-
-//  /**
-//    * @param candidate
-//    * @param groundTruth
-//    * @param k
-//    * @return
-//    */
-//  def accuracy(candidate: SparseMatrix, groundTruth: SparseMatrix)(implicit k: Int): Double = {
-//    (candidate.rowVectors.toSeq, groundTruth.rowVectors.toSeq)
-//      .zipped
-//
-//    ???
-//  }
 
 }

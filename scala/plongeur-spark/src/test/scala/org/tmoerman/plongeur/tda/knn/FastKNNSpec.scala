@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda.knn
 
+import org.scalatest.{Matchers, FlatSpec}
 import org.tmoerman.plongeur.tda.Distances.{DistanceFunction, EuclideanDistance}
 import org.tmoerman.plongeur.tda.Model.DataPoint
 import org.tmoerman.plongeur.tda.knn.FastKNN._
@@ -9,7 +10,7 @@ import org.tmoerman.plongeur.util.MatrixFunctions._
 /**
   * @author Thomas Moerman
   */
-class FastKNNSpec extends KNNSpec {
+class FastKNNSpec extends FlatSpec with Matchers {
 
   behavior of "brute force kNN functions"
 
@@ -36,7 +37,7 @@ class FastKNNSpec extends KNNSpec {
     val acc = toAcc(points)
     val sparse = toSparseMatrix(points.size, acc)
 
-    assertDistanceFrequencies(sparse)
+    assertDistanceFrequenciesM(sparse)
   }
 
   private def toAcc(points: Seq[DataPoint])(implicit k: Int = 2, d: DistanceFunction): ACC =
