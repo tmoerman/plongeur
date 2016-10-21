@@ -45,7 +45,6 @@ object LSH extends Serializable {
     import params._
 
     lazy val random = new JavaRandom(seed)
-
     lazy val r = radius.get
 
     Try(distance match {
@@ -94,6 +93,6 @@ object LSH extends Serializable {
     * @param fraction
     * @return Returns an estimate for the radius of the $L_p$ LSH function radius.
     */
-  def estimateLSHRadius(ctx: TDAContext, fraction: Double = 1d / 25): Radius = maxRadius(ctx) * fraction
+  def estimateRadius(ctx: TDAContext, fraction: Double = 1d / 25): Radius = maxRadius(ctx) * fraction
 
 }

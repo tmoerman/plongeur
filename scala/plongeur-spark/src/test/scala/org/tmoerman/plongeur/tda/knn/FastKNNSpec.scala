@@ -2,7 +2,10 @@ package org.tmoerman.plongeur.tda.knn
 
 import org.scalatest.{Matchers, FlatSpec}
 import org.tmoerman.plongeur.tda.Distances.{DistanceFunction, EuclideanDistance}
+import org.tmoerman.plongeur.tda.LSH
+import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model.{TDAContext, DataPoint}
+import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
 import org.tmoerman.plongeur.tda.knn.FastKNN._
 import org.tmoerman.plongeur.tda.knn.KNN._
 import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
@@ -61,13 +64,29 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
   behavior of "FastKNN"
 
   it should "pass a smoke test on iris data set" in {
-    val k = 10
+    implicit val seed = 666L
 
-    val blockSize = 30
+    val ctx = TDAContext(sc, irisDataPointsRDD)
 
-    //val params = new FastKNNParams(k, c)
+    val k = 5
+    val L = 1
 
+    val params = new FastKNNParams(
+      k = k,
+      blockSize = 30,
+      nrHashTables = 1,
+      lshParams = LSHParams(
+        signatureLength = 10,
+        radius = Some(LSH.estimateRadius(ctx)),
+        distance = EuclideanDistance)(seed))
 
+    val fastACC = FastKNN.fastACC(ctx, params)
+
+    val exactACC = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = EuclideanDistance))
+
+    val accuracy = KNN.accuracy(fastACC, exactACC)
+
+    println(accuracy)
   }
 
 }

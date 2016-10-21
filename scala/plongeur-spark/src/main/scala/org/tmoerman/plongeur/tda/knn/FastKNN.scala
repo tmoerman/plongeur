@@ -1,5 +1,7 @@
 package org.tmoerman.plongeur.tda.knn
 
+import java.util.{Random => JavaRandom}
+
 import breeze.linalg.{DenseVector => BDV}
 import org.apache.spark.mllib.linalg.SparseMatrix
 import org.tmoerman.plongeur.tda.Distances._
@@ -72,8 +74,9 @@ object FastKNN extends Serializable {
     import lshParams._
 
     val hashFunction = LSH.makeHashFunction(ctx.D, lshParams)
+    val random = new JavaRandom(seed)
 
-    val w: BDV[Distance] = BDV.rand(signatureLength)
+    val w: BDV[Distance] = BDV.rand(signatureLength) // TODO take seed into account!
 
     def linearHashProjection(p: DataPoint): Distance =
       hashFunction
@@ -83,8 +86,8 @@ object FastKNN extends Serializable {
 
     def toBlockId(orderPosition: Long) = orderPosition / blockSize
 
-    implicit val N = ctx.N
     implicit val d = distance
+    implicit val k = kNNParams.k
 
     ctx
       .dataPoints
