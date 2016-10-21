@@ -7,6 +7,7 @@ import com.softwaremill.quicklens
 import org.apache.spark.SparkContext
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
+import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Colour.Colouring
 import org.tmoerman.plongeur.tda.Distances.{DEFAULT, DistanceFunction}
@@ -98,6 +99,8 @@ object Model {
     lazy val N = dataPoints.count.toInt
 
     lazy val D = dataPoints.first.features.size
+
+    lazy val stats = Statistics.colStats(dataPoints.map(_.features))
 
   }
 

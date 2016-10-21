@@ -3,8 +3,9 @@ package org.tmoerman.plongeur.tda
 import java.io.Serializable
 import java.util.{Random => JavaRandom}
 
-import breeze.linalg.{DenseVector => BDV}
+import breeze.linalg.{DenseVector => BDV, _}
 import com.github.karlhigley.spark.neighbors.lsh.{LSHFunction, ScalarRandomProjectionFunction, SignRandomProjectionFunction, Signature}
+import org.apache.spark.mllib.linalg.VectorConversions._
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model.TDAContext
 
@@ -74,7 +75,25 @@ object LSH extends Serializable {
   def toVector(signature: Signature[_]): BDV[Double] =
     toArray(signature).map(_.map(_.toDouble)).map(BDV(_)).get
 
-  // TODO implement
-  def estimateRadius(ctx: TDAContext): Radius = ???
+  /**
+    * @param ctx
+    * @return Returns the maximum radius of the hypercube spanned by the observations.
+    */
+  def maxRadius(ctx: TDAContext) = {
+    import ctx.stats
+
+    val max = stats.max.toBreeze
+    val min = stats.min.toBreeze
+    val delta = max - min
+
+    delta(argmax(delta))
+  }
+
+  /**
+    * @param ctx
+    * @param fraction
+    * @return Returns an estimate for the radius of the $L_p$ LSH function radius.
+    */
+  def estimateLSHRadius(ctx: TDAContext, fraction: Double = 1d / 25): Radius = maxRadius(ctx) * fraction
 
 }
