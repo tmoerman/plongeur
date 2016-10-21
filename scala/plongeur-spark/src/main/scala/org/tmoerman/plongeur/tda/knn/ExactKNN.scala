@@ -19,14 +19,15 @@ object ExactKNN {
   case class ExactKNNParams(k: Int, distance: DistanceFunction = DEFAULT)
 
   def apply(ctx: TDAContext, kNNParams: ExactKNNParams): SparseMatrix = {
-    val acc = toACC(ctx, kNNParams)
+    val acc = exactACC(ctx, kNNParams)
 
     toSparseMatrix(ctx.N, acc)
   }
 
-  def toACC(ctx: TDAContext, kNNParams: ExactKNNParams): ACC = {
+  def exactACC(ctx: TDAContext, kNNParams: ExactKNNParams): ACC = {
+    import kNNParams._
+
     implicit val k = kNNParams.k
-    implicit val distance = kNNParams.distance
 
     ctx
       .dataPoints
@@ -40,7 +41,7 @@ object ExactKNN {
       .toList
   }
 
-  def init(entry: PQEntry)(implicit k: Int) = new BPQ(k) += entry
+  def init(entry: PQEntry)(implicit k: Int) = bpq(k) += entry
 
   def concat(bpq: BPQ, entry: PQEntry) = bpq += entry
 

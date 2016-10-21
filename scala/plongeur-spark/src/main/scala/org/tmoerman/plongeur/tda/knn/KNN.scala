@@ -17,6 +17,10 @@ object KNN extends Serializable {
   type ACC     = List[(DataPoint, BPQ)]
   type ACCLike = Iterable[(DataPoint, BPQ)]
 
+  val ORD = Ordering.by[PQEntry, Distance](_._2).reverse
+
+  def bpq(k: Int) = new BPQ(k)(ORD)
+
   /**
     * @return Returns a SparseMatrix in function of the calculated kNN data structure.
     */
@@ -31,7 +35,7 @@ object KNN extends Serializable {
     *         (calculated with a brute-force approach).
     */
   def accuracy(ctx: TDAContext, candidate: ACCLike, kNNParams: ExactKNNParams): Double = {
-    val groundTruth = ExactKNN.toACC(ctx, kNNParams)
+    val groundTruth = ExactKNN.exactACC(ctx, kNNParams)
 
     (candidate, groundTruth) // TODO careful with sort orders!
       .zipped
@@ -50,7 +54,7 @@ object KNN extends Serializable {
   def sampledAccuracy(ctx: TDAContext, candidate: ACCLike, kNNParams: SampledKNNParams): Double = {
     val sampledGroundTruth =
       SampledKNN
-        .toACC(ctx, kNNParams)
+        .sampledACC(ctx, kNNParams)
         .map{ case (p, bpq) => (p.index, bpq.map(_._1).toSet) }
         .toMap
 

@@ -10,17 +10,15 @@ import org.tmoerman.plongeur.test.SparkContextSpec
   */
 class ExactKNNSpec extends KNNSpec with SparkContextSpec {
 
-  lazy val kNNParams = ExactKNNParams(k = 2, distance = EuclideanDistance)
+  val params = ExactKNNParams(k = 2, distance = EuclideanDistance)
 
   lazy val rdd = sc.parallelize(points)
   lazy val ctx = TDAContext(sc, rdd)
 
   "ExactKNN ACC" should "yield correct frequencies" in {
-    val acc = toACC(ctx, kNNParams)
+    val acc = exactACC(ctx, params)
 
     assertDistanceFrequencies(acc)
   }
-
-
 
 }
