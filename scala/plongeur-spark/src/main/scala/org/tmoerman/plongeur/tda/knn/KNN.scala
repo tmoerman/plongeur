@@ -25,6 +25,20 @@ object KNN extends Serializable {
   def toSparseMatrix(N: Int, acc: ACC) =
     SparseMatrix.fromCOO(N, N, for { (p, bpq) <- acc; (q, dist) <- bpq } yield (p.index, q, dist))
 
+
+  /**
+    * TODO
+    *
+    * implement an algorithm that collects:
+    *   - true positives
+    *   - false positives
+    *   - false negatives
+    *
+    * so we can design some kind of learning algorithm that optimizes the LSH parameter choices for a data set.
+    */
+
+
+
   /**
     * @param candidate Candidate accumulator of which to assess the accuracy.
     * @param baseLine Ground truth accumulator to which the candidate will be compared.

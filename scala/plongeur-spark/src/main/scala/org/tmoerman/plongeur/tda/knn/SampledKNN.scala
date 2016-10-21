@@ -40,7 +40,7 @@ object SampledKNN {
 
     lazy val sampled =
       full
-        .sample(withReplacement = false, fraction = sampleSize.right.get)
+        .sample(withReplacement = false, fraction = sampleSize.right.get, seed = seed)
 
     val sample = if (sampleSize.isLeft) taken else sampled
 

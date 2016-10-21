@@ -24,8 +24,14 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
     KNN.accuracy(acc, acc) shouldBe 1.0
   }
 
-  it should "yield 100% with respect to a sampled kNN" in {
+  it should "yield 100% with respect to a fixed size sampled kNN" in {
     val sampled = sampledACC(ctx, SampledKNNParams(2, Left(3), EuclideanDistance))
+
+    KNN.accuracy(acc, sampled) shouldBe 1.0
+  }
+
+  it should "yield 100% accuracy with respect to a stochastically sampled kNN" in {
+    val sampled = sampledACC(ctx, SampledKNNParams(2, Right(0.33), EuclideanDistance)(seed = 1l))
 
     KNN.accuracy(acc, sampled) shouldBe 1.0
   }
