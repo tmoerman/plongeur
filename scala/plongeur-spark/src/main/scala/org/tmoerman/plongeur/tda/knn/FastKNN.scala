@@ -37,17 +37,29 @@ object FastKNN extends Serializable {
     * @return Returns a kNN sparse matrix.
     */
   def apply(ctx: TDAContext, kNNParams: FastKNNParams): SparseMatrix = {
+    val combined = fastACC(ctx, kNNParams)
+
+    toSparseMatrix(ctx.N, combined)
+  }
+
+  /**
+    * @param ctx
+    * @param kNNParams
+    * @return
+    */
+  def fastACC(ctx: TDAContext, kNNParams: FastKNNParams): ACC = {
     import kNNParams._
+
+    val random = new JavaRandom(lshParams.seed)
 
     val combined =
       (1 to nrHashTables)
-        .par
-        .map(_ => fastACC(ctx, kNNParams))
+        //.par
+        .map(_ => kNNParams.copy(lshParams = lshParams.copy(seed = random.nextLong))) // different seed for each hash table
+        .map(params => singleACC(ctx, params))
         .reduce(combine)
 
-    // TODO neighbour propagation?
-
-    toSparseMatrix(ctx.N, combined)
+    combined
   }
 
   /**
@@ -61,7 +73,9 @@ object FastKNN extends Serializable {
       .map{ case ((p, bpq1), (q, bpq2)) => {
         assert(p.index == q.index) // TODO remove after simplification
 
-        (p, bpq1 ++= bpq2)
+        val result = (p, bpq1 ++= bpq2)
+
+        result
       }}
 
   /**
@@ -69,14 +83,13 @@ object FastKNN extends Serializable {
     * @param kNNParams
     * @return TODO
     */
-  def fastACC(ctx: TDAContext, kNNParams: FastKNNParams): ACC = {
+  def singleACC(ctx: TDAContext, kNNParams: FastKNNParams): ACC = {
     import kNNParams._
     import lshParams._
 
     val hashFunction = LSH.makeHashFunction(ctx.D, lshParams)
-    val random = new JavaRandom(seed)
 
-    val w: BDV[Distance] = BDV.rand(signatureLength) // TODO take seed into account!
+    val w = randomUniformVector(signatureLength, seed)
 
     def linearHashProjection(p: DataPoint): Distance =
       hashFunction
@@ -100,6 +113,12 @@ object FastKNN extends Serializable {
       .values
       .treeReduce(union)                            // bipartite merge across block IDs
       .sortBy(_._1.index)
+  }
+
+  def randomUniformVector(length: Int, seed: Long): BDV[Distance] = {
+    val random = new JavaRandom(seed)
+
+    BDV.apply((1 to length).map(_ => random.nextDouble): _*)
   }
 
   /**

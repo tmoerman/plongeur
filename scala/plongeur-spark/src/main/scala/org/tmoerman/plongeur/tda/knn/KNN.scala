@@ -15,7 +15,9 @@ object KNN extends Serializable {
   type ACC     = List[(DataPoint, BPQ)]
   type ACCLike = Iterable[(DataPoint, BPQ)]
 
-  val ORD = Ordering.by[PQEntry, Distance](_._2).reverse
+  type SPQ = scala.collection.mutable.PriorityQueue[PQEntry]
+
+  val ORD = Ordering.by((e: PQEntry) => (-e._2, e._1)) // why `e._1`? -> to disambiguate between equal distances
 
   def bpq(k: Int) = new BPQ(k)(ORD)
 
@@ -24,7 +26,6 @@ object KNN extends Serializable {
     */
   def toSparseMatrix(N: Int, acc: ACC) =
     SparseMatrix.fromCOO(N, N, for { (p, bpq) <- acc; (q, dist) <- bpq } yield (p.index, q, dist))
-
 
   /**
     * TODO
@@ -36,8 +37,6 @@ object KNN extends Serializable {
     *
     * so we can design some kind of learning algorithm that optimizes the LSH parameter choices for a data set.
     */
-
-
 
   /**
     * @param candidate Candidate accumulator of which to assess the accuracy.

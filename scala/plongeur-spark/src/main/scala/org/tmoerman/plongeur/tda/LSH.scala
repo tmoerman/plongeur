@@ -33,8 +33,8 @@ object LSH extends Serializable {
     */
   case class LSHParams(signatureLength: SignatureLength,
                        radius: Option[Radius] = None,
-                       distance: DistanceFunction = DEFAULT)
-                      (implicit val seed: Long = nextLong) extends Serializable
+                       distance: DistanceFunction = DEFAULT,
+                       seed: Long = nextLong) extends Serializable
 
   /**
     * @param d The original dimensionality of the data points.

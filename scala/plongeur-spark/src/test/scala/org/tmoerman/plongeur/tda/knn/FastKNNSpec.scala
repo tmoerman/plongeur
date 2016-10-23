@@ -1,14 +1,14 @@
 package org.tmoerman.plongeur.tda.knn
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distances.{DistanceFunction, EuclideanDistance}
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.LSHParams
-import org.tmoerman.plongeur.tda.Model.{TDAContext, DataPoint}
+import org.tmoerman.plongeur.tda.Model.{DataPoint, TDAContext}
 import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
 import org.tmoerman.plongeur.tda.knn.FastKNN._
 import org.tmoerman.plongeur.tda.knn.KNN._
-import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
+import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
 import org.tmoerman.plongeur.util.MatrixFunctions._
 
 /**
@@ -63,30 +63,50 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
   behavior of "FastKNN"
 
+  implicit val seed = 1L
+
+  val k = 5
+  val L = 1
+  val params = new FastKNNParams(
+    k = k,
+    blockSize = 50,
+    nrHashTables = L,
+    lshParams = LSHParams(
+      signatureLength = 2,
+      radius = Some(LSH.estimateRadius(ctx)),
+      distance = EuclideanDistance,
+      seed = seed))
+
+  lazy val ctx = TDAContext(sc, irisDataPointsRDD)
+
+  lazy val exactACC = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = EuclideanDistance))
+
   it should "pass a smoke test on iris data set" in {
-    implicit val seed = 666L
-
-    val ctx = TDAContext(sc, irisDataPointsRDD)
-
-    val k = 5
-    val L = 1
-
-    val params = new FastKNNParams(
-      k = k,
-      blockSize = 30,
-      nrHashTables = 1,
-      lshParams = LSHParams(
-        signatureLength = 10,
-        radius = Some(LSH.estimateRadius(ctx)),
-        distance = EuclideanDistance)(seed))
-
     val fastACC = FastKNN.fastACC(ctx, params)
-
-    val exactACC = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = EuclideanDistance))
 
     val accuracy = KNN.accuracy(fastACC, exactACC)
 
-    println(accuracy)
+    accuracy should be >= 0.99
+  }
+
+  it should "yield identical results with the same seed value" in {
+    val a = FastKNN.fastACC(ctx, params)
+    val b = FastKNN.fastACC(ctx, params)
+
+    KNN.accuracy(a, exactACC) shouldBe KNN.accuracy(b, exactACC)
+  }
+
+  it should "yield increasing accuracy with increasing L" in {
+    val accuracies =
+      (1 to 5).map(L => {
+        val newParams = params.copy(nrHashTables = L)
+
+        val fastACC = FastKNN.fastACC(ctx, newParams)
+
+        (L, KNN.accuracy(fastACC, exactACC))
+      })
+
+    accuracies.sliding(2, 1).foreach{ case Seq(a, b) => a should be <= b}
   }
 
 }
