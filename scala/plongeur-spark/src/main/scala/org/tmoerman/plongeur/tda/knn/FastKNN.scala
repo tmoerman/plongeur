@@ -89,12 +89,12 @@ object FastKNN extends Serializable {
 
     val hashFunction = LSH.makeHashFunction(ctx.D, lshParams)
 
-    val w = randomUniformVector(signatureLength, seed)
+    lazy val w = randomUniformVector(signatureLength, seed)
 
-    def linearHashProjection(p: DataPoint): Distance =
+    def hashProjection(p: DataPoint): Distance =
       hashFunction
         .map(_.signature(p.features))
-        .map(toVector(_) dot w)
+        .map(toVector(signatureLength, _) dot w)
         .get // TODO propagate failure correctly
 
     def toBlockId(orderPosition: Long) = orderPosition / blockSize
@@ -104,7 +104,7 @@ object FastKNN extends Serializable {
 
     ctx
       .dataPoints
-      .map(p => (linearHashProjection(p), p))       // key by hash projection
+      .map(p => (hashProjection(p), p))       // key by hash projection
       .sortByKey()
       .values
       .zipWithIndex

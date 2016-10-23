@@ -176,9 +176,7 @@ object Sketch extends Serializable {
 
     def computeCollisionKey(point: DataPoint): HashKey =
       hashFunctionTry
-        .map(_.signature(point.features))
-        .flatMap(toArray)
-        .map(arrayHash)
+        .map(hf => arrayHash(toArray(hf.signature(point.features))))
         .get // TODO propagate failure correctly
 
     val pointsByHashKey =

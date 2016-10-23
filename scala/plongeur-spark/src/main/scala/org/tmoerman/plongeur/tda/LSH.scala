@@ -3,7 +3,7 @@ package org.tmoerman.plongeur.tda
 import java.io.Serializable
 import java.util.{Random => JavaRandom}
 
-import breeze.linalg.{DenseVector => BDV, _}
+import breeze.linalg.{DenseVector => BDV, Vector => BV, SparseVector => BSV, _}
 import com.github.karlhigley.spark.neighbors.lsh.{LSHFunction, ScalarRandomProjectionFunction, SignRandomProjectionFunction, Signature}
 import org.apache.spark.mllib.linalg.VectorConversions._
 import org.tmoerman.plongeur.tda.Distances._
@@ -61,18 +61,21 @@ object LSH extends Serializable {
     * @param signature
     * @return Returns a Try of converting the signature into an Array[Int].
     */
-  def toArray(signature: Signature[_]): Try[Array[Int]] = signature.elements match {
-    case b: BitSet     => Success(b.toArray)
-    case a: Array[Int] => Success(a)
-    case _             => Failure(new IllegalArgumentException("Cannot convert signature into Array[Int]"))
+  def toArray(signature: Signature[_]): Array[Int] = signature.elements match {
+    case a: Array[Int] => a
+    case b: BitSet     => b.toArray
+    case _             => throw new UnsupportedOperationException(s"Cannot convert $signature to Array[Int]")
   }
 
   /**
     * @param signature
     * @return Returns a Try of the signature cast to a breeze DenseVector
     */
-  def toVector(signature: Signature[_]): BDV[Double] =
-    toArray(signature).map(_.map(_.toDouble)).map(BDV(_)).get
+  def toVector(length: Int, signature: Signature[_]): BV[Double] = signature.elements match {
+    case a: Array[Int] => BDV(a.map(_.toDouble))
+    case b: BitSet     => BSV(length)(b.map(index => (index, 1.0)).toSeq: _*)
+    case _             => throw new UnsupportedOperationException(s"Cannot convert $signature to breeze Vector[Double]")
+  }
 
   /**
     * @param ctx

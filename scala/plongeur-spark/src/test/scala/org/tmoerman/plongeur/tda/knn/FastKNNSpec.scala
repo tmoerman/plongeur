@@ -1,7 +1,7 @@
 package org.tmoerman.plongeur.tda.knn
 
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Distances.{DistanceFunction, EuclideanDistance}
+import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model.{DataPoint, TDAContext}
@@ -65,21 +65,23 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
   implicit val seed = 1L
 
-  val k = 5
+  val k = 10
   val L = 1
+  val d = EuclideanDistance
+
   val params = new FastKNNParams(
     k = k,
-    blockSize = 50,
+    blockSize = 20,
     nrHashTables = L,
     lshParams = LSHParams(
-      signatureLength = 2,
+      signatureLength = 10,
       radius = Some(LSH.estimateRadius(ctx)),
-      distance = EuclideanDistance,
+      distance = d,
       seed = seed))
 
   lazy val ctx = TDAContext(sc, irisDataPointsRDD)
 
-  lazy val exactACC = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = EuclideanDistance))
+  lazy val exactACC = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = d))
 
   it should "pass a smoke test on iris data set" in {
     val fastACC = FastKNN.fastACC(ctx, params)
@@ -93,7 +95,12 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     val a = FastKNN.fastACC(ctx, params)
     val b = FastKNN.fastACC(ctx, params)
 
-    KNN.accuracy(a, exactACC) shouldBe KNN.accuracy(b, exactACC)
+    val x = KNN.accuracy(a, exactACC)
+    val y = KNN.accuracy(b, exactACC)
+
+    println(x)
+
+    x shouldBe y
   }
 
   it should "yield increasing accuracy with increasing L" in {
@@ -103,10 +110,14 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
         val fastACC = FastKNN.fastACC(ctx, newParams)
 
-        (L, KNN.accuracy(fastACC, exactACC))
+        KNN.accuracy(fastACC, exactACC)
       })
 
-    accuracies.sliding(2, 1).foreach{ case Seq(a, b) => a should be <= b}
+    accuracies.sliding(2, 1).foreach{ case Seq(a, b) => {
+      println(a)
+
+      a should be <= b
+    }}
   }
 
 }
