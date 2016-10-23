@@ -24,8 +24,7 @@ class RDDFunctions[T: ClassTag](val rdd: RDD[T]) extends Serializable {
 
   def distinctComboSets[O](orderingSelector: T => O)
                           (implicit ord: Ordering[O]): RDD[Set[T]] =
-    rdd
-      .cartesian(rdd)
+    (rdd cartesian rdd)
       .flatMap{ case ((e1, e2)) =>
         if (ord.lt(orderingSelector(e1), orderingSelector(e2))) Seq(Set(e1, e2)) else Nil
       }
@@ -52,8 +51,7 @@ class DataPointRDDFunctions(val rdd: RDD[DataPoint]) extends Serializable {
     * @return Returns an RDD of all non-equal combination pairs of the specified RDD.
     */
   def distinctComboPairs: RDD[(DataPoint, DataPoint)] =
-    rdd
-      .cartesian(rdd)
+    (rdd cartesian rdd)
       .filter{ case ((p1, p2)) => p1.index < p2.index }
 
   /**

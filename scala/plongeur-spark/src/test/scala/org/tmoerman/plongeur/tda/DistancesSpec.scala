@@ -2,13 +2,13 @@ package org.tmoerman.plongeur.tda
 
 import org.apache.spark.mllib.linalg.Vectors._
 import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.tda.Distance.EuclideanDistance
+import org.tmoerman.plongeur.tda.Distances.EuclideanDistance
 import org.tmoerman.plongeur.tda.Model._
 
 /**
   * @author Thomas Moerman
   */
-class DistanceSpec extends FlatSpec with Matchers {
+class DistancesSpec extends FlatSpec with Matchers {
 
   "Euclidean distance" should "work" in {
     val dist = EuclideanDistance.apply(

@@ -4,7 +4,7 @@ import java.lang.Math.sqrt
 
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Distance.EuclideanDistance
+import org.tmoerman.plongeur.tda.Distances.EuclideanDistance
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale._

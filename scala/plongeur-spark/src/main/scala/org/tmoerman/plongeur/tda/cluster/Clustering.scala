@@ -3,7 +3,7 @@ package org.tmoerman.plongeur.tda.cluster
 import java.util.UUID
 import java.util.UUID._
 
-import org.tmoerman.plongeur.tda.Distance._
+import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import shapeless.{HNil, HList}

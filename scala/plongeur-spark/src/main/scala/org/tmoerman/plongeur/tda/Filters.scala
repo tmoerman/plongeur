@@ -7,7 +7,7 @@ import org.apache.spark.Logging
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
 import org.apache.spark.mllib.linalg.VectorConversions._
 import org.apache.spark.mllib.linalg.{Vector => MLLibVector}
-import org.tmoerman.plongeur.tda.Distance.DistanceFunction
+import org.tmoerman.plongeur.tda.Distances.DistanceFunction
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
 import org.tmoerman.plongeur.util.RDDFunctions._

@@ -7,7 +7,7 @@ import org.tmoerman.plongeur.tda.Model._
 /**
   * @author Thomas Moerman
   */
-object Distance {
+object Distances {
 
   /**
     * See Smile-scala.
@@ -32,7 +32,9 @@ object Distance {
 
   val DEFAULT: DistanceFunction = ManhattanDistance
 
-  trait DistanceFunction extends ((DataPoint, DataPoint) => Double) with SimpleName with Serializable
+  type Distance = Double
+
+  trait DistanceFunction extends ((DataPoint, DataPoint) => Distance) with SimpleName with Serializable
 
   // TODO Pearson correlation, closing over ~~TDAContext~~ / over broadcast variable
 

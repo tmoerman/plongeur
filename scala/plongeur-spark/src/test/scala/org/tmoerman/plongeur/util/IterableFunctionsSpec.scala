@@ -49,4 +49,36 @@ class IterableFunctionsSpec extends FlatSpec with Matchers {
     Seq(1, 2, 2, 3, 3, 3).frequencies shouldBe Map(1 -> 1, 2 -> 2, 3 -> 3)
   }
 
+  behavior of "groupWhile"
+
+  it should "group an empty list correctly" in {
+    val empty = List[Int]()
+
+    empty.groupWhile(_ < _) shouldBe Nil
+  }
+
+  it should "group a singleton list correctly" in {
+    val single = List(1)
+
+    single.groupWhile(_ < _) shouldBe List(List(1))
+  }
+
+  it should "group a monotonously increasing list correctly" in {
+    val mono = List(1, 2, 3, 4, 5)
+
+    mono.groupWhile(_ < _) shouldBe List(List(1, 2, 3, 4, 5))
+  }
+
+  it should "group a monotonously decreasing list correctly" in {
+    val rev = List(1, 2, 3, 4, 5).reverse
+
+    rev.groupWhile(_ < _) shouldBe List(List(5), List(4), List(3), List(2), List(1))
+  }
+
+  it should "group a non-empty list correctly" in {
+    val list = List(0, 1, 2, 0, 1, 4, 2, 7, 9, 1)
+
+    list.groupWhile(_ < _) shouldBe List(List(0, 1, 2), List(0, 1, 4), List(2, 7, 9), List(1))
+  }
+
 }

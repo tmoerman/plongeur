@@ -23,48 +23,66 @@ object IterableFunctions {
       }
     }
 
-  implicit def iteratorToIterable[V](it: Iterator[V]): Iterable[V] = it.toIterable
+  implicit def iteratorToIterable[T](it: Iterator[T]): Iterable[T] = it.toIterable
 
-  implicit def iterableToIterator[V](it: Iterable[V]): Iterator[V] = it.toIterator
+  implicit def iterableToIterator[T](it: Iterable[T]): Iterator[T] = it.toIterator
 
-  implicit def pimpIterable[V](it: Iterable[V]): IterableFunctions[V] = new IterableFunctions[V](it)
+  implicit def pimpIterable[T](it: Iterable[T]): IterableFunctions[T] = new IterableFunctions[T](it)
 
 }
 
-class IterableFunctions[V](it: Iterable[V]) extends Serializable {
+class IterableFunctions[T](it: Iterable[T]) extends Serializable {
 
   /**
     * @return Returns a Map of frequencies of the elements.
     */
-  def frequencies: Map[V, Int] =
-    it.foldLeft(Map[V, Int]() withDefaultValue 0) { (acc, v) => acc.updated(v, acc(v) + 1) }
+  def frequencies: Map[T, Int] =
+    it.foldLeft(Map[T, Int]() withDefaultValue 0) { (acc, v) => acc.updated(v, acc(v) + 1) }
 
   /**
     * @return Returns an Iterable of sliding pairs assuming step size 1.
     */
-  def slidingPairs: Iterable[(V, V)] =
+  def slidingPairs: Iterable[(T, T)] =
     it.sliding(2).map(t => (t.head, t.tail.head)).toIterable
 
   /**
     * @return
     */
-  def cartesian: Iterable[(V, V)]  = for (
+  def cartesian: Iterable[(T, T)]  = for (
     a <- it;
     b <- it; if a != b) yield (a, b)
 
   /**
     * @param selector Selector function, defaults to the identity function.
-    * @return List of Lists of V instances,
-    *         grouping repeats of the result of the selector function applied to the V instances.
+    * @return List of Lists of T instances,
+    *         grouping repeats of the result of the selector function applied to the T instances.
     */
-  def groupRepeats(selector: (V) => Any = (v: V) => v): List[List[V]] =
-    it.foldLeft(List[List[V]]()) { (acc, i) =>
-      acc match {
-        case l :: ls => l match {
-          case x :: _ if selector(x) == selector(i) => (i :: l) :: ls
-          case _                                    => (i :: Nil) :: acc
-        }
-        case _ => (i :: Nil) :: Nil
-      }}.reverse.map(_.reverse)
+  def groupRepeats(selector: (T) => Any = (v: T) => v): List[List[T]] = groupWhile((a: T, b: T) => selector(a) == selector(b))
+
+  /**
+    * @param invariant The functional invariant for consecutive elements in the specified list
+    * @return Returns a List of Lists, where the nested lists group consecutive elements where the functional invariant
+    *         is maintained.
+    *
+    *         Example:
+    *
+    *         val list = List(0, 1, 2, 0, 1, 4, 2, 7, 9, 1)
+    *
+    *         groupWhile[Int](_ < _)(list)  yields  List(List(0, 1, 2), List(0, 1, 4), List(2, 7, 9), List(1))
+    */
+  def groupWhile(invariant: (T, T) => Boolean): List[List[T]]  =
+    it
+      .foldLeft(List[List[T]]()) {
+        case (Nil, i) => (i :: Nil) :: Nil
+
+        case ((head@(x :: _)) :: tail, t) =>
+          if (invariant(x, t))
+            (t :: head) :: tail
+          else
+            (t :: Nil) :: head :: tail
+
+        case _ => Nil
+      }
+      .reverseMap(_.reverse)
 
 }

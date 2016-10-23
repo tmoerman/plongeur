@@ -1,7 +1,7 @@
 package org.tmoerman.lab
 
 import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.tda.Distance._
+import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.test.FileResources
 import smile.clustering.HierarchicalClustering
 import smile.clustering.linkage.SingleLinkage
