@@ -61,61 +61,71 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     rows.size shouldBe 9
   }
 
-  behavior of "FastKNN"
-
   implicit val seed = 1L
 
-  val k = 10
-  val L = 1
-  val d = EuclideanDistance
-
-  val params = new FastKNNParams(
-    k = k,
-    blockSize = 20,
-    nrHashTables = L,
-    lshParams = LSHParams(
-      signatureLength = 10,
-      radius = Some(LSH.estimateRadius(ctx)),
-      distance = d,
-      seed = seed))
-
+  val k = 5
+  
   lazy val ctx = TDAContext(sc, irisDataPointsRDD)
 
-  lazy val exactACC = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = d))
+  behavior of "FastKNN with Euclidean distance"
 
-  it should "pass a smoke test on iris data set" in {
-    val fastACC = FastKNN.fastACC(ctx, params)
+  lazy val exactEuclidean = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = EuclideanDistance))
 
-    val accuracy = KNN.accuracy(fastACC, exactACC)
+  val lshParamsEuclidean = LSHParams(
+    signatureLength = 10,
+    radius = Some(LSH.estimateRadius(ctx)),
+    distance = EuclideanDistance,
+    seed = seed)
 
-    accuracy should be >= 0.99
-  }
+  val fastParamsEuclidean = new FastKNNParams(
+    k = k,
+    blockSize = 20,
+    nrHashTables = 1,
+    lshParams = lshParamsEuclidean)
 
   it should "yield identical results with the same seed value" in {
-    val a = FastKNN.fastACC(ctx, params)
-    val b = FastKNN.fastACC(ctx, params)
+    assertEqualResultsForEqualSeed(fastParamsEuclidean, exactEuclidean)
+  }
 
-    val x = KNN.accuracy(a, exactACC)
-    val y = KNN.accuracy(b, exactACC)
+  it should "yield increasing accuracy with increasing L" in {
+    assertIncreasingAccuracy(fastParamsEuclidean, exactEuclidean)
+  }
 
-    println(x)
+  behavior of "FastKNN with Cosine distance"
+
+  val fastParamsCosine = fastParamsEuclidean.copy(lshParams = lshParamsEuclidean.copy(distance = CosineDistance))
+
+  lazy val exactCosine = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = CosineDistance))
+
+  it should "yield identical results with the same seed value" in {
+    assertEqualResultsForEqualSeed(fastParamsCosine, exactCosine)
+  }
+
+  it should "yield increasing accuracy with increasing L" in {
+    assertIncreasingAccuracy(fastParamsCosine, exactCosine)
+  }
+
+  private def assertEqualResultsForEqualSeed(fastParams: FastKNNParams, baseLine: ACC): Unit = {
+    val a = FastKNN.fastACC(ctx, fastParams)
+    val b = FastKNN.fastACC(ctx, fastParams)
+
+    val x = KNN.accuracy(a, baseLine)
+    val y = KNN.accuracy(b, baseLine)
 
     x shouldBe y
   }
 
-  it should "yield increasing accuracy with increasing L" in {
+  private def assertIncreasingAccuracy(fastParams: FastKNNParams, baseLine: ACC): Unit = {
     val accuracies =
       (1 to 5).map(L => {
-        val newParams = params.copy(nrHashTables = L)
+        val newParams = fastParams.copy(nrHashTables = L)
 
         val fastACC = FastKNN.fastACC(ctx, newParams)
 
-        KNN.accuracy(fastACC, exactACC)
+        KNN.accuracy(fastACC, baseLine)
       })
 
     accuracies.sliding(2, 1).foreach{ case Seq(a, b) => {
-      println(a)
-
       a should be <= b
     }}
   }
