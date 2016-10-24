@@ -9,6 +9,7 @@ import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.{LSHParams, toVector}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.KNN._
+import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
   * See "Fast kNN Graph Construction with Locality Sensitive Hashing"
@@ -54,7 +55,7 @@ object FastKNN extends Serializable {
 
     val combined =
       (1 to nrHashTables)
-        //.par
+        // .par -> TODO makes sense?
         .map(_ => kNNParams.copy(lshParams = lshParams.copy(seed = random.nextLong))) // different seed for each hash table
         .map(params => singleACC(ctx, params))
         .reduce(combine)
@@ -147,8 +148,18 @@ object FastKNN extends Serializable {
   def union(a: ACC, b: ACC)(implicit distance: DistanceFunction): ACC = {
     assert((a.map(_._1).toSet intersect b.map(_._1).toSet).isEmpty) // TODO remove after simplification
 
-    def merge(base: ACC, arg: ACC) =
-      base.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, distance(p, q)) }) }
+    implicit val ORD = Ordering.by((d: DataPoint) => d.index)
+
+    def indexPair(p: DataPoint, q: DataPoint) = if (ORD.lt(p, q)) (p.index, q.index) else (q.index, p.index)
+
+    val distances =
+      (a.map(_._1) cartesian b.map(_._1))
+        .foldLeft(Map[(Index, Index), Distance]()){ case (m, (p, q)) => m + (indexPair(p, q) -> distance(p, q)) }
+
+    def cachedDistance(p: DataPoint, q: DataPoint) = distances(indexPair(p, q))
+
+    def merge(acc: ACC, arg: ACC): ACC =
+      acc.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, cachedDistance(p, q)) })}
 
     merge(a, b) ::: merge(b, a)
   }
