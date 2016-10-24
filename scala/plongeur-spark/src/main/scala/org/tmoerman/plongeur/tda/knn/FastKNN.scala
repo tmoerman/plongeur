@@ -105,14 +105,14 @@ object FastKNN extends Serializable {
 
     ctx
       .dataPoints
-      .map(p => (hashProjection(p), p))       // key by hash projection
+      .map(p => (hashProjection(p), p))             // key by hash projection
       .sortByKey()
       .values
       .zipWithIndex
       .map { case (p, idx) => (toBlockId(idx), p) } // key by block ID
-      .combineByKey(init, concat, union)            // bipartite merge within block ID
+      .combineByKey(init, concat, merge)            // bipartite merge within block ID
       .values
-      .treeReduce(union)                            // bipartite merge across block IDs
+      .treeReduce(_ ::: _)                          // U{g_i}
       .sortBy(_._1.index)
   }
 
@@ -145,7 +145,7 @@ object FastKNN extends Serializable {
     * @return Returns a merged accumulator,
     *         cfr. G = U{g_1}, cfr. basic_ann_by_lsh(X, k, block-sz), p666 Y.-M. Zhang et al.
     */
-  def union(a: ACC, b: ACC)(implicit distance: DistanceFunction): ACC = {
+  def merge(a: ACC, b: ACC)(implicit distance: DistanceFunction): ACC = {
     assert((a.map(_._1).toSet intersect b.map(_._1).toSet).isEmpty) // TODO remove after simplification
 
     implicit val ORD = Ordering.by((d: DataPoint) => d.index)

@@ -30,7 +30,7 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     implicit val d: DistanceFunction = EuclideanDistance
 
     val (a, b) = points.splitAt(4)
-    val acc = union(bruteForceAcc(a), bruteForceAcc(b))
+    val acc = merge(bruteForceAcc(a), bruteForceAcc(b))
 
     assertDistanceFrequencies(acc)
   }
@@ -126,6 +126,8 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
       })
 
     accuracies.sliding(2, 1).foreach{ case Seq(a, b) => {
+      println(s"$a < $b")
+
       a should be <= b
     }}
   }
