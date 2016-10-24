@@ -65,7 +65,7 @@ trait TestResources extends SparkContextSpec with FileResources {
       .map(s => {
         val columns = s.split(",").map(trim).toList
 
-        columns match {
+        (columns: @unchecked) match {
           case cat :: rawFeatures =>
             val nonZero =
               rawFeatures
@@ -76,9 +76,7 @@ trait TestResources extends SparkContextSpec with FileResources {
 
             val sparseFeatures = Vectors.sparse(rawFeatures.size, nonZero)
 
-            (cat, sparseFeatures)
-          case _ => throw new Exception("dafuq")
-        }})
+            (cat, sparseFeatures) }})
       .zipWithIndex
       .map {case ((cat, features), idx) => DataPoint(idx.toInt, features, Some(Map("cat" -> cat)))}
 
