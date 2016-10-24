@@ -27,7 +27,9 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
 
   behavior of "L1000"
 
-  val perts = L1000Reader.read(geneXPSignatures)._2.sample(false, 0.1)
+  val pct = 0.5
+
+  val perts = L1000Reader.read(geneXPSignatures)._2.sample(false, pct)
 
   val ctx = TDAContext(sc, perts)
 
@@ -46,7 +48,7 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
     val B   = 200
     val sig = 20
     val L   = 1
-    val sample = Right(0.25)
+    val sample = Right(0.01)
     val dist = CosineDistance
 
     val lshParams = LSHParams(signatureLength = sig, radius = None, distance = dist)
@@ -63,9 +65,9 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
 
     lazy val (exactACC, exactDuration) = time{ ExactKNN.exactACC(ctx, exactKNNParams) }
 
-    val accuracy = KNN.accuracy(fastACC, exactACC)
+    val accuracy = KNN.accuracy(fastACC, sampledACC)
 
-    println(s"fastACC computed in ${fastDuration.toSeconds}s with accuracy $accuracy, sampledACC computed in ${exactDuration}s")
+    println(s"| $k | $sig | $L | $B | $pct | ${fastDuration.toSeconds}s | $accuracy | ${sample.right.get} | ${sampledDuration.toSeconds}s | ")
   }
 
 }
