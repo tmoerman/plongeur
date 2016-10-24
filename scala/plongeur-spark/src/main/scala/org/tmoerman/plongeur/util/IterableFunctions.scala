@@ -48,9 +48,8 @@ class IterableFunctions[T](it: Iterable[T]) extends Serializable {
   /**
     * @return
     */
-  def cartesian: Iterable[(T, T)]  = for (
-    a <- it;
-    b <- it; if a != b) yield (a, b)
+  def cartesian(ot: Iterable[T])(implicit ord: Ordering[T]): Iterable[(T, T)] =
+    for {a <- it; b <- ot} yield if (ord.lt(a, b)) (a, b) else (b, a)
 
   /**
     * @param selector Selector function, defaults to the identity function.

@@ -35,6 +35,23 @@ class IterableFunctionsSpec extends FlatSpec with Matchers {
     List(Seq(2, 4, 0, 1), Seq(2, 4, 3, 1), Seq(2, 4, 3, 7))
   }
 
+  behavior of "cartesian"
+
+  it should "yield nil when either or both of the iterables is nil" in {
+    val empty: Seq[Int] = Nil
+
+    (Seq(1) cartesian empty ) shouldBe Nil
+    (empty  cartesian Seq(1)) shouldBe Nil
+    (empty  cartesian empty ) shouldBe Nil
+  }
+
+  it should "yield correctly ordered pairs only" in {
+    (Seq(1) cartesian Seq(2)) shouldBe Seq((1, 2))
+    (Seq(2) cartesian Seq(1)) shouldBe Seq((1, 2))
+
+    (Seq(2, 3, 4) cartesian Seq(1)).toSet shouldBe Set((1, 2), (1, 3), (1, 4))
+  }
+
   behavior of "frequencies"
 
   it should "be correct for empty input" in {
