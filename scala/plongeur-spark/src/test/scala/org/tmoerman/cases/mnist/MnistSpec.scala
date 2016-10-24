@@ -1,4 +1,4 @@
-package org.tmoerman.plongeur.tda.mnist
+package org.tmoerman.cases.mnist
 
 import org.apache.commons.lang.StringUtils.trim
 import org.apache.spark.mllib.linalg.Vectors
@@ -6,13 +6,11 @@ import org.apache.spark.rdd.RDD
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Colour.{AttributePredicate, Colouring, LocalPercentage}
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.{Brewer, TDAMachine}
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
+import org.tmoerman.plongeur.tda.{Brewer, TDAMachine}
 import org.tmoerman.plongeur.test.SparkContextSpec
-import rx.lang.scala.Observable
-import shapeless.HNil
-
 import org.tmoerman.plongeur.util.IterableFunctions._
+import rx.lang.scala.Observable
 
 /**
   * @author Thomas Moerman
@@ -29,7 +27,7 @@ class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
       .map(s => {
         val columns = s.split(",").map(trim).toList
 
-        columns match {
+        (columns: @unchecked) match {
           case cat :: rawFeatures =>
             val nonZero =
               rawFeatures.
@@ -40,10 +38,7 @@ class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
 
             val sparseFeatures = Vectors.sparse(rawFeatures.size, nonZero)
 
-            (cat, sparseFeatures)
-
-          case _ => throw new Exception("dafuq")
-        }})
+            (cat, sparseFeatures) }})
       .zipWithIndex
       .map {case ((cat, features), idx) => dp(idx.toInt, features, Map("cat" -> cat))}
 
