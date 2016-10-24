@@ -34,13 +34,26 @@ class RDDFunctions[T: ClassTag](val rdd: RDD[T]) extends Serializable {
 class CsvRDDFunctions(val rdd: RDD[Array[String]]) extends Serializable {
   import RDDFunctions._
 
+  def parseWithIndex[R](parseFn: (Long, Array[String]) => R,
+                        cacheValues: Boolean = true)(implicit ev$1: R => Serializable, ev$2: ClassTag[R]) = {
+
+    val header = rdd.first
+    val values =
+      rdd
+        .drop(1)
+        .zipWithIndex
+        .map{ case (line, idx) => parseFn(idx, line) }
+
+    (header, if (cacheValues) values.cache else values)
+  }
+
   def parseCsv[R: ClassTag](parseFn: Array[String] => R = identity _,
                             cacheValues: Boolean = true) = {
 
-    val header = rdd.first()
+    val header = rdd.first
     val values = rdd.drop(1).map(parseFn)
 
-    (header, if (cacheValues) values.cache() else values)
+    (header, if (cacheValues) values.cache else values)
   }
 
 }
