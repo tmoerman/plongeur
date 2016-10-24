@@ -8,9 +8,10 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distances.CosineDistance
 import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model.{DataPoint, TDAContext, dp}
+import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
 import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
 import org.tmoerman.plongeur.tda.knn.SampledKNN.SampledKNNParams
-import org.tmoerman.plongeur.tda.knn.{KNN, FastKNN, SampledKNN}
+import org.tmoerman.plongeur.tda.knn.{ExactKNN, KNN, FastKNN, SampledKNN}
 import org.tmoerman.plongeur.test.SparkContextSpec
 import org.tmoerman.plongeur.util.RDDFunctions._
 import org.tmoerman.plongeur.util.TimeUtils.time
@@ -40,26 +41,31 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
     println(top3.map(pert => (pert.meta, pert.features.size)).mkString("\n"))
   }
 
-  it should "be possible to compute an approximate kNN matrix" in {
-    val kNN = 10
+  it should "compute an approximate kNN matrix and its accuracy" in {
+    val k   = 10
     val B   = 200
     val sig = 20
     val L   = 1
     val sample = Right(0.25)
+    val dist = CosineDistance
 
-    val lshParams = LSHParams(signatureLength = sig, radius = None, distance = CosineDistance)
+    val lshParams = LSHParams(signatureLength = sig, radius = None, distance = dist)
 
-    val fastKNNParams = FastKNNParams(k = kNN, blockSize = B, nrHashTables = L, lshParams = lshParams)
+    val fastKNNParams = FastKNNParams(k = k, blockSize = B, nrHashTables = L, lshParams = lshParams)
 
     val (fastACC, fastDuration) = time { FastKNN.fastACC(ctx, fastKNNParams) }
 
-    val sampledKNNParams = SampledKNNParams(k = kNN, sampleSize = sample, distance = CosineDistance)
+    val sampledKNNParams = SampledKNNParams(k = k, sampleSize = sample, distance = dist)
 
-    val (sampledACC, sampledDuration) = time{ SampledKNN.sampledACC(ctx, sampledKNNParams) }
+    lazy val (sampledACC, sampledDuration) = time{ SampledKNN.sampledACC(ctx, sampledKNNParams) }
 
-    val accuracy = KNN.accuracy(fastACC, sampledACC)
+    val exactKNNParams = ExactKNNParams(k = k, distance = dist)
 
-    println(s"fastACC computed in ${fastDuration.toSeconds}s with accuracy $accuracy, sampledACC computed in ${sampledDuration}s")
+    lazy val (exactACC, exactDuration) = time{ ExactKNN.exactACC(ctx, exactKNNParams) }
+
+    val accuracy = KNN.accuracy(fastACC, exactACC)
+
+    println(s"fastACC computed in ${fastDuration.toSeconds}s with accuracy $accuracy, sampledACC computed in ${exactDuration}s")
   }
 
 }
