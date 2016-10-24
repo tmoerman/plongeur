@@ -10,3 +10,4 @@
 /plongeur-nb/demos
 /plongeur-nb/.*
 /src/test/resources/mnist/
+/src/test/resources/l1000/
