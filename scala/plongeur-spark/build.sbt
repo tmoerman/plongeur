@@ -26,7 +26,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark"       % "spark-core_2.10"   % sparkVersion % "provided",
   "org.apache.spark"       % "spark-mllib_2.10"  % sparkVersion exclude("com.chuusai", "*"),
   "org.scalanlp"           %% "breeze-natives"   % "0.12"       exclude("com.chuusai", "*"),
-  "com.esotericsoftware"   % "kryo"              % "3.0.3",
+  "com.esotericsoftware"   % "kryo"              % "4.0.0",
 
   "com.github.haifengl"    % "smile-core"        % "1.1.0",
 
