@@ -2,40 +2,27 @@ package org.tmoerman.plongeur.tda.knn
 
 import java.util.{Random => JavaRandom}
 
-import org.apache.spark.Partitioner
-import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.FastKNN._
 import org.tmoerman.plongeur.tda.knn.KNN._
-import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
-  * A second attempt at implementing FastKNN, this time leveraging Spark's `repartitionAndSortWithinPartitions`.
+  * TODO explain M/R strategy.
+  *
+  *
   *
   * @author Thomas Moerman
   */
 object FastKNN2 {
 
-  class MyPartitioner(partitions: Int) extends Partitioner {
-
-    override def numPartitions: Int = partitions
-
-    override def getPartition(key: Any): Int =
-      key.asInstanceOf[(Int, Double)]._1.hashCode() % numPartitions
-
-  }
-
-  def fastACC(ctx: TDAContext, kNNParams: FastKNNParams): ACC = {
+  def apply(ctx: TDAContext, kNNParams: FastKNNParams): kNN_RDD = {
     import kNNParams._
     import lshParams._
 
     val random = new JavaRandom(lshParams.seed)
-
-    type T = (DataPoint, BPQ)
-    type IT = RDD[(Index, T)]
 
     val N = ctx.N
     val D = ctx.D
@@ -67,17 +54,21 @@ object FastKNN2 {
     implicit val d = distance
     implicit val k = kNNParams.k
 
-    def toBlockId(table: Int, globalIndex: Long): Long = (globalIndex - table*N) / blockSize
+    def toBlockId(table: Int, globalIndex: Long): Long = {
+      val offSet = table * N
+
+      offSet + (globalIndex - offSet) / blockSize
+    }
 
     ctx
       .dataPoints
       .flatMap(p => bc.value.map(_.apply(p)))
+      .sortByKey()
       .zipWithIndex
-      .map{ case (((table, projection), p), globalIndex) => ((table, toBlockId(table, globalIndex)), p) }
+      .map{ case (((table, projection), p), globalIndex) => (toBlockId(table, globalIndex), p) }
       .combineByKey(init, concat, merge)
-      .flatMap(_._2)
-      .collect
-      .toList
+      .flatMap{ case (_, acc) => acc.map{ case (p, bpq) => (p.index, bpq) }}
+      .reduceByKey{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
   }
 
 }

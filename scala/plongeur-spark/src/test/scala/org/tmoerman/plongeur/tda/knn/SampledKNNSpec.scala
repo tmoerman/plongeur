@@ -17,9 +17,9 @@ class SampledKNNSpec extends FlatSpec with SparkContextSpec with Matchers {
   lazy val ctx = TDAContext(sc, rdd)
 
   "SampledKNN with fixed sample size" should "yield correct frequencies" in {
-    val acc = SampledKNN.sampledACC(ctx, kNNParams)
+    val acc = SampledKNN(ctx, kNNParams)
 
-    assertDistanceFrequencies(acc, Map(1.0 -> 6))
+    assertDistanceFrequenciesRDD(acc, Map(1.0 -> 6))
   }
 
 }

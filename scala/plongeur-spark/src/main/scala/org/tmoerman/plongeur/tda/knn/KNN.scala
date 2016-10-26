@@ -1,6 +1,7 @@
 package org.tmoerman.plongeur.tda.knn
 
 import org.apache.spark.mllib.linalg.SparseMatrix
+import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.BoundedPriorityQueue
@@ -13,12 +14,9 @@ object KNN extends Serializable {
   type PQEntry = (Index, Distance)
   type BPQ     = BoundedPriorityQueue[PQEntry]
   type ACC     = List[(DataPoint, BPQ)]
-  type ACCLike = Iterable[(DataPoint, BPQ)]
-
-  type SPQ = scala.collection.mutable.PriorityQueue[PQEntry]
+  type kNN_RDD = RDD[(Index, BPQ)]
 
   val ORD = Ordering.by((e: PQEntry) => (-e._2, e._1)) // why `e._1`? -> to disambiguate between equal distances
-
   def bpq(k: Int) = new BPQ(k)(ORD)
 
   /**
@@ -26,6 +24,12 @@ object KNN extends Serializable {
     */
   def toSparseMatrix(N: Int, acc: ACC) =
     SparseMatrix.fromCOO(N, N, for { (p, bpq) <- acc; (q, dist) <- bpq } yield (p.index, q, dist))
+
+  /**
+    * @return Returns a SparseMatrix in function of the calculated kNN data structure.
+    */
+  def toSparseMatrix(N: Int, rdd: kNN_RDD) =
+    SparseMatrix.fromCOO(N, N, rdd.flatMap{ case (p, bpq) => bpq.map{ case (q, dist) => (p, q, dist) }}.collect)
 
   /**
     * TODO
@@ -43,16 +47,10 @@ object KNN extends Serializable {
     * @param baseLine Ground truth accumulator to which the candidate will be compared.
     * @return Returns the accuracy of the candidate with respect to the baseline accumulator.
     */
-  def accuracy(candidate: ACCLike, baseLine: ACCLike): Double = {
-    val baseLineMap = baseLine.map{ case (p, bpq) => (p.index, bpq.map(_._1).toSet) }.toMap
-
-    val sum =
-      candidate
-        .filter{ case (p, _) => baseLineMap.contains(p.index) }
-        .map{ case (p, bpq) => (bpq.map(_._1).toSet intersect baseLineMap(p.index)).size.toDouble / bpq.size }.sum
-
-    sum / baseLine.size
-  }
+  def accuracy(candidate: kNN_RDD, baseLine: kNN_RDD): Double =
+    (baseLine join candidate)
+      .map{ case (_, (bpq1, bpq2)) => (bpq1.map(_._1).toSet intersect bpq2.map(_._1).toSet).size.toDouble / bpq1.size }
+      .sum / baseLine.count
 
   import org.tmoerman.plongeur.util.MatrixFunctions._
 

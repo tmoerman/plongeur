@@ -1,7 +1,6 @@
 package org.tmoerman.plongeur.tda.knn
 
-import org.apache.spark.mllib.linalg.SparseMatrix
-import org.tmoerman.plongeur.tda.Distances.{DEFAULT, Distance, DistanceFunction}
+import org.tmoerman.plongeur.tda.Distances.{DEFAULT, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
 import org.tmoerman.plongeur.tda.knn.KNN._
@@ -18,13 +17,7 @@ object ExactKNN {
 
   case class ExactKNNParams(k: Int, distance: DistanceFunction = DEFAULT)
 
-  def apply(ctx: TDAContext, kNNParams: ExactKNNParams): SparseMatrix = {
-    val acc = exactACC(ctx, kNNParams)
-
-    toSparseMatrix(ctx.N, acc)
-  }
-
-  def exactACC(ctx: TDAContext, kNNParams: ExactKNNParams): ACC = {
+  def apply(ctx: TDAContext, kNNParams: ExactKNNParams): kNN_RDD = {
     import kNNParams._
 
     implicit val k = kNNParams.k
@@ -37,8 +30,7 @@ object ExactKNN {
 
         (a, (b.index, d)) :: (b, (a.index, d)) :: Nil }
       .combineByKey(init, concat, union)
-      .collect
-      .toList // TODO sort?
+      .map{ case (p, bpq) => (p.index, bpq) }
   }
 
   def init(entry: PQEntry)(implicit k: Int) = bpq(k) += entry

@@ -4,14 +4,16 @@ import org.apache.commons.lang.StringUtils.trim
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.apache.spark.rdd.RDD
+import org.joda.time.DateTime
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Distances.CosineDistance
+import org.tmoerman.plongeur.tda.Distances.{ManhattanDistance, CosineDistance}
+import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model.{DataPoint, TDAContext, dp}
-import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
 import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
+import org.tmoerman.plongeur.tda.knn.KNN.{kNN_RDD, ACC}
 import org.tmoerman.plongeur.tda.knn.SampledKNN.SampledKNNParams
-import org.tmoerman.plongeur.tda.knn.{ExactKNN, KNN, FastKNN, SampledKNN}
+import org.tmoerman.plongeur.tda.knn.{FastKNN2, FastKNN, KNN, SampledKNN}
 import org.tmoerman.plongeur.test.SparkContextSpec
 import org.tmoerman.plongeur.util.RDDFunctions._
 import org.tmoerman.plongeur.util.TimeUtils.time
@@ -27,47 +29,68 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
 
   behavior of "L1000"
 
-  val pct = 0.5
+  val perts = L1000Reader.read(geneXPSignatures)._2
 
-  val perts = L1000Reader.read(geneXPSignatures)._2.sample(false, pct)
+  val s = perts.count.toInt
 
-  val ctx = TDAContext(sc, perts)
-
-  it should "pass smoke test" ignore {
-    val size = perts.count
-
-    println(size) // 20339
-
-    val top3 = perts.take(3)
-
-    println(top3.map(pert => (pert.meta, pert.features.size)).mkString("\n"))
-  }
-
-  it should "compute an approximate kNN matrix and its accuracy" in {
+  val fastKNNParams = {
     val k   = 10
     val B   = 200
-    val sig = 20
+    val sig = 40
     val L   = 1
-    val sample = Right(0.01)
     val dist = CosineDistance
+    val r = None
+    val lshParams = LSHParams(signatureLength = sig, radius = r, distance = dist)
 
-    val lshParams = LSHParams(signatureLength = sig, radius = None, distance = dist)
+    FastKNNParams(k = k, blockSize = B, nrHashTables = L, lshParams = lshParams)
+  }
 
-    val fastKNNParams = FastKNNParams(k = k, blockSize = B, nrHashTables = L, lshParams = lshParams)
+  import fastKNNParams._
+  import lshParams._
 
-    val (fastACC, fastDuration) = time { FastKNN.fastACC(ctx, fastKNNParams) }
+  it should "compute an approximate kNN matrix and its accuracy" in {
+    val pctTotal  = 1.0
+    val pctSample = 0.025
 
-    val sampledKNNParams = SampledKNNParams(k = k, sampleSize = sample, distance = dist)
+    // val summary = run(pctTotal, pctSample, fastKNNParams)
+    // println(summary)
+  }
 
-    lazy val (sampledACC, sampledDuration) = time{ SampledKNN.sampledACC(ctx, sampledKNNParams) }
+  it should "compute a series of runs" in {
+    val pctTotal  = 0.1
+    val pctSample = 0.25
 
-    val exactKNNParams = ExactKNNParams(k = k, distance = dist)
+    val ctx = TDAContext(sc, if (pctTotal < 1.0) perts.sample(false, pctTotal) else perts)
 
-    lazy val (exactACC, exactDuration) = time{ ExactKNN.exactACC(ctx, exactKNNParams) }
+    val sampledKNNParams = SampledKNNParams(k = k, sampleSize = Right(pctSample), distance = distance)
 
-    val accuracy = KNN.accuracy(fastACC, sampledACC)
+    val baseLine = SampledKNN.apply(ctx, sampledKNNParams)
 
-    println(s"| $k | $sig | $L | $B | $pct | ${fastDuration.toSeconds}s | $accuracy | ${sample.right.get} | ${sampledDuration.toSeconds}s | ")
+    //Stream(1, 5, 10, 15, 20, 25) // , 30, 50) // TODO write this more efficiently with a scan algorithm
+    Option(30)
+      .map(L => fastKNNParams.copy(nrHashTables = L, lshParams = lshParams.copy(radius = Some(LSH.estimateRadius(ctx)))))
+      .map(p => run(ctx, pctTotal, pctSample, p, baseLine))
+      .foreach(println)
+  }
+
+  def run(ctx: TDAContext, pctTotal: Double, pctSample: Double, fastKNNParams: FastKNNParams, baseLine: kNN_RDD): String = {
+    import fastKNNParams._
+    import lshParams._
+
+    //val (rdd, fastDuration) = time { FastKNN(ctx, fastKNNParams) }
+    val ((rdd, _), fastDuration) = time {
+      val rdd = FastKNN2(ctx, fastKNNParams).cache
+
+      val matrix = KNN.toSparseMatrix(s, rdd)
+
+      (rdd, matrix)
+    }
+
+    val accuracy = KNN.accuracy(rdd, baseLine)
+
+    val now = DateTime.now
+
+    s"| $k | $distance | $signatureLength | $nrHashTables | $blockSize | $pctTotal | ${fastDuration.toSeconds}s | ${f"$accuracy%1.3f"} | $pctSample | $now | | "
   }
 
 }

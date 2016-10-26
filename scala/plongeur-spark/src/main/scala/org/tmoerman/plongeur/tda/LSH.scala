@@ -3,7 +3,7 @@ package org.tmoerman.plongeur.tda
 import java.io.Serializable
 import java.util.{Random => JavaRandom}
 
-import breeze.linalg.{DenseVector => BDV, Vector => BV, SparseVector => BSV, _}
+import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV, _}
 import com.github.karlhigley.spark.neighbors.lsh.{LSHFunction, ScalarRandomProjectionFunction, SignRandomProjectionFunction, Signature}
 import org.apache.spark.mllib.linalg.VectorConversions._
 import org.tmoerman.plongeur.tda.Distances._
@@ -11,7 +11,7 @@ import org.tmoerman.plongeur.tda.Model.TDAContext
 
 import scala.collection.BitSet
 import scala.util.Random.nextLong
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 /**
   * LSH related functions.
@@ -34,7 +34,7 @@ object LSH extends Serializable {
   case class LSHParams(signatureLength: SignatureLength,
                        radius: Option[Radius] = None,
                        distance: DistanceFunction = DEFAULT,
-                       seed: Long = nextLong) extends Serializable
+                       seed: Long = nextLong)
 
   /**
     * @param d The original dimensionality of the data points.

@@ -25,7 +25,7 @@ object SampledKNN {
     * @param kNNParams
     * @return Returns a partial sampleSize*N
     */
-  def sampledACC(ctx: TDAContext, kNNParams: SampledKNNParams): ACC = {
+  def apply(ctx: TDAContext, kNNParams: SampledKNNParams): kNN_RDD = {
     import kNNParams._
 
     implicit val k = kNNParams.k
@@ -52,8 +52,7 @@ object SampledKNN {
         (p, (q.index, d))
       }
       .combineByKey(init, concat, union)
-      .collect
-      .toList // TODO sort?
+      .map{ case (p, bpq) => (p.index, bpq)}
   }
 
 }

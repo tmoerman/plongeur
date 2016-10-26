@@ -3,7 +3,6 @@ package org.tmoerman.plongeur.tda.knn
 import java.util.{Random => JavaRandom}
 
 import breeze.linalg.{DenseVector => BDV}
-import org.apache.spark.mllib.linalg.SparseMatrix
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.{LSHParams, toVector}
@@ -30,17 +29,9 @@ object FastKNN extends Serializable {
   case class FastKNNParams(k: Int,
                            blockSize: Int,
                            nrHashTables: Int = 1,
-                           lshParams: LSHParams)
-
-  /**
-    * @param ctx
-    * @param kNNParams
-    * @return Returns a kNN sparse matrix.
-    */
-  def apply(ctx: TDAContext, kNNParams: FastKNNParams): SparseMatrix = {
-    val combined = fastACC(ctx, kNNParams)
-
-    toSparseMatrix(ctx.N, combined)
+                           lshParams: LSHParams) {
+    require(k > 0)
+    require(nrHashTables > 0)
   }
 
   /**
@@ -48,43 +39,30 @@ object FastKNN extends Serializable {
     * @param kNNParams
     * @return
     */
-  def fastACC(ctx: TDAContext, kNNParams: FastKNNParams): ACC = {
+  def apply(ctx: TDAContext, kNNParams: FastKNNParams): kNN_RDD = {
     import kNNParams._
 
     val random = new JavaRandom(lshParams.seed)
 
-    val combined =
-      (1 to nrHashTables)
-        // .par -> TODO makes sense?
-        .map(_ => kNNParams.copy(lshParams = lshParams.copy(seed = random.nextLong))) // different seed for each hash table
-        .map(params => singleACC(ctx, params))
-        .reduce(combine)
+    def combine1(a: kNN_RDD, b: kNN_RDD) = (a join b).mapValues[BPQ]{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
 
-    combined
+    def combine2(a: kNN_RDD, b: kNN_RDD) = (a ++ b).reduceByKey{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
+
+    (1 to nrHashTables)
+      .map(_ => {
+        val newSeed = random.nextLong // different seed for each hash table
+        val params = kNNParams.copy(lshParams = lshParams.copy(seed = newSeed))
+
+        basic(ctx, params) })
+      .reduce(combine1)
   }
-
-  /**
-    * Assumption: acc1 and acc2 both are sorted and have equal size
-    *
-    * @return Returns G = combine{G_1, G_2, ..., G_l}
-    */
-  def combine(acc1: ACC, acc2: ACC): ACC =
-    (acc1, acc2)
-      .zipped
-      .map{ case ((p, bpq1), (q, bpq2)) => {
-        assert(p.index == q.index) // TODO remove after simplification
-
-        val result = (p, bpq1 ++= bpq2)
-
-        result
-      }}
 
   /**
     * @param ctx
     * @param kNNParams
-    * @return TODO
+    * @return
     */
-  def singleACC(ctx: TDAContext, kNNParams: FastKNNParams): ACC = {
+  def basic(ctx: TDAContext, kNNParams: FastKNNParams): kNN_RDD = {
     import kNNParams._
     import lshParams._
 
@@ -105,15 +83,13 @@ object FastKNN extends Serializable {
 
     ctx
       .dataPoints
-      .map(p => (hashProjection(p), p))             // key by hash projection
+      .map(p => (hashProjection(p), p)) // key by hash projection
       .sortByKey()
       .values
       .zipWithIndex
       .map { case (p, idx) => (toBlockId(idx), p) } // key by block ID
-      .combineByKey(init, concat, merge)            // bipartite merge within block ID
-      .values
-      .treeReduce(_ ::: _)                          // U{g_i}
-      .sortBy(_._1.index)
+      .combineByKey(init, concat, merge) // bipartite merge within block ID
+      .flatMap{ case (_, acc) => acc.map{ case (p, bpq) => (p.index, bpq) }}
   }
 
   def randomUniformVector(length: Int, seed: Long): BDV[Distance] = {
@@ -156,10 +132,8 @@ object FastKNN extends Serializable {
       (a.map(_._1) cartesian b.map(_._1))
         .foldLeft(Map[(Index, Index), Distance]()){ case (m, (p, q)) => m + (indexPair(p, q) -> distance(p, q)) }
 
-    def cachedDistance(p: DataPoint, q: DataPoint) = distances(indexPair(p, q))
-
     def merge(acc: ACC, arg: ACC): ACC =
-      acc.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, cachedDistance(p, q)) })}
+      acc.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, distances(indexPair(p, q))) })}
 
     merge(a, b) ::: merge(b, a)
   }

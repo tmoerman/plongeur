@@ -37,14 +37,19 @@ package object knn extends Matchers {
 
   val k2ExpectedFreqs = Map(1.0 -> 16, sqrt(2) -> 2)
 
-  def assertDistanceFrequencies(acc: ACCLike,
-                                expectedFreqs: Map[Distance, Count] = k2ExpectedFreqs): Unit =
+  def assertDistanceFrequenciesACC(acc: ACC, expectedFreqs: Map[Distance, Count] = k2ExpectedFreqs): Unit =
     acc
       .flatMap(_._2.map(_._2))
       .frequencies shouldBe expectedFreqs
 
-  def assertDistanceFrequenciesM(m: SparseMatrix,
-                                 expectedFreqs: Map[Distance, Count] = k2ExpectedFreqs): Unit =
+  def assertDistanceFrequenciesRDD(acc: kNN_RDD, expectedFreqs: Map[Distance, Count] = k2ExpectedFreqs): Unit =
+    acc
+      .flatMap(_._2.map(_._2))
+      .collect
+      .toIterable
+      .frequencies shouldBe expectedFreqs
+
+  def assertDistanceFrequenciesM(m: SparseMatrix, expectedFreqs: Map[Distance, Count] = k2ExpectedFreqs): Unit =
     m
       .values
       .toIterable

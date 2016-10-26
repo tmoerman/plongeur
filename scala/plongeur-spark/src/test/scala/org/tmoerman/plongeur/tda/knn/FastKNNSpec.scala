@@ -23,7 +23,7 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
     val acc = bruteForceAcc(points)
 
-    assertDistanceFrequencies(acc)
+    assertDistanceFrequenciesACC(acc)
   }
 
   it should "yield correct frequencies for combined partition accumulators" in {
@@ -32,13 +32,14 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     val (a, b) = points.splitAt(4)
     val acc = merge(bruteForceAcc(a), bruteForceAcc(b))
 
-    assertDistanceFrequencies(acc)
+    assertDistanceFrequenciesACC(acc)
   }
 
   it should "yield correct frequencies for the sparse matrix" in {
     implicit val d: DistanceFunction = EuclideanDistance
 
     val acc = bruteForceAcc(points)
+
     val sparse = toSparseMatrix(points.size, acc)
 
     assertDistanceFrequenciesM(sparse)
@@ -69,7 +70,7 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
   behavior of "FastKNN with Euclidean distance"
 
-  lazy val exactEuclidean = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = EuclideanDistance))
+  lazy val exactEuclidean = ExactKNN.apply(ctx, ExactKNNParams(k = k, distance = EuclideanDistance))
 
   val lshParamsEuclidean = LSHParams(
     signatureLength = 10,
@@ -95,7 +96,7 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
   val fastParamsCosine = fastParamsEuclidean.copy(lshParams = lshParamsEuclidean.copy(distance = CosineDistance))
 
-  lazy val exactCosine = ExactKNN.exactACC(ctx, ExactKNNParams(k = k, distance = CosineDistance))
+  lazy val exactCosine = ExactKNN(ctx, ExactKNNParams(k = k, distance = CosineDistance))
 
   it should "yield identical results with the same seed value" in {
     assertEqualResultsForEqualSeed(fastParamsCosine, exactCosine)
@@ -105,9 +106,9 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     assertIncreasingAccuracy(fastParamsCosine, exactCosine)
   }
 
-  private def assertEqualResultsForEqualSeed(fastParams: FastKNNParams, baseLine: ACC): Unit = {
-    val a = FastKNN.fastACC(ctx, fastParams)
-    val b = FastKNN.fastACC(ctx, fastParams)
+  private def assertEqualResultsForEqualSeed(fastParams: FastKNNParams, baseLine: kNN_RDD): Unit = {
+    val a = FastKNN.apply(ctx, fastParams)
+    val b = FastKNN.apply(ctx, fastParams)
 
     val x = KNN.accuracy(a, baseLine)
     val y = KNN.accuracy(b, baseLine)
@@ -115,12 +116,12 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     x shouldBe y
   }
 
-  private def assertIncreasingAccuracy(fastParams: FastKNNParams, baseLine: ACC): Unit = {
+  private def assertIncreasingAccuracy(fastParams: FastKNNParams, baseLine: kNN_RDD): Unit = {
     val accuracies =
       (1 to 5).map(L => {
         val newParams = fastParams.copy(nrHashTables = L)
 
-        val fastACC = FastKNN.fastACC(ctx, newParams)
+        val fastACC = FastKNN(ctx, newParams)
 
         KNN.accuracy(fastACC, baseLine)
       })
