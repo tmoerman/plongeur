@@ -100,6 +100,8 @@ object Model {
 
     lazy val D = dataPoints.first.features.size
 
+    lazy val indexBound = dataPoints.map(_.index).max + 1
+
     lazy val stats = Statistics.colStats(dataPoints.map(_.features))
 
   }

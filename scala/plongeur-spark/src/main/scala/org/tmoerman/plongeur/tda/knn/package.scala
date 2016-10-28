@@ -1,4 +1,4 @@
-package org.tmoerman.plongeur.tda.knn
+package org.tmoerman.plongeur.tda
 
 import org.apache.spark.mllib.linalg.SparseMatrix
 import org.apache.spark.rdd.RDD
@@ -9,12 +9,12 @@ import org.tmoerman.plongeur.util.BoundedPriorityQueue
 /**
   * @author Thomas Moerman
   */
-object KNN extends Serializable {
+package object knn {
 
-  type PQEntry = (Index, Distance)
-  type BPQ     = BoundedPriorityQueue[PQEntry]
-  type ACC     = List[(DataPoint, BPQ)]
-  type kNN_RDD = RDD[(Index, BPQ)]
+  type PQEntry     = (Index, Distance)
+  type BPQ         = BoundedPriorityQueue[PQEntry]
+  type Accumulator = List[(DataPoint, BPQ)]
+  type kNN_RDD     = RDD[(Index, BPQ)]
 
   val ORD = Ordering.by((e: PQEntry) => (-e._2, e._1)) // why `e._1`? -> to disambiguate between equal distances
   def bpq(k: Int) = new BPQ(k)(ORD)
@@ -22,7 +22,7 @@ object KNN extends Serializable {
   /**
     * @return Returns a SparseMatrix in function of the calculated kNN data structure.
     */
-  def toSparseMatrix(N: Int, acc: ACC) =
+  def toSparseMatrix(N: Int, acc: Accumulator) =
     SparseMatrix.fromCOO(N, N, for { (p, bpq) <- acc; (q, dist) <- bpq } yield (p.index, q, dist))
 
   /**
@@ -47,7 +47,7 @@ object KNN extends Serializable {
     * @param baseLine Ground truth accumulator to which the candidate will be compared.
     * @return Returns the accuracy of the candidate with respect to the baseline accumulator.
     */
-  def accuracy(candidate: kNN_RDD, baseLine: kNN_RDD): Double =
+  def relativeAccuracy(candidate: kNN_RDD, baseLine: kNN_RDD): Double =
     (baseLine join candidate)
       .map{ case (_, (bpq1, bpq2)) => (bpq1.map(_._1).toSet intersect bpq2.map(_._1).toSet).size.toDouble / bpq1.size }
       .sum / baseLine.count
@@ -59,7 +59,7 @@ object KNN extends Serializable {
     * @param baseLine Ground truth SparseMatrix to which the candidate will be compared.
     * @return Returns the accuracy of the candidate with respect to the baseline SparseMatrix.
     */
-  def accuracy(candidate: SparseMatrix, baseLine: SparseMatrix): Double = {
+  def relativeAccuracy(candidate: SparseMatrix, baseLine: SparseMatrix): Double = {
     (candidate.rowVectors.toSeq, baseLine.rowVectors.toSeq)
       .zipped
 

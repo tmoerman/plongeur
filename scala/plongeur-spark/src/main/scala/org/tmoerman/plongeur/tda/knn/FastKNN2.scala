@@ -2,13 +2,12 @@ package org.tmoerman.plongeur.tda.knn
 
 import java.util.{Random => JavaRandom}
 
-import org.apache.spark.Partitioner
+import org.apache.spark.RangePartitioner
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.FastKNN._
-import org.tmoerman.plongeur.tda.knn.KNN._
 
 /**
   * TODO explain M/R strategy.
@@ -25,6 +24,7 @@ object FastKNN2 {
 
     val N = ctx.N
     val D = ctx.D
+    val indexBound = ctx.indexBound
 
     val hashProjections =
       (1 to nrHashTables)
@@ -46,54 +46,36 @@ object FastKNN2 {
               .get
 
           (p: DataPoint) => {
-            val key = table * N + hashProjection(p)
+            val tableHash = table * N + hashProjection(p)
 
-            (key, (table, p))
+            (tableHash, (table, p))
           }
         })
 
     val bc = ctx.sc.broadcast(hashProjections)
 
     implicit val d = distance
-    implicit val k = kNNParams.k
+
+    val byTableHash =
+      ctx
+        .dataPoints
+        .flatMap(p => bc.value.map(_.apply(p)))
+
+    val partitioner = new RangePartitioner(ctx.sc.defaultParallelism, byTableHash)
 
     def toBlockId(table: Int, globalIndex: Long): Long = {
       val offSet = table * N
-
       offSet + (globalIndex - offSet) / blockSize
     }
 
-
-    class MyPartitioner(partitions: Int) extends Partitioner {
-
-      override def numPartitions: Int = partitions
-
-      override def getPartition(key: Any): Int =
-        key.asInstanceOf[(Int, Distance)]._1.hashCode() % numPartitions
-
-    }
-
-    ctx
-      .dataPoints
-      .flatMap(p => bc.value.map(_.apply(p)))
-      .sortByKey()
-      .zipWithIndex
-      .map{ case ((_, (table, p)), globalIndex) => (toBlockId(table, globalIndex), p) }
-      .combineByKey(init, concat, merge)
+    byTableHash
+      .repartitionAndSortWithinPartitions(partitioner)
+      .mapPartitionsWithIndex(
+        { case (partIdx, it) => it.zipWithIndex.map{ case ((_, (table, p)), idx) => (toBlockId(table, partIdx * N + idx), p) }},
+        preservesPartitioning = true)
+      .combineByKey(init(k), concat(k), merge(indexBound))
       .flatMap{ case (_, acc) => acc.map{ case (p, bpq) => (p.index, bpq) }}
       .reduceByKey{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
-
-//    ctx
-//      .dataPoints
-//      .flatMap(p => bc.value.map(_.apply(p)))
-//      .repartitionAndSortWithinPartitions(new MyPartitioner(ctx.sc.defaultParallelism))
-//      .mapPartitionsWithIndex({ case (partIdx, it) => it.zipWithIndex.map{ case (((table, _), p), itIdx) => (toBlockId(table, partIdx*itIdx), p) }}, preservesPartitioning = true)
-//      //      .zipWithIndex
-//      //      .map{ case (((table, projection), p), globalIndex) => (toBlockId(table, globalIndex), p) }
-//      .combineByKey(init, concat, merge)
-//      .mapPartitions(_.flatMap(_._2.map{ case (p, bpq) => (p.index, bpq) }), preservesPartitioning = true)
-//      //.flatMap{ case (_, acc) => acc.map{ case (p, bpq) => (p.index, bpq) }}
-//      .reduceByKey{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
   }
 
 }

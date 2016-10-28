@@ -1,4 +1,4 @@
-package org.tmoerman.plongeur.tda
+package org.tmoerman.plongeur.tda.knn
 
 import java.lang.Math._
 
@@ -7,13 +7,12 @@ import org.apache.spark.mllib.linalg.Vectors._
 import org.scalatest.Matchers
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.knn.KNN._
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
   * @author Thomas Moerman
   */
-package object knn extends Matchers {
+object Commons extends Matchers {
 
   /** 7
     * 6              .7 .8
@@ -37,7 +36,7 @@ package object knn extends Matchers {
 
   val k2ExpectedFreqs = Map(1.0 -> 16, sqrt(2) -> 2)
 
-  def assertDistanceFrequenciesACC(acc: ACC, expectedFreqs: Map[Distance, Count] = k2ExpectedFreqs): Unit =
+  def assertDistanceFrequenciesAcc(acc: Accumulator, expectedFreqs: Map[Distance, Count] = k2ExpectedFreqs): Unit =
     acc
       .flatMap(_._2.map(_._2))
       .frequencies shouldBe expectedFreqs

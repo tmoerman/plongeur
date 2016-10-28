@@ -1,13 +1,14 @@
-package org.tmoerman.plongeur.tda.knn
+package org.tmoerman.plongeur.tda.TestCommons
 
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distances._
-import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model.{DataPoint, TDAContext}
+import org.tmoerman.plongeur.tda.knn.Commons._
 import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
 import org.tmoerman.plongeur.tda.knn.FastKNN._
-import org.tmoerman.plongeur.tda.knn.KNN._
+import org.tmoerman.plongeur.tda.knn._
+import org.tmoerman.plongeur.tda.knn.{ExactKNN, FastKNN}
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
 import org.tmoerman.plongeur.util.MatrixFunctions._
 
@@ -23,20 +24,21 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
     val acc = bruteForceAcc(points)
 
-    assertDistanceFrequenciesACC(acc)
+    assertDistanceFrequenciesAcc(acc)
   }
 
   it should "yield correct frequencies for combined partition accumulators" in {
-    implicit val d: DistanceFunction = EuclideanDistance
+    val N = points.size
+    implicit val d = EuclideanDistance
 
     val (a, b) = points.splitAt(4)
-    val acc = merge(bruteForceAcc(a), bruteForceAcc(b))
+    val acc = merge(N)(bruteForceAcc(a), bruteForceAcc(b))
 
-    assertDistanceFrequenciesACC(acc)
+    assertDistanceFrequenciesAcc(acc)
   }
 
   it should "yield correct frequencies for the sparse matrix" in {
-    implicit val d: DistanceFunction = EuclideanDistance
+    implicit val d = EuclideanDistance
 
     val acc = bruteForceAcc(points)
 
@@ -45,9 +47,9 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     assertDistanceFrequenciesM(sparse)
   }
 
-  private def bruteForceAcc(points: Seq[DataPoint])(implicit k: Int = 2, d: DistanceFunction): ACC =
+  private def bruteForceAcc(points: Seq[DataPoint])(implicit k: Int = 2, d: DistanceFunction): Accumulator =
     (points: @unchecked) match {
-      case x :: xs => xs.foldLeft(init(x))(concat)
+      case x :: xs => xs.foldLeft(init(k)(x))(concat(k))
     }
 
   behavior of "sparse matrix row iterator"
@@ -74,7 +76,6 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
   val lshParamsEuclidean = LSHParams(
     signatureLength = 10,
-    radius = Some(LSH.estimateRadius(ctx)),
     distance = EuclideanDistance,
     seed = seed)
 
@@ -110,8 +111,8 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     val a = FastKNN.apply(ctx, fastParams)
     val b = FastKNN.apply(ctx, fastParams)
 
-    val x = KNN.accuracy(a, baseLine)
-    val y = KNN.accuracy(b, baseLine)
+    val x = relativeAccuracy(a, baseLine)
+    val y = relativeAccuracy(b, baseLine)
 
     x shouldBe y
   }
@@ -121,9 +122,9 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
       (1 to 5).map(L => {
         val newParams = fastParams.copy(nrHashTables = L)
 
-        val fastACC = FastKNN(ctx, newParams)
+        val fastKNN = FastKNN(ctx, newParams)
 
-        KNN.accuracy(fastACC, baseLine)
+        relativeAccuracy(fastKNN, baseLine)
       })
 
     accuracies.sliding(2, 1).foreach{ case Seq(a, b) => {

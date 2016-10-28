@@ -3,7 +3,7 @@ package org.tmoerman.plongeur.tda.knn
 import org.tmoerman.plongeur.tda.Distances.{DEFAULT, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
-import org.tmoerman.plongeur.tda.knn.KNN._
+import org.tmoerman.plongeur.tda.knn._
 import org.tmoerman.plongeur.util.RDDFunctions._
 
 /**

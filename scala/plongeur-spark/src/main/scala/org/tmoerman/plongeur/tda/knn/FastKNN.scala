@@ -3,11 +3,11 @@ package org.tmoerman.plongeur.tda.knn
 import java.util.{Random => JavaRandom}
 
 import breeze.linalg.{DenseVector => BDV}
+import org.apache.spark.mllib.linalg.SparseMatrix
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.{LSHParams, toVector}
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.knn.KNN._
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 /**
@@ -63,6 +63,7 @@ object FastKNN extends Serializable {
     * @return
     */
   def basic(ctx: TDAContext, kNNParams: FastKNNParams): kNN_RDD = {
+    import ctx.indexBound
     import kNNParams._
     import lshParams._
 
@@ -79,7 +80,6 @@ object FastKNN extends Serializable {
     def toBlockId(orderPosition: Long) = orderPosition / blockSize
 
     implicit val d = distance
-    implicit val k = kNNParams.k
 
     ctx
       .dataPoints
@@ -88,7 +88,7 @@ object FastKNN extends Serializable {
       .values
       .zipWithIndex
       .map { case (p, idx) => (toBlockId(idx), p) } // key by block ID
-      .combineByKey(init, concat, merge) // bipartite merge within block ID
+      .combineByKey(init(k), concat(k), merge(indexBound)) // bipartite merge within block ID
       .flatMap{ case (_, acc) => acc.map{ case (p, bpq) => (p.index, bpq) }}
   }
 
@@ -101,18 +101,22 @@ object FastKNN extends Serializable {
   /**
     * @return Returns a new accumulator.
     */
-  def init(p: DataPoint)(implicit k: Int): ACC = (p, bpq(k)) :: Nil
+  def init(k: Int)(p: DataPoint): Accumulator = (p, bpq(k)) :: Nil
 
   /**
     * @return Returns an updated accumulator.
     */
-  def concat(acc: ACC, p: DataPoint)(implicit k: Int, distance: DistanceFunction): ACC = {
-    val distances = acc.map(_._1).map(q => ((p.index, q.index), distance(p, q)))
+  def concat(k: Int)(acc: Accumulator, p: DataPoint)(implicit distance: DistanceFunction): Accumulator = {
+    val distances = acc.map{ case (q, bpq) => (q.index, distance(p, q)) }
 
-    (p, bpq(k) ++= distances.map{ case ((p, q), d) => (q, d) }) ::
-    (acc, distances.map{ case ((p, q), d) => (p, d) })
-      .zipped
-      .map{ case ((q, pq), entry) => (q, pq += entry) }
+    val newEntry = (p, distances.foldLeft(bpq(k)){ case (bpq, pair) => bpq += pair })
+
+    val updated =
+      (acc, distances)
+        .zipped
+        .map{ case ((q, bpq), (_, d)) => (q, bpq += ((p.index, d))) }
+
+    newEntry :: updated
   }
 
   /**
@@ -121,19 +125,21 @@ object FastKNN extends Serializable {
     * @return Returns a merged accumulator,
     *         cfr. G = U{g_1}, cfr. basic_ann_by_lsh(X, k, block-sz), p666 Y.-M. Zhang et al.
     */
-  def merge(a: ACC, b: ACC)(implicit distance: DistanceFunction): ACC = {
-    assert((a.map(_._1).toSet intersect b.map(_._1).toSet).isEmpty) // TODO remove after simplification
-
+  def merge(N: Int)(a: Accumulator, b: Accumulator)(implicit distance: DistanceFunction): Accumulator = {
     implicit val ORD = Ordering.by((d: DataPoint) => d.index)
-
-    def indexPair(p: DataPoint, q: DataPoint) = if (ORD.lt(p, q)) (p.index, q.index) else (q.index, p.index)
 
     val distances =
       (a.map(_._1) cartesian b.map(_._1))
-        .foldLeft(Map[(Index, Index), Distance]()){ case (m, (p, q)) => m + (indexPair(p, q) -> distance(p, q)) }
+        .flatMap{ case (p, q) => {
+          val d = distance(p, q)
 
-    def merge(acc: ACC, arg: ACC): ACC =
-      acc.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, distances(indexPair(p, q))) })}
+          (p.index, q.index, d) :: (q.index, p.index, d) :: Nil
+        }}
+
+    val cache = SparseMatrix.fromCOO(N, N, distances)
+
+    def merge(acc: Accumulator, arg: Accumulator): Accumulator =
+      acc.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, cache(p.index, q.index)) })}
 
     merge(a, b) ::: merge(b, a)
   }

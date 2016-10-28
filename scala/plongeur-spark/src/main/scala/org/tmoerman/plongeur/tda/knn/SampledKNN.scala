@@ -3,7 +3,6 @@ package org.tmoerman.plongeur.tda.knn
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model.TDAContext
 import org.tmoerman.plongeur.tda.knn.ExactKNN._
-import org.tmoerman.plongeur.tda.knn.KNN._
 
 import scala.util.Random.nextLong
 
