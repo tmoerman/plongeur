@@ -9,7 +9,7 @@ object TestSparkContext {
 
   def create(appName:     String  = "Plongeur Test",
              master:      String  = "local[*]",
-             memGigs:     Int     = 8,
+             memGigs:     Int     = 12,
              compressRDD: Boolean = true) = {
 
     val conf =
