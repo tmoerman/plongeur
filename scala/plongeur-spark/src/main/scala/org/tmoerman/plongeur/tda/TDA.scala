@@ -1,7 +1,7 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.spark.RangePartitioner
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{Logging, RangePartitioner}
 import org.tmoerman.plongeur.tda.Colour.Colouring
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters._
@@ -13,7 +13,7 @@ import org.tmoerman.plongeur.util.IterableFunctions._
 /**
   * @author Thomas Moerman
   */
-trait TDA extends Logging {
+trait TDA {
 
   def createLevelSets(lens: TDALens, ctx: TDAContext): RDD[(LevelSetID, DataPoint)] = {
     import ctx._

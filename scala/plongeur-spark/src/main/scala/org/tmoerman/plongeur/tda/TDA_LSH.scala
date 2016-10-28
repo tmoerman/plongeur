@@ -2,18 +2,14 @@ package org.tmoerman.plongeur.tda
 
 import java.util.UUID
 
-import org.apache.spark.Logging
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Model._
 import shapeless.{HList, HNil}
 
-import scala.annotation.tailrec
-import scala.io.Source
-
 /**
   * @author Thomas Moerman
   */
-object TDA_LSH extends TDA with Logging {
+object TDA_LSH extends TDA {
 
   def apply(ctx: TDAContext, params: TDAParams) = {
     import params._

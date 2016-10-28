@@ -3,7 +3,6 @@ package org.tmoerman.plongeur.tda
 import java.lang.Math.{PI, exp, min, sqrt}
 
 import breeze.linalg.{SparseVector, max => elmax}
-import org.apache.spark.Logging
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
 import org.apache.spark.mllib.linalg.VectorConversions._
 import org.apache.spark.mllib.linalg.{Vector => MLLibVector}
@@ -17,7 +16,7 @@ import scala.math.{max, pow}
 /**
   * @author Thomas Moerman
   */
-object Filters extends Serializable with Logging {
+object Filters extends Serializable {
 
   /**
     * @param filter
