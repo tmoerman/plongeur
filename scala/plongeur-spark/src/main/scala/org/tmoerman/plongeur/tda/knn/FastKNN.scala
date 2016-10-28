@@ -63,9 +63,10 @@ object FastKNN extends Serializable {
     * @return
     */
   def basic(ctx: TDAContext, kNNParams: FastKNNParams): kNN_RDD = {
-    import ctx.indexBound
     import kNNParams._
     import lshParams._
+
+    val indexBound = ctx.indexBound
 
     val hashFunction = LSH.makeHashFunction(ctx.D, lshParams)
 
