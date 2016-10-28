@@ -114,7 +114,7 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     val x = relativeAccuracy(a, baseLine)
     val y = relativeAccuracy(b, baseLine)
 
-    x shouldBe y
+    x shouldBe (y +- 0.01)
   }
 
   private def assertIncreasingAccuracy(fastParams: FastKNNParams, baseLine: kNN_RDD): Unit = {

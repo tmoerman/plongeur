@@ -27,7 +27,7 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
 
   behavior of "L1000"
 
-  val perts = L1000Reader.read(geneXPSignatures)._2
+  val perts = L1000Reader.read(geneXPSignatures)(sc)._2
 
   val s = perts.count.toInt
 
@@ -46,10 +46,10 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
   import fastKNNParams._
   import lshParams._
 
-  it should "compute a series of runs" ignore {
-    // val (pctTotal, sampleSize) = (1.0, Right(0.01))
-    val (pctTotal, sampleSize) = (0.25, Right(0.10))
-    //val (pctTotal, sampleSize) = (0.1, Right(0.25))
+  it should "compute a series of runs" in {
+    val (pctTotal, sampleSize) = (1.0, Right(0.01))
+    // val (pctTotal, sampleSize) = (0.25, Right(0.10))
+    // val (pctTotal, sampleSize) = (0.1, Right(0.25))
 
     val ctx = TDAContext(sc, if (pctTotal < 1.0) perts.sample(false, pctTotal) else perts)
 
@@ -57,11 +57,11 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
 
     val baseLine = SampledKNN.apply(ctx, sampledKNNParams)
 
-    val radius = Some(50.0)
+    val radius = Some(10.0)
 
     //Stream(1, 5, 10, 15, 20, 25) // , 30, 50) // TODO write this more efficiently with a scan algorithm
-    //Option(30)
-    Stream(10, 30, 60)
+    Option(90)
+    //Stream(10, 30, 60)
       .map(L => fastKNNParams.copy(nrHashTables = L, lshParams = lshParams.copy(radius = radius)))
       .map(p => run(ctx, pctTotal, sampleSize, p, baseLine))
       .foreach(println)
@@ -79,7 +79,7 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
 
     val now = DateTime.now
 
-    s"| k(NN)=$k | $distance | ${radius.map(v => s"r=$v").getOrElse("N/A")} | sig=$signatureLength | L=$nrHashTables | B=$blockSize | $pctTotal | ${wallTime.toSeconds}s | ${f"$accuracy%1.3f"} | $sample | $now | | "
+    s"| k(NN)=$k | $distance | ${radius.map(v => s"r=$v").getOrElse("N/A")} | sig=$signatureLength | L=$nrHashTables | B=$blockSize | $pctTotal | ${wallTime.toSeconds}s | ${f"$accuracy%1.3f"} | $sample | $now | Spark 2.0.1 | "
   }
 
 }
