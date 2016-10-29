@@ -26,7 +26,6 @@ object FastKNN {
 
     val N = ctx.N
     val D = ctx.D
-    val indexBound = ctx.indexBound
 
     val hashProjections =
       (1 to nrHashTables)
@@ -34,12 +33,9 @@ object FastKNN {
           val newSeed = random.nextLong // different seed for each hash table
           val params = kNNParams.copy(lshParams = lshParams.copy(seed = newSeed))
 
-          import params.lshParams
-          import params.lshParams._
+          val w = randomUniformVector(signatureLength, newSeed)
 
-          lazy val w = randomUniformVector(signatureLength, newSeed)
-
-          val hashFunction = LSH.makeHashFunction(D, lshParams)
+          val hashFunction = LSH.makeHashFunction(D, params.lshParams)
 
           def hashProjection(p: DataPoint): Distance =
             hashFunction
@@ -70,9 +66,10 @@ object FastKNN {
     val byBlockId = // TODO extract method for testing -> compute frequencies on block sizes -> should all be <= block size
       byTableHash
         .repartitionAndSortWithinPartitions(rangePartitioner)
-        .mapPartitionsWithIndex(
-          { case (partitionIndex, it) => it.zipWithIndex.map{ case ((_, (tableIdx, p)), idx) => (toBlockId(tableIdx, partitionIndex, idx, blockSize), p)}},
-          preservesPartitioning = true)
+        .mapPartitionsWithIndex{ case (partitionIndex, it) =>
+          it.zipWithIndex.map{ case ((_, (tableIdx, p)), idx) => (toBlockId(tableIdx, partitionIndex, idx, blockSize), p) }}
+
+    val indexBound = ctx.indexBound
 
     byBlockId
       .combineByKey(init(k), concat(k), merge(indexBound))
