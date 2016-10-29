@@ -28,14 +28,14 @@ libraryDependencies ++= Seq(
   "org.scalanlp"           %% "breeze-natives"   % "0.12"       exclude("com.chuusai", "*"),
   "com.esotericsoftware"   % "kryo"              % "4.0.0",
 
-  "com.github.haifengl"    % "smile-core"        % "1.1.0",
+  "com.github.haifengl"    % "smile-core"        % "1.2.0",
 
   "io.reactivex"           %% "rxscala"          % "0.26.1",
   "org.scalaz"             %% "scalaz-core"      % "7.2.0",
   "com.chuusai"            %% "shapeless"        % "2.3.0",
   "org.typelevel"          %% "shapeless-scalaz" % "0.4",
 
-  "com.github.karlhigley"  %% "spark-neighbors"  % "0.3.3-FORK",
+  "com.github.karlhigley"  %% "spark-neighbors"  % "0.3.6-FORK",
 
   "com.softwaremill.quicklens" %% "quicklens" % "1.4.4",
   

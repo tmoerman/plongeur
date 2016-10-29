@@ -6,6 +6,9 @@
 /target/
 /plongeur-nb/metastore_db
 /plongeur-nb/derby.log
+/plongeur-nb/L1000/metastore_db
+/plongeur-nb/L1000/derby.log
+/plongeur-nb/L1000/.ipynb_*
 /plongeur-nb/urth-examples
 /plongeur-nb/demos
 /plongeur-nb/.*
