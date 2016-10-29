@@ -2,7 +2,7 @@ package org.tmoerman.plongeur.tda.knn
 
 import org.tmoerman.plongeur.tda.Distances.{DEFAULT, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
+import org.tmoerman.plongeur.tda.knn.FastKNN_BAK.FastKNNParams
 import org.tmoerman.plongeur.tda.knn._
 import org.tmoerman.plongeur.util.RDDFunctions._
 
@@ -17,7 +17,7 @@ object ExactKNN {
 
   case class ExactKNNParams(k: Int, distance: DistanceFunction = DEFAULT)
 
-  def apply(ctx: TDAContext, kNNParams: ExactKNNParams): kNN_RDD = {
+  def apply(ctx: TDAContext, kNNParams: ExactKNNParams): KNN_RDD = {
     import kNNParams._
 
     implicit val k = kNNParams.k

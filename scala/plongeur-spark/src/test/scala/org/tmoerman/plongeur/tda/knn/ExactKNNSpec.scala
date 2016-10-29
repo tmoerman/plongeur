@@ -17,7 +17,7 @@ class ExactKNNSpec extends FlatSpec with SparkContextSpec with Matchers {
   lazy val rdd = sc.parallelize(points)
   lazy val ctx = TDAContext(sc, rdd)
 
-  "ExactKNN ACC" should "yield correct frequencies" in {
+  "ExactKNN" should "yield correct frequencies" in {
     val rdd = apply(ctx, params)
 
     assertDistanceFrequenciesRDD(rdd)

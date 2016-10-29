@@ -41,7 +41,7 @@ object Commons extends Matchers {
       .flatMap(_._2.map(_._2))
       .frequencies shouldBe expectedFreqs
 
-  def assertDistanceFrequenciesRDD(acc: kNN_RDD, expectedFreqs: Map[Distance, Count] = k2ExpectedFreqs): Unit =
+  def assertDistanceFrequenciesRDD(acc: KNN_RDD, expectedFreqs: Map[Distance, Count] = k2ExpectedFreqs): Unit =
     acc
       .flatMap(_._2.map(_._2))
       .collect

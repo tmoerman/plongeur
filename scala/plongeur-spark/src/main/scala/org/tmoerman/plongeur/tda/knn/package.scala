@@ -14,7 +14,7 @@ package object knn {
   type PQEntry     = (Index, Distance)
   type BPQ         = BoundedPriorityQueue[PQEntry]
   type Accumulator = List[(DataPoint, BPQ)]
-  type kNN_RDD     = RDD[(Index, BPQ)]
+  type KNN_RDD     = RDD[(Index, BPQ)]
 
   val ORD = Ordering.by((e: PQEntry) => (-e._2, e._1)) // why `e._1`? -> to disambiguate between equal distances
   def bpq(k: Int) = new BPQ(k)(ORD)
@@ -28,7 +28,7 @@ package object knn {
   /**
     * @return Returns a SparseMatrix in function of the calculated kNN data structure.
     */
-  def toSparseMatrix(N: Int, rdd: kNN_RDD) =
+  def toSparseMatrix(N: Int, rdd: KNN_RDD) =
     SparseMatrix.fromCOO(N, N, rdd.flatMap{ case (p, bpq) => bpq.map{ case (q, dist) => (p, q, dist) }}.collect)
 
   /**
@@ -47,7 +47,7 @@ package object knn {
     * @param baseLine Ground truth accumulator to which the candidate will be compared.
     * @return Returns the accuracy of the candidate with respect to the baseline accumulator.
     */
-  def relativeAccuracy(candidate: kNN_RDD, baseLine: kNN_RDD): Double =
+  def relativeAccuracy(candidate: KNN_RDD, baseLine: KNN_RDD): Double =
     (baseLine join candidate)
       .map{ case (_, (bpq1, bpq2)) => (bpq1.map(_._1).toSet intersect bpq2.map(_._1).toSet).size.toDouble / bpq1.size }
       .sum / baseLine.count
