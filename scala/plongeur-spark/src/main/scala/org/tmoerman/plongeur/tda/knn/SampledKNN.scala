@@ -24,7 +24,7 @@ object SampledKNN {
     * @param kNNParams
     * @return Returns a partial sampleSize*N
     */
-  def apply(ctx: TDAContext, kNNParams: SampledKNNParams): kNN_RDD = {
+  def apply(ctx: TDAContext, kNNParams: SampledKNNParams): KNN_RDD = {
     import kNNParams._
 
     implicit val k = kNNParams.k

@@ -1,14 +1,17 @@
 package org.tmoerman.plongeur.tda.TestCommons
 
+import org.apache.spark.RangePartitioner
+import org.apache.spark.rdd.RDD
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model.{DataPoint, TDAContext}
 import org.tmoerman.plongeur.tda.knn.Commons._
 import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
-import org.tmoerman.plongeur.tda.knn.FastKNN._
+import org.tmoerman.plongeur.tda.knn.FastKNN_ALT.hashProjectionFunctions
+import org.tmoerman.plongeur.tda.knn.FastKNN_BAK._
 import org.tmoerman.plongeur.tda.knn._
-import org.tmoerman.plongeur.tda.knn.{ExactKNN, FastKNN}
+import org.tmoerman.plongeur.tda.knn.{ExactKNN, FastKNN_BAK}
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
 import org.tmoerman.plongeur.util.MatrixFunctions._
 
@@ -70,6 +73,23 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
   
   lazy val ctx = TDAContext(sc, irisDataPointsRDD)
 
+  behavior of "hashProjectionFunctions"
+
+  it should "bla" in {
+    val params = fastParamsEuclidean
+
+    val bc = sc.broadcast(hashProjectionFunctions(ctx, params.copy(nrHashTables = 5), 666L))
+
+    val byTableHash =
+      ctx
+        .dataPoints
+        .flatMap(p => bc.value.map(_.apply(p)))
+
+    // val result = Helpers.meh(ctx, params, byTableHash).collect.mkString("\n")
+
+    // println(result)
+  }
+
   behavior of "FastKNN with Euclidean distance"
 
   lazy val exactEuclidean = ExactKNN.apply(ctx, ExactKNNParams(k = k, distance = EuclideanDistance))
@@ -107,7 +127,7 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     assertIncreasingAccuracy(fastParamsCosine, exactCosine)
   }
 
-  private def assertEqualResultsForEqualSeed(fastParams: FastKNNParams, baseLine: kNN_RDD): Unit = {
+  private def assertEqualResultsForEqualSeed(fastParams: FastKNNParams, baseLine: KNN_RDD): Unit = {
     val a = FastKNN.apply(ctx, fastParams)
     val b = FastKNN.apply(ctx, fastParams)
 
@@ -117,7 +137,7 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     x shouldBe (y +- 0.01)
   }
 
-  private def assertIncreasingAccuracy(fastParams: FastKNNParams, baseLine: kNN_RDD): Unit = {
+  private def assertIncreasingAccuracy(fastParams: FastKNNParams, baseLine: KNN_RDD): Unit = {
     val accuracies =
       (1 to 5).map(L => {
         val newParams = fastParams.copy(nrHashTables = L)
@@ -132,6 +152,24 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
       a should be <= b
     }}
+  }
+
+}
+
+object Helpers extends Serializable {
+
+  def meh(ctx: TDAContext, params: FastKNNParams, byTableHash: RDD[(Double, (Int, DataPoint))]) = {
+    import params._
+
+    val N = ctx.N
+
+    val partitioner = new RangePartitioner(ctx.sc.defaultParallelism, byTableHash)
+
+    byTableHash
+      .repartitionAndSortWithinPartitions(partitioner)
+      .mapPartitionsWithIndex(
+        { case (partIdx, it) => it.zipWithIndex.map { case ((_, (table, p)), idx) => (FastKNN_ALT.toBlockIndex(N, table, partIdx * N + idx, blockSize), p) } },
+        preservesPartitioning = true)
   }
 
 }
