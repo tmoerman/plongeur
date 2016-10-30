@@ -10,7 +10,9 @@ import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.FastKNN_BAK._
 
 /**
-  * TODO explain M/R strategy.
+  * Alternative implementation that partitions by table index.
+  * Easier to verify correctness but might potentially not use the computation resources efficiently
+  * because we only use a number of partitions in function of the number of hash tables.
   *
   * @author Thomas Moerman
   */
@@ -85,8 +87,6 @@ object FastKNN_ALT {
     import kNNParams._
     val D = ctx.D
 
-    val OFFSET = 10d
-
     val random = new JavaRandom(lshParams.seed)
 
     (1 to nrHashTables)
@@ -108,9 +108,7 @@ object FastKNN_ALT {
             .map(toVector(signatureLength, _) dot w)
             .get
 
-        (p: DataPoint) => {
-          ((tableIndex, hashProjection(p)), p)
-        }
+        (p: DataPoint) => ((tableIndex, hashProjection(p)), p)
       })
   }
 
