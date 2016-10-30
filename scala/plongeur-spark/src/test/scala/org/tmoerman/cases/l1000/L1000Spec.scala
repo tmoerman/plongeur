@@ -48,8 +48,8 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
 
   it should "compute a series of runs" in {
     // val (pctTotal, sampleSize) = (1.0, Right(0.01))
-    // val (pctTotal, sampleSize) = (0.25, Right(0.10))
-    val (pctTotal, sampleSize) = (0.1, Right(0.25))
+    val (pctTotal, sampleSize) = (0.25, Right(0.10))
+    // val (pctTotal, sampleSize) = (0.1, Right(0.25))
 
     val ctx = TDAContext(sc, if (pctTotal < 1.0) perts.sample(false, pctTotal) else perts)
 
@@ -77,11 +77,12 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
       (rdd, relativeAccuracy(rdd, baseLine))
     }
 
+    val comment = "MurmurHash, preserve = false"
     val now = DateTime.now
 
     (distance, k, radius, signatureLength, nrHashTables, blockSize, pctTotal, wallTime.toSeconds, accuracy, sample)
 
-    s"| k(NN)=$k | $distance | ${radius.map(v => s"r=$v").getOrElse("N/A")} | sig=$signatureLength | L=$nrHashTables | B=$blockSize | $pctTotal | ${wallTime.toSeconds}s | ${f"$accuracy%1.3f"} | $sample | $now | Spark 2.0.1 | "
+    s"| k(NN)=$k | $distance | ${radius.map(v => s"r=$v").getOrElse("N/A")} | sig=$signatureLength | L=$nrHashTables | B=$blockSize | $pctTotal | ${wallTime.toSeconds}s | ${f"$accuracy%1.3f"} | $sample | $now | $comment | "
   }
 
 }

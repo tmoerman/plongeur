@@ -165,7 +165,17 @@
 
 | k(NN)=10 | LpNormDistance(0.5) | r=50.0 | sig=10 | L=10 | B=50 | 0.25 | 144s | 0.122 | Right(0.1) | 2016-10-28T16:10:25.769+02:00 | | 
 | k(NN)=10 | LpNormDistance(0.5) | r=50.0 | sig=10 | L=30 | B=50 | 0.25 | 175s | 0.299 | Right(0.1) | 2016-10-28T16:13:20.886+02:00 | | 
-| k(NN)=10 | LpNormDistance(0.5) | r=50.0 | sig=10 | L=60 | B=50 | 0.25 | 446s | 0.530 | Right(0.1) | 2016-10-28T16:20:47.121+02:00 | |  
+| k(NN)=10 | LpNormDistance(0.5) | r=50.0 | sig=10 | L=60 | B=50 | 0.25 | 446s | 0.530 | Right(0.1) | 2016-10-28T16:20:47.121+02:00 | |
+
+| k(NN)=10 | LpNormDistance(0.5) | r=10.0 | sig=10 | L=10 | B=50 | 0.25 | 125s | 0.121 | Right(0.1) | 2016-10-29T23:35:20.542+02:00 | Murmur | 
+| k(NN)=10 | LpNormDistance(0.5) | r=10.0 | sig=10 | L=30 | B=50 | 0.25 | 153s | 0.316 | Right(0.1) | 2016-10-29T23:37:54.110+02:00 | Murmur | 
+| k(NN)=10 | LpNormDistance(0.5) | r=10.0 | sig=10 | L=60 | B=50 | 0.25 | 312s | 0.528 | Right(0.1) | 2016-10-29T23:43:06.202+02:00 | Murmur | 
+| k(NN)=10 | LpNormDistance(0.5) | r=10.0 | sig=10 | L=10 | B=50 | 0.25 | 116s | 0.115 | Right(0.1) | 2016-10-30T00:06:26.044+02:00 | MurmurHash, preserve = false | 
+| k(NN)=10 | LpNormDistance(0.5) | r=10.0 | sig=10 | L=30 | B=50 | 0.25 | 144s | 0.313 | Right(0.1) | 2016-10-30T00:08:50.089+02:00 | MurmurHash, preserve = false | 
+| k(NN)=10 | LpNormDistance(0.5) | r=10.0 | sig=10 | L=60 | B=50 | 0.25 | 371s | 0.525 | Right(0.1) | 2016-10-30T00:15:01.740+02:00 | MurmurHash, preserve = false | 
+| k(NN)=10 | LpNormDistance(0.5) | r=10.0 | sig=10 | L=10 | B=50 | 0.25 | 123s | 0.123 | Right(0.1) | 2016-10-30T07:58:00.835+01:00 | MurmurHash, preserve = false, bpq unique optim. | 
+| k(NN)=10 | LpNormDistance(0.5) | r=10.0 | sig=10 | L=30 | B=50 | 0.25 | 152s | 0.313 | Right(0.1) | 2016-10-30T08:00:33.798+01:00 | MurmurHash, preserve = false, bpq unique optim. | 
+| k(NN)=10 | LpNormDistance(0.5) | r=10.0 | sig=10 | L=60 | B=50 | 0.25 | 313s | 0.533 | Right(0.1) | 2016-10-30T08:05:46.872+01:00 | MurmurHash, preserve = false, bpq unique optim. | 
 
 
 | k-NN | distance metric | radius | signature length | # hash tables | block size | fraction of total data | execution time | estimated accuracy | test fraction |
