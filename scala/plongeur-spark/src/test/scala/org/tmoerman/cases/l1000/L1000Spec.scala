@@ -46,7 +46,7 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
   import fastKNNParams._
   import lshParams._
 
-  it should "compute a series of runs" in {
+  it should "compute a series of runs" ignore {
     // val (pctTotal, sampleSize) = (1.0, Right(0.01))
     val (pctTotal, sampleSize) = (0.25, Right(0.10))
     // val (pctTotal, sampleSize) = (0.1, Right(0.25))

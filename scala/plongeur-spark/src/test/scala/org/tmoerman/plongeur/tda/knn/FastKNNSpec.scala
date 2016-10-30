@@ -10,8 +10,7 @@ import org.tmoerman.plongeur.tda.knn.Commons._
 import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
 import org.tmoerman.plongeur.tda.knn.FastKNN_ALT.hashProjectionFunctions
 import org.tmoerman.plongeur.tda.knn.FastKNN_BAK._
-import org.tmoerman.plongeur.tda.knn._
-import org.tmoerman.plongeur.tda.knn.{ExactKNN, FastKNN_BAK}
+import org.tmoerman.plongeur.tda.knn.{ExactKNN, _}
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
 import org.tmoerman.plongeur.util.MatrixFunctions._
 
@@ -134,7 +133,9 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     val x = relativeAccuracy(a, baseLine)
     val y = relativeAccuracy(b, baseLine)
 
-    x shouldBe (y +- 0.01)
+    val slack = 0.01
+
+    x shouldBe (y +- slack)
   }
 
   private def assertIncreasingAccuracy(fastParams: FastKNNParams, baseLine: KNN_RDD): Unit = {
@@ -148,9 +149,11 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
       })
 
     accuracies.sliding(2, 1).foreach{ case Seq(a, b) => {
-      println(s"$a < $b")
+      val slack = 0.05
 
-      a should be <= b
+      println(s"$a < ($b + (slack: $slack))")
+
+      a should be <= (b + slack)
     }}
   }
 
