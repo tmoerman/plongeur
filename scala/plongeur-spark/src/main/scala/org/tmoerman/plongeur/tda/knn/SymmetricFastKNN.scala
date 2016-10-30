@@ -3,11 +3,7 @@ package org.tmoerman.plongeur.tda.knn
 import java.util.{Random => JavaRandom}
 
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Distances._
-import org.tmoerman.plongeur.tda.LSH
-import org.tmoerman.plongeur.tda.LSH._
-import org.tmoerman.plongeur.tda.Model.{DataPoint, Index, TDAContext}
-import org.tmoerman.plongeur.tda.knn.FastKNN_BAK.FastKNNParams
+import org.tmoerman.plongeur.tda.Model.{Index, TDAContext}
 
 /**
   * @author Thomas Moerman

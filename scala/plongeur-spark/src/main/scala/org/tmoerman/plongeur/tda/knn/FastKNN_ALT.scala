@@ -2,12 +2,11 @@ package org.tmoerman.plongeur.tda.knn
 
 import java.util.{Random => JavaRandom}
 
-import org.apache.spark.{Partitioner, RangePartitioner}
+import org.apache.spark.Partitioner
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH._
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.knn.FastKNN_BAK._
 
 /**
   * Alternative implementation that partitions by table index.
@@ -50,7 +49,6 @@ object FastKNN_ALT {
       key.asInstanceOf[(K1, _)]._1.hashCode() % numPartitions
 
   }
-
 
   /**
     * RULES:

@@ -9,7 +9,6 @@ import org.tmoerman.plongeur.tda.Model.{DataPoint, TDAContext}
 import org.tmoerman.plongeur.tda.knn.Commons._
 import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
 import org.tmoerman.plongeur.tda.knn.FastKNN_ALT.hashProjectionFunctions
-import org.tmoerman.plongeur.tda.knn.FastKNN_BAK._
 import org.tmoerman.plongeur.tda.knn.{ExactKNN, _}
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
 import org.tmoerman.plongeur.util.MatrixFunctions._

@@ -10,6 +10,7 @@ import org.tmoerman.plongeur.tda.LSH.{LSHParams, toVector}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.IterableFunctions._
 
+
 /**
   * See "Fast kNN Graph Construction with Locality Sensitive Hashing"
   *   -- Yan-Ming Zhang, Kaizhu Huang, Guanggang Geng, and Cheng-Lin Liu
@@ -21,20 +22,6 @@ import org.tmoerman.plongeur.util.IterableFunctions._
 object FastKNN_BAK extends Serializable {
 
   /**
-    * @param k The k in kNN.
-    * @param nrHashTables Also known as the L parameter, cfr. LSH literature.
-    * @param blockSize
-    * @param lshParams
-    */
-  case class FastKNNParams(k: Int,
-                           blockSize: Int,
-                           nrHashTables: Int = 1,
-                           lshParams: LSHParams) {
-    require(k > 0)
-    require(nrHashTables > 0)
-  }
-
-  /**
     * @param ctx
     * @param kNNParams
     * @return
@@ -44,9 +31,7 @@ object FastKNN_BAK extends Serializable {
 
     val random = new JavaRandom(lshParams.seed)
 
-    def combine1(a: KNN_RDD, b: KNN_RDD) = (a join b).mapValues[BPQ]{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
-
-    def combine2(a: KNN_RDD, b: KNN_RDD) = (a ++ b).reduceByKey{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
+    // def combine2(a: KNN_RDD, b: KNN_RDD) = (a ++ b).reduceByKey{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
 
     (1 to nrHashTables)
       .map(_ => {
@@ -54,7 +39,7 @@ object FastKNN_BAK extends Serializable {
         val params = kNNParams.copy(lshParams = lshParams.copy(seed = newSeed))
 
         basic(ctx, params) })
-      .reduce(combine1)
+      .reduce(combine)
   }
 
   /**
@@ -97,52 +82,6 @@ object FastKNN_BAK extends Serializable {
     val random = new JavaRandom(seed)
 
     BDV.apply((1 to length).map(_ => random.nextDouble): _*)
-  }
-
-  /**
-    * @return Returns a new accumulator.
-    */
-  def init(k: Int)(p: DataPoint): Accumulator = (p, bpq(k)) :: Nil
-
-  /**
-    * @return Returns an updated accumulator.
-    */
-  def concat(k: Int)(acc: Accumulator, p: DataPoint)(implicit distance: DistanceFunction): Accumulator = {
-    val distances = acc.map{ case (q, bpq) => (q.index, distance(p, q)) }
-
-    val newEntry = (p, distances.foldLeft(bpq(k)){ case (bpq, pair) => bpq += pair })
-
-    val updated =
-      (acc, distances)
-        .zipped
-        .map{ case ((q, bpq), (_, d)) => (q, bpq += ((p.index, d))) }
-
-    newEntry :: updated
-  }
-
-  /**
-    * Assumes accumulators a and b's data points are mutually exclusive.
-    *
-    * @return Returns a merged accumulator,
-    *         cfr. G = U{g_1}, cfr. basic_ann_by_lsh(X, k, block-sz), p666 Y.-M. Zhang et al.
-    */
-  def merge(N: Int)(a: Accumulator, b: Accumulator)(implicit distance: DistanceFunction): Accumulator = {
-    implicit val ORD = Ordering.by((d: DataPoint) => d.index)
-
-    val distances =
-      (a.map(_._1) cartesian b.map(_._1))
-        .flatMap{ case (p, q) => {
-          val d = distance(p, q)
-
-          (p.index, q.index, d) :: (q.index, p.index, d) :: Nil
-        }}
-
-    val cache = SparseMatrix.fromCOO(N, N, distances)
-
-    def merge(acc: Accumulator, arg: Accumulator): Accumulator =
-      acc.map{ case (p, bpq) => (p, bpq ++= arg.map{ case (q, _) => (q.index, cache(p.index, q.index)) })}
-
-    merge(a, b) ::: merge(b, a)
   }
 
 }
