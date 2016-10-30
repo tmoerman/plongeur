@@ -61,9 +61,7 @@ class BoundedPriorityQueue[T](maxSize: Int, unique: Boolean = true)
   }
 
   private def canOffer(elem: T, head: T): Boolean = {
-    (! (unique && underlying.contains(elem))) &&
-    head != null &&
-    ord.gt(elem, head)
+    head != null && ord.gt(elem, head) && ! (unique && underlying.contains(elem))
   }
 
 }
