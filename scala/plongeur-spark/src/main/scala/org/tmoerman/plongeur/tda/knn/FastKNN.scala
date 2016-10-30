@@ -22,71 +22,76 @@ object FastKNN {
     import kNNParams._
     import lshParams._
 
+    type HashProjection = Double
+    type TableIndex = Int
+    type HashProjectionFunction = (DataPoint) => (HashProjection, (TableIndex, DataPoint))
+
     val random = new JavaRandom(lshParams.seed)
 
     val N = ctx.N
     val D = ctx.D
-
-    val hashProjections =
-      (1 to nrHashTables)
-        .map(tableIndex => {
-          val newSeed = random.nextLong // different seed for each hash table
-          val params = kNNParams.copy(lshParams = lshParams.copy(seed = newSeed))
-
-          val w = randomUniformVector(signatureLength, newSeed)
-
-          val hashFunction = LSH.makeHashFunction(D, params.lshParams)
-
-          def hashProjection(p: DataPoint): Distance =
-            hashFunction
-              .map(_.signature(p.features))
-              .map(toVector(signatureLength, _) dot w)
-              .get
-
-          (p: DataPoint) => {
-            val offset = tableIndex * N
-
-            val tableHash = offset + hashProjection(p)
-
-            (tableHash, (tableIndex, p))
-          }
-        })
-
-    val bc = ctx.sc.broadcast(hashProjections)
-
+    val indexBound = ctx.indexBound
     implicit val d = distance
 
-    val byTableHash =
-      ctx
-        .dataPoints
-        .flatMap(p => bc.value.map(_.apply(p)))
+    val nrHashTablesPerJob = Math.ceil(nrHashTables.toDouble / nrJobs).toInt
 
-    val rangePartitioner = new RangePartitioner(ctx.sc.defaultParallelism, byTableHash)
+    def hashProjectionFunction(tableIndex: Index): HashProjectionFunction = {
+      val newSeed = random.nextLong // different seed for each hash table
 
-    val byBlockId = // TODO extract method for testing -> compute frequencies on block sizes -> should all be <= block size
-      byTableHash
-        .repartitionAndSortWithinPartitions(rangePartitioner)
-        .mapPartitionsWithIndex{ case (partitionIndex, it) =>
-          it.zipWithIndex.map{ case ((_, (tableIdx, p)), idx) => (toBlockId(tableIdx, partitionIndex, idx, blockSize), p) }}
+      val w = randomUniformVector(signatureLength, newSeed)
 
-    val indexBound = ctx.indexBound
+      val hashFunction = LSH.makeHashFunction(D, lshParams.copy(seed = newSeed))
 
-    byBlockId
-      .combineByKey(init(k), concat(k), merge(indexBound))
-      .flatMap{ case (_, acc) => acc.map{ case (p, bpq) => (p.index, bpq) }}
-      .reduceByKey{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
+      def hashProjection(p: DataPoint): Distance =
+        hashFunction
+          .map(_.signature(p.features))
+          .map(toVector(signatureLength, _) dot w)
+          .get
+
+      (p: DataPoint) => {
+        val offset = tableIndex * N
+
+        val tableHash = offset + hashProjection(p)
+
+        (tableHash, (tableIndex, p))
+      }
+    }
+
+    def runJob(hashProjectionFunctions: Seq[HashProjectionFunction]): KNN_RDD = {
+
+      val bc = ctx.sc.broadcast(hashProjectionFunctions)
+      val byTableHash =
+        ctx
+          .dataPoints
+          .flatMap(p => bc.value.map(_.apply(p)))
+
+      val rangePartitioner = new RangePartitioner(ctx.sc.defaultParallelism, byTableHash)
+      val byBlockId =
+        byTableHash
+          .repartitionAndSortWithinPartitions(rangePartitioner)
+          .mapPartitionsWithIndex{ case (partitionIndex, it) =>
+            it.zipWithIndex.map{ case ((_, (tableIdx, p)), idx) => (toBlockId(tableIdx, partitionIndex, idx, blockSize), p) }}
+
+      val knn_RDD =
+        byBlockId
+          .combineByKey(init(k), concat(k), merge(indexBound))
+          .flatMap{ case (_, acc) => acc.map{ case (p, bpq) => (p.index, bpq) }}
+          .reduceByKey{ case (bpq1, bpq2) => bpq1 ++= bpq2 }
+
+      knn_RDD
+    }
+
+    (1 to nrHashTables)
+      .grouped(nrHashTablesPerJob)
+      .map(tableIndices => tableIndices.map(hashProjectionFunction(_)))
+      .map(runJob)
+      .reduce(combine) // fold in a continuation criterion
   }
 
-  def toBlockId(tableIndex: Int,
-                partitionIndex: Int,
-                pointIndexInPartition: Int,
-                blockSize: Int): Long = {
-
+  def toBlockId(tableIndex: Int, partitionIndex: Int, pointIndexInPartition: Int, blockSize: Int): Long = {
     val localBlockIndex = pointIndexInPartition / blockSize
 
-    val product = (tableIndex, partitionIndex, localBlockIndex)
-
-    MurmurHash3.productHash(product)
+    MurmurHash3.productHash((tableIndex, partitionIndex, localBlockIndex))
   }
 
 }
