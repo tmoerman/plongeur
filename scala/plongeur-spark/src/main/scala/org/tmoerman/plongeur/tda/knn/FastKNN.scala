@@ -10,6 +10,7 @@ import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn.FastKNN_BAK._
 
 import scala.util.hashing.MurmurHash3
+import scalaz.Scalaz._
 
 /**
   * TODO explain M/R strategy.
@@ -18,6 +19,11 @@ import scala.util.hashing.MurmurHash3
   */
 object FastKNN {
 
+  /**
+    * @param ctx
+    * @param kNNParams
+    * @return Returns a _directed_ kNN graph data structure.
+    */
   def apply(ctx: TDAContext, kNNParams: FastKNNParams): KNN_RDD = {
     import kNNParams._
     import lshParams._
@@ -33,8 +39,10 @@ object FastKNN {
     val indexBound = ctx.indexBound
     implicit val d = distance
 
-    val nrHashTablesPerJob = Math.ceil(nrHashTables.toDouble / nrJobs).toInt
-
+    /**
+      * @param tableIndex
+      * @return Returns a new hash projection function, generated with a new seed value.
+      */
     def hashProjectionFunction(tableIndex: Index): HashProjectionFunction = {
       val newSeed = random.nextLong // different seed for each hash table
 
@@ -57,6 +65,15 @@ object FastKNN {
       }
     }
 
+    /**
+      * @param hashProjectionFunctions
+      * @return Returns the KNN_RDD result, calculated in function of the specified collection of
+      *         hash projection functions.
+      *
+      *         The motivation for this mechanism is to provide a means to break up the complete job
+      *         into a number of smaller jobs when running the complete job on hardware with insufficient
+      *         memory would result in suffocating the JVM.
+      */
     def runJob(hashProjectionFunctions: Seq[HashProjectionFunction]): KNN_RDD = {
 
       val bc = ctx.sc.broadcast(hashProjectionFunctions)
@@ -81,11 +98,25 @@ object FastKNN {
       knn_RDD
     }
 
-    (1 to nrHashTables)
-      .grouped(nrHashTablesPerJob)
-      .map(tableIndices => tableIndices.map(hashProjectionFunction(_)))
-      .map(runJob)
-      .reduce(combine) // fold in a continuation criterion
+    val nrHashTablesPerJob = Math.ceil(nrHashTables.toDouble / nrJobs).toInt
+
+    val EMPTY: Map[Index, BPQ] = Map.empty
+
+    val result =
+      (1 to nrHashTables)
+        .grouped(nrHashTablesPerJob)
+        .map(tableIndices => tableIndices.map(hashProjectionFunction))
+        .map(runJob)
+
+        .foldLeft(EMPTY){ case (acc, rdd) => {
+          val accNext = rdd.collectAsMap.toMap
+
+          if (acc.isEmpty) accNext else (acc intersectWith accNext)(_ ++= _)
+        }}
+
+    ctx.sc.parallelize(result.toSeq) // TODO hacketyhack
+
+    // ???
   }
 
   def toBlockId(tableIndex: Int, partitionIndex: Int, pointIndexInPartition: Int, blockSize: Int): Long = {
