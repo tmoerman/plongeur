@@ -50,7 +50,7 @@ object SampledKNN {
 
         (p, (q.index, d))
       }
-      .combineByKey(init, concat, union)
+      .combineByKey(lift, add, union)
       .map{ case (p, bpq) => (p.index, bpq)}
   }
 

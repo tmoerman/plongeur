@@ -27,13 +27,13 @@ object ExactKNN {
         val d = distance(a, b)
 
         (a, (b.index, d)) :: (b, (a.index, d)) :: Nil }
-      .combineByKey(init, concat, union)
+      .combineByKey(lift, add, union)
       .map{ case (p, bpq) => (p.index, bpq) }
   }
 
-  def init(entry: PQEntry)(implicit k: Int) = bpq(k) += entry
+  def lift(entry: PQEntry)(implicit k: Int) = bpq(k) += entry
 
-  def concat(bpq: BPQ, entry: PQEntry) = bpq += entry
+  def add(bpq: BPQ, entry: PQEntry) = bpq += entry
 
   def union(a: BPQ, b: BPQ) = a ++= b
 
