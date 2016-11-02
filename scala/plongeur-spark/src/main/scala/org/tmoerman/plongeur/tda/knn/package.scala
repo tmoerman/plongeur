@@ -17,6 +17,7 @@ package object knn {
   type BPQ         = BoundedPriorityQueue[PQEntry]
   type Accumulator = List[(DataPoint, BPQ)]
   type KNN_RDD     = RDD[(Index, BPQ)]
+  type KNN_RDD_Set = RDD[(Index, Set[PQEntry])]
 
   /**
     * @param k The k in kNN.
@@ -137,5 +138,25 @@ package object knn {
 
     ???
   }
+
+  /**
+    * See: "A Tutorial on Spectral Clustering" -- Ulrike von Luxburg
+    *
+    * -> Section 2.2 "Different similarity graphs"
+    *
+    * @param directedKnnGraph
+    * @param mutual
+    * @return Returns a symmetric counterpart of the specified asymmetric KNN_RDD
+    */
+  def toUndirected(directedKnnGraph: KNN_RDD, mutual: Boolean = false): KNN_RDD_Set =
+    directedKnnGraph
+      .flatMap{ case (p, bpq) => bpq.map{ case (q, d) => (Set(p, q), d) } }
+      .groupByKey
+      .filter{ case (_, it) => if (mutual) it.size == 2 else true }
+      .mapValues(_.head)
+      .flatMap{ case (set, d) => set.toArray match { case Array(a, b) =>
+        (a, Set((b, d))) ::
+        (b, Set((a, d))) :: Nil }}
+      .reduceByKey(_ ++ _)
 
 }
