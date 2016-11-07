@@ -7,7 +7,7 @@ import java.util.{Random => JavaRandom}
 import breeze.linalg.DenseVector.fill
 import com.github.karlhigley.spark.neighbors.lsh.{LSHFunction, Signature}
 import org.apache.spark.RangePartitioner
-import org.apache.spark.mllib.linalg.VectorConversions._
+import org.apache.spark.mllib.linalg.BreezeConversions._
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH.{LSHParams, toArray}

@@ -1,5 +1,6 @@
 package org.tmoerman.lab
 
+import org.apache.spark.mllib.linalg.SparseMatrix
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
@@ -22,6 +23,20 @@ class MLLab extends FlatSpec with Matchers with SparkContextSpec with TestResour
     val in = circle1kRDD.distinctComboSets
 
     println(in.take(3).mkString("\n"))
+  }
+
+  import org.apache.spark.mllib.linalg.BreezeConversions._
+
+  behavior of "matrix power"
+
+  it should "compute matrix power" in {
+
+    val diagonal = Seq(3.0, 5.0, 7.0).zipWithIndex.map{ case (v, i) => (i, i, v) }
+
+    val m = SparseMatrix.fromCOO(3, 3, diagonal).toBreeze
+
+    println(m :^ 0.5)
+
   }
 
 }

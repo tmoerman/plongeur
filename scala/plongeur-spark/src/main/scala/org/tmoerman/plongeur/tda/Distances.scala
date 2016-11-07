@@ -1,7 +1,7 @@
 package org.tmoerman.plongeur.tda
 
 import breeze.linalg.functions._
-import org.apache.spark.mllib.linalg.VectorConversions._
+import org.apache.spark.mllib.linalg.BreezeConversions._
 import org.tmoerman.plongeur.tda.Model._
 
 /**

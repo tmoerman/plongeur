@@ -4,7 +4,7 @@ import java.lang.Math.{PI, exp, min, sqrt}
 
 import breeze.linalg.{SparseVector, max => elmax}
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
-import org.apache.spark.mllib.linalg.VectorConversions._
+import org.apache.spark.mllib.linalg.BreezeConversions._
 import org.apache.spark.mllib.linalg.{Vector => MLLibVector}
 import org.tmoerman.plongeur.tda.Distances.DistanceFunction
 import org.tmoerman.plongeur.tda.Model._
