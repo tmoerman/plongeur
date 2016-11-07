@@ -56,13 +56,13 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   val asymmetricRDD: KNN_RDD = sc.parallelize(asymmetricGraph)
 
-  it should "correctly compute the mutual undirected kNN graph (AND)" in {
-    val mutualUndirected =
-      toUndirected(asymmetricRDD, mutual = true)
+  it should "correctly compute the mutual weighted symmetric kNN graph (AND)" in {
+    val mutualSymmetric =
+      symmetricize(asymmetricRDD, SymmetricizeParams(mutual = true))
         .collectAsMap
         .toMap
 
-    mutualUndirected shouldBe Map(
+    mutualSymmetric shouldBe Map(
       _a -> Set((_b, 4.), (_c, 1.)),
       _b -> Set((_a, 4.)),
       _c -> Set((_a, 1.), (_d, 1.)),
@@ -71,13 +71,58 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
     )
   }
 
-  it should "correctly compute the undirected kNN graph (OR)" in {
-    val undirected =
-      toUndirected(asymmetricRDD)
+  it should "correctly compute the mutual unweighted symmetric kNN graph (AND)" in {
+    val mutualSymmetric =
+      symmetricize(asymmetricRDD, SymmetricizeParams(mutual = true, weighted = false))
         .collectAsMap
         .toMap
 
-    undirected shouldBe Map(
+    mutualSymmetric shouldBe Map(
+      _a -> Set((_b, 1.), (_c, 1.)),
+      _b -> Set((_a, 1.)),
+      _c -> Set((_a, 1.), (_d, 1.)),
+      _d -> Set((_c, 1.), (_e, 1.)),
+      _e -> Set((_d, 1.))
+    )
+  }
+
+  it should "correctly compute the symmetric weighted kNN graph (OR)" in {
+    val symmetric =
+      symmetricize(asymmetricRDD, SymmetricizeParams(mutual = false))
+        .collectAsMap
+        .toMap
+
+    symmetric shouldBe Map(
+      _a -> Set((_b, 4.), (_c, 1.)),
+      _b -> Set((_d, 5.), (_a, 4.)),
+      _c -> Set((_e, 3.), (_d, 1.), (_a, 1.)),
+      _d -> Set((_b, 5.), (_c, 1.), (_e, 3.)),
+      _e -> Set((_c, 3.), (_d, 3.))
+    )
+  }
+
+  it should "correctly compute the symmetric unweighted kNN graph (OR)" in {
+    val symmetric =
+      symmetricize(asymmetricRDD, SymmetricizeParams(mutual = false, weighted = false))
+        .collectAsMap
+        .toMap
+
+    symmetric shouldBe Map(
+      _a -> Set((_b, 1.), (_c, 1.)),
+      _b -> Set((_d, 1.), (_a, 1.)),
+      _c -> Set((_e, 1.), (_d, 1.), (_a, 1.)),
+      _d -> Set((_b, 1.), (_c, 1.), (_e, 1.)),
+      _e -> Set((_c, 1.), (_d, 1.))
+    )
+  }
+
+  it should "correctly compute the symmetric weighted kNN graph with half non-mutual edge weights (OR)" in {
+    val symmetric =
+      symmetricize(asymmetricRDD, SymmetricizeParams(mutual = false))
+        .collectAsMap
+        .toMap
+
+    symmetric shouldBe Map(
       _a -> Set((_b, 4.), (_c, 1.)),
       _b -> Set((_d, 5.), (_a, 4.)),
       _c -> Set((_e, 3.), (_d, 1.), (_a, 1.)),

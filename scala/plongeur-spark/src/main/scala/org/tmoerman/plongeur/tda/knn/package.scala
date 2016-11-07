@@ -99,12 +99,6 @@ package object knn {
     SparseMatrix.fromCOO(N, N, for { (p, bpq) <- acc; (q, dist) <- bpq } yield (p.index, q, dist))
 
   /**
-    * @return Returns a SparseMatrix in function of the calculated kNN data structure.
-    */
-  def toSparseMatrix(N: Int, rdd: KNN_RDD) =
-    SparseMatrix.fromCOO(N, N, rdd.flatMap{ case (p, bpq) => bpq.map{ case (q, dist) => (p, q, dist) }}.collect)
-
-  /**
     * TODO
     *
     * implement an algorithm that collects:
@@ -140,23 +134,60 @@ package object knn {
   }
 
   /**
+    *
+    * @param weighted If false, all edge weights are 1.
+    * @param mutual Consider only mutual kNN edges.
+    * @param halveNonMutual cfr. (A + A.T) / 2
+    */
+  case class SymmetricizeParams(weighted:       Boolean = true,
+                                mutual:         Boolean = true,
+                                halveNonMutual: Boolean = false) extends Serializable
+
+  /**
     * See: "A Tutorial on Spectral Clustering" -- Ulrike von Luxburg
     *
     * -> Section 2.2 "Different similarity graphs"
     *
     * @param directedKnnGraph
-    * @param mutual
     * @return Returns a symmetric counterpart of the specified asymmetric KNN_RDD
     */
-  def toUndirected(directedKnnGraph: KNN_RDD, mutual: Boolean = false): KNN_RDD_Set =
+  def symmetricize(directedKnnGraph: KNN_RDD, params: SymmetricizeParams): KNN_RDD_Set = {
+    import params._
+
+    def init(d: Distance) = (d, 1)
+
+    def concat(acc: (Distance, Count), d: Distance) = acc match { case (_, count) => (d, count + 1) }
+
+    def merge(acc1: (Distance, Count), acc2: (Distance, Count)) = (acc1, acc2) match {
+      case ((d, count1), (_, count2)) => (d, count1 + count2)
+    }
+
+    val toWeight = (d: Distance, count: Count) => (weighted, halveNonMutual, count) match {
+      case (true,  true,  1) => d / 2
+      case (true,  true,  _) => d
+      case (true,  false, _) => d
+      case (false, _,     _) => 1.0
+    }
+
     directedKnnGraph
       .flatMap{ case (p, bpq) => bpq.map{ case (q, d) => (Set(p, q), d) } }
-      .groupByKey
-      .filter{ case (_, it) => if (mutual) it.size == 2 else true }
-      .mapValues(_.head)
-      .flatMap{ case (set, d) => set.toArray match { case Array(a, b) =>
-        (a, Set((b, d))) ::
-        (b, Set((a, d))) :: Nil }}
+      .combineByKey(init, concat, merge)
+      .filter{ case (_, (_, count)) => if (mutual) count == 2 else true }
+      .mapValues(toWeight.tupled)
+      .flatMap{ case (set, d) =>
+        set.toArray match { case Array(a, b) =>
+          (a, Set((b, d))) ::
+          (b, Set((a, d))) :: Nil }}
       .reduceByKey(_ ++ _)
+  }
+
+  /**
+    * @return Returns a SparseMatrix in function of the calculated kNN data structure.
+    */
+  def toSparseMatrix(N: Int, rdd: KNN_RDD_Set) = {
+    val N = rdd.count.toInt
+
+    SparseMatrix.fromCOO(N, N, rdd.flatMap{ case (p, bpq) => bpq.map{ case (q, dist) => (p, q, dist) }}.collect)
+  }
 
 }
