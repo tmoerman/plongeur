@@ -25,7 +25,7 @@ libraryDependencies ++= Seq(
 
   "org.apache.spark"       % "spark-core_2.10"   % sparkVersion % "provided",
   "org.apache.spark"       % "spark-mllib_2.10"  % sparkVersion exclude("com.chuusai", "*"),
-  "org.scalanlp"           %% "breeze-natives"   % "0.12"       exclude("com.chuusai", "*"),
+  "org.scalanlp"           %% "breeze-natives"   % "0.11.2"     exclude("com.chuusai", "*"),
   "com.esotericsoftware"   % "kryo"              % "4.0.0",
 
   "com.github.haifengl"    % "smile-core"        % "1.2.0",
@@ -35,7 +35,7 @@ libraryDependencies ++= Seq(
   "com.chuusai"            %% "shapeless"        % "2.3.0",
   "org.typelevel"          %% "shapeless-scalaz" % "0.4",
 
-  "com.github.karlhigley"  %% "spark-neighbors"  % "0.3.6-FORK",
+  "com.github.karlhigley"  %% "spark-neighbors"  % "0.3.6-FORK" exclude("org.apache.spark", "*") exclude("org.scalanlp", "*"),
 
   "com.softwaremill.quicklens" %% "quicklens" % "1.4.4",
   

@@ -1,7 +1,8 @@
 package org.tmoerman.plongeur.util
 
-import org.apache.spark.mllib.linalg.{SparseVector, SparseMatrix}
+import org.apache.spark.mllib.linalg.{SparseVector, SparseMatrix, DenseMatrix, DenseVector}
 import scala.collection.mutable.{ArrayBuilder => MArrayBuilder}
+import com.github.fommil.netlib.BLAS.{getInstance => blas}
 
 /**
   * @author Thomas Moerman
@@ -12,18 +13,45 @@ object MatrixFunctions {
 
 }
 
-class SparseMatrixFunctions(m: SparseMatrix) {
+class DenseMatrixFunctions(m: DenseMatrix) {
 
-  def rowVectors = rowColIter(m.transpose)
+  def rowVectors = colIter(m.transpose)
 
-  def colVectors = rowColIter(m)
+  def colVectors = colIter(m)
 
   /**
     * See MLLib 2.0
     * https://github.com/apache/spark/blob/master/mllib/src/main/scala/org/apache/spark/mllib/linalg/Matrices.scala
     */
   @deprecated("remove after upgrade to Spark 2.0")
-  private def rowColIter(m: SparseMatrix): Iterator[SparseVector] = {
+  private def colIter(m: DenseMatrix): Iterator[DenseVector] = {
+    if (m.isTransposed) {
+      Iterator.tabulate(m.numCols) { j =>
+        val col = new Array[Double](m.numRows)
+        blas.dcopy(m.numRows, m.values, j, m.numCols, col, 0, 1)
+        new DenseVector(col)
+      }
+    } else {
+      Iterator.tabulate(m.numCols) { j =>
+        new DenseVector(m.values.slice(j * m.numRows, (j + 1) * m.numRows))
+      }
+    }
+  }
+
+}
+
+class SparseMatrixFunctions(m: SparseMatrix) {
+
+  def rowVectors = colIter(m.transpose)
+
+  def colVectors = colIter(m)
+
+  /**
+    * See MLLib 2.0
+    * https://github.com/apache/spark/blob/master/mllib/src/main/scala/org/apache/spark/mllib/linalg/Matrices.scala
+    */
+  @deprecated("remove after upgrade to Spark 2.0")
+  private def colIter(m: SparseMatrix): Iterator[SparseVector] = {
     if (m.isTransposed) {
       val indicesArray = Array.fill(m.numCols)(MArrayBuilder.make[Int])
       val valuesArray = Array.fill(m.numCols)(MArrayBuilder.make[Double])

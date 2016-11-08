@@ -1,6 +1,6 @@
 package org.tmoerman.lab
 
-import breeze.linalg.SparseVector
+import breeze.linalg.{CSCMatrix, SparseVector}
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
@@ -50,12 +50,27 @@ class BreezeLab extends FlatSpec with Matchers {
   }
 
   it should "apply exponentiation by a scalar to all elements" in {
-
     val a = SparseVector(20)(0 -> 3.0, 10 -> 3.0)
 
     val c: SparseVector[Double] = (a :^ 2.0)
 
     c shouldBe SparseVector(20)(0 -> 9.0, 10 -> 9.0)
+  }
+
+  behavior of "Breeze matrices"
+
+  it should "be possible to slice rows of a sparse matrix" in {
+    import breeze.linalg._
+
+    val sparse = CSCMatrix(
+      (1d, 2d, 3d, 4d),
+      (5d, 6d, 7d, 8d),
+      (9d, 10d, 11d, 12d),
+      (13d, 14d, 15d, 16d)).toDense
+
+    val result = sparse(*, ::)
+
+    println(result)
   }
 
 }
