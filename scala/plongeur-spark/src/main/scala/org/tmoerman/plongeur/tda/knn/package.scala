@@ -156,38 +156,44 @@ package object knn {
 
     def init(d: Distance) = (d, 1)
 
-    def concat(acc: (Distance, Count), d: Distance) = acc match { case (_, count) => (d, count + 1) }
+    def concat(acc: (Distance, Count), d: Distance) = acc match {
+      case (_, count) => (d, count + 1)
+    }
 
     def merge(acc1: (Distance, Count), acc2: (Distance, Count)) = (acc1, acc2) match {
       case ((d, count1), (_, count2)) => (d, count1 + count2)
     }
 
     val toWeight = (d: Distance, count: Count) => (weighted, halveNonMutual, count) match {
-      case (true,  true,  1) => d / 2
-      case (true,  true,  _) => d
-      case (true,  false, _) => d
-      case (false, _,     _) => 1.0
+      case (true, true, 1) => d / 2
+      case (true, _,    _) => d
+      case (false, _,   _) => 1.0
     }
 
     directedKnnGraph
-      .flatMap{ case (p, bpq) => bpq.map{ case (q, d) => (Set(p, q), d) } }
+      .flatMap { case (p, bpq) => bpq.map { case (q, d) => (Set(p, q), d) } }
       .combineByKey(init, concat, merge)
-      .filter{ case (_, (_, count)) => if (mutual) count == 2 else true }
+      .filter { case (_, (_, count)) => if (mutual) count == 2 else true }
       .mapValues(toWeight.tupled)
-      .flatMap{ case (set, d) =>
-        set.toArray match { case Array(a, b) =>
-          (a, Set((b, d))) ::
-          (b, Set((a, d))) :: Nil }}
+      .flatMap { case (set, d) =>
+        set.toArray match {
+          case Array(a, b) =>
+            (a, Set((b, d))) ::
+            (b, Set((a, d))) :: Nil }}
       .reduceByKey(_ ++ _)
   }
 
   /**
+    * @param rdd
+    * @return Returns a flattened RDD of triplets (a, b, distance).
+    */
+  def flatten(rdd: KNN_RDD_Set) = rdd.flatMap{ case (p, bpq) => bpq.map{ case (q, dist) => (p, q, dist) }}
+
+  /**
+    * @param N The matrix dimension N*N
+    * @param rdd The RDD of nearest neighbour sets.
     * @return Returns a SparseMatrix in function of the calculated kNN data structure.
     */
-  def toSparseMatrix(N: Int, rdd: KNN_RDD_Set) = {
-    val N = rdd.count.toInt
-
-    SparseMatrix.fromCOO(N, N, rdd.flatMap{ case (p, bpq) => bpq.map{ case (q, dist) => (p, q, dist) }}.collect)
-  }
+  def toSparseMatrix(N: Int, rdd: KNN_RDD_Set) = SparseMatrix.fromCOO(N, N, flatten(rdd).collect)
 
 }

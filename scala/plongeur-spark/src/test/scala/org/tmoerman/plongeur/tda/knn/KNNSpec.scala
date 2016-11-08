@@ -41,18 +41,18 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   behavior of "symmetric kNN"
 
-  val _a = 1
-  val _b = 2
-  val _c = 3
-  val _d = 4
-  val _e = 5
+  val _a = 0
+  val _b = 1
+  val _c = 2
+  val _d = 3
+  val _e = 4
 
   val asymmetricGraph = Seq(
-    (_a, bpq(2) += ((_b, 4.), (_c, 1.))),
-    (_b, bpq(2) += ((_a, 4.), (_d, 5.))),
-    (_c, bpq(2) += ((_a, 1.), (_d, 1.))),
-    (_d, bpq(2) += ((_c, 1.), (_e, 3.))),
-    (_e, bpq(2) += ((_c, 3.), (_d, 3.))))
+    (_a, bpq(2) += ((_b, 4d), (_c, 1d))),
+    (_b, bpq(2) += ((_a, 4d), (_d, 5d))),
+    (_c, bpq(2) += ((_a, 1d), (_d, 1d))),
+    (_d, bpq(2) += ((_c, 1d), (_e, 3d))),
+    (_e, bpq(2) += ((_c, 3d), (_d, 3d))))
 
   val asymmetricRDD: KNN_RDD = sc.parallelize(asymmetricGraph)
 
@@ -63,11 +63,11 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
         .toMap
 
     mutualSymmetric shouldBe Map(
-      _a -> Set((_b, 4.), (_c, 1.)),
-      _b -> Set((_a, 4.)),
-      _c -> Set((_a, 1.), (_d, 1.)),
-      _d -> Set((_c, 1.), (_e, 3.)),
-      _e -> Set((_d, 3.))
+      _a -> Set((_b, 4d), (_c, 1d)),
+      _b -> Set((_a, 4d)),
+      _c -> Set((_a, 1d), (_d, 1d)),
+      _d -> Set((_c, 1d), (_e, 3d)),
+      _e -> Set((_d, 3d))
     )
   }
 
@@ -78,11 +78,11 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
         .toMap
 
     mutualSymmetric shouldBe Map(
-      _a -> Set((_b, 1.), (_c, 1.)),
-      _b -> Set((_a, 1.)),
-      _c -> Set((_a, 1.), (_d, 1.)),
-      _d -> Set((_c, 1.), (_e, 1.)),
-      _e -> Set((_d, 1.))
+      _a -> Set((_b, 1d), (_c, 1d)),
+      _b -> Set((_a, 1d)),
+      _c -> Set((_a, 1d), (_d, 1d)),
+      _d -> Set((_c, 1d), (_e, 1d)),
+      _e -> Set((_d, 1d))
     )
   }
 
@@ -93,11 +93,11 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
         .toMap
 
     symmetric shouldBe Map(
-      _a -> Set((_b, 4.), (_c, 1.)),
-      _b -> Set((_d, 5.), (_a, 4.)),
-      _c -> Set((_e, 3.), (_d, 1.), (_a, 1.)),
-      _d -> Set((_b, 5.), (_c, 1.), (_e, 3.)),
-      _e -> Set((_c, 3.), (_d, 3.))
+      _a -> Set((_b, 4d), (_c, 1d)),
+      _b -> Set((_d, 5d), (_a, 4d)),
+      _c -> Set((_e, 3d), (_d, 1d), (_a, 1d)),
+      _d -> Set((_b, 5d), (_c, 1d), (_e, 3d)),
+      _e -> Set((_c, 3d), (_d, 3d))
     )
   }
 
@@ -108,11 +108,11 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
         .toMap
 
     symmetric shouldBe Map(
-      _a -> Set((_b, 1.), (_c, 1.)),
-      _b -> Set((_d, 1.), (_a, 1.)),
-      _c -> Set((_e, 1.), (_d, 1.), (_a, 1.)),
-      _d -> Set((_b, 1.), (_c, 1.), (_e, 1.)),
-      _e -> Set((_c, 1.), (_d, 1.))
+      _a -> Set((_b, 1d), (_c, 1d)),
+      _b -> Set((_d, 1d), (_a, 1d)),
+      _c -> Set((_e, 1d), (_d, 1d), (_a, 1d)),
+      _d -> Set((_b, 1d), (_c, 1d), (_e, 1d)),
+      _e -> Set((_c, 1d), (_d, 1d))
     )
   }
 
@@ -123,12 +123,20 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
         .toMap
 
     symmetric shouldBe Map(
-      _a -> Set((_b, 4.), (_c, 1.)),
-      _b -> Set((_d, 5.), (_a, 4.)),
-      _c -> Set((_e, 3.), (_d, 1.), (_a, 1.)),
-      _d -> Set((_b, 5.), (_c, 1.), (_e, 3.)),
-      _e -> Set((_c, 3.), (_d, 3.))
+      _a -> Set((_b, 4d), (_c, 1d)),
+      _b -> Set((_d, 5d), (_a, 4d)),
+      _c -> Set((_e, 3d), (_d, 1d), (_a, 1d)),
+      _d -> Set((_b, 5d), (_c, 1d), (_e, 3d)),
+      _e -> Set((_c, 3d), (_d, 3d))
     )
+  }
+
+  it should "convert to a SparseMatrix correctly" in {
+    val symmetric = symmetricize(asymmetricRDD, SymmetricizeParams(mutual = false))
+
+    val m = toSparseMatrix(5, symmetric)
+
+    m.numRows shouldBe 5
   }
 
 }
