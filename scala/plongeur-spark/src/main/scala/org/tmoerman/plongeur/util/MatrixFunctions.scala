@@ -1,6 +1,6 @@
 package org.tmoerman.plongeur.util
 
-import org.apache.spark.mllib.linalg.{SparseVector, SparseMatrix, DenseMatrix, DenseVector}
+import org.apache.spark.mllib.linalg.{Vector => MLVector, SparseVector, SparseMatrix, DenseMatrix, DenseVector}
 import scala.collection.mutable.{ArrayBuilder => MArrayBuilder}
 import com.github.fommil.netlib.BLAS.{getInstance => blas}
 
@@ -24,7 +24,7 @@ class DenseMatrixFunctions(m: DenseMatrix) {
     * https://github.com/apache/spark/blob/master/mllib/src/main/scala/org/apache/spark/mllib/linalg/Matrices.scala
     */
   @deprecated("remove after upgrade to Spark 2.0")
-  private def colIter(m: DenseMatrix): Iterator[DenseVector] = {
+  private def colIter(m: DenseMatrix): Iterator[MLVector] = {
     if (m.isTransposed) {
       Iterator.tabulate(m.numCols) { j =>
         val col = new Array[Double](m.numRows)
@@ -51,7 +51,7 @@ class SparseMatrixFunctions(m: SparseMatrix) {
     * https://github.com/apache/spark/blob/master/mllib/src/main/scala/org/apache/spark/mllib/linalg/Matrices.scala
     */
   @deprecated("remove after upgrade to Spark 2.0")
-  private def colIter(m: SparseMatrix): Iterator[SparseVector] = {
+  private def colIter(m: SparseMatrix): Iterator[MLVector] = {
     if (m.isTransposed) {
       val indicesArray = Array.fill(m.numCols)(MArrayBuilder.make[Int])
       val valuesArray = Array.fill(m.numCols)(MArrayBuilder.make[Double])
