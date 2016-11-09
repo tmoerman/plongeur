@@ -1,15 +1,9 @@
 package org.tmoerman.plongeur.ui
 
-import declarativewidgets.Channel
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Model.{PrincipalComponent, Filter, TDALens, TDAParams}
+import org.tmoerman.plongeur.tda.Model.{Filter, PrincipalComponent, TDALens, TDAParams}
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import rx.lang.scala.subjects.PublishSubject
-import shapeless.HNil
-
-import Controls._
-
-import scala.util.Try
 
 /**
   * @author Thomas Moerman

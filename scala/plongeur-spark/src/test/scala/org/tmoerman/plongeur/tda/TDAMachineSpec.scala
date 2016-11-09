@@ -12,7 +12,6 @@ import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
 import org.tmoerman.plongeur.util.RxUtils._
 import rx.lang.scala.Observable
 import rx.lang.scala.subjects.PublishSubject
-import shapeless.HNil
 
 import scala.concurrent.duration.Duration
 
@@ -40,12 +39,12 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10))
 
-    val (outParams, result) =
+    val result =
       TDAMachine.run(TDAContext(sc, circle250RDD), Observable.just(inParams))
         .toBlocking
         .single
 
-    inParams shouldBe outParams
+    // inParams shouldBe outParams
 
     // printInspections(result, "test TDA Machine 1 input")
   }
@@ -83,7 +82,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     in.onNext(params_1)
     in.onCompleted()
 
-    waitFor(out).map(_._2.clusters)
+    waitFor(out).map(_.clusters)
   }
 
   val p_pca_0 =
@@ -108,7 +107,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
 
     in.onCompleted()
 
-    waitFor(out).map(_._2.clusters)
+    waitFor(out).map(_.clusters)
   }
 
   val p_ecc_1 =
@@ -129,7 +128,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     in.onNext(setFilterNrBins(0, 20)(p_ecc_1))
     in.onCompleted()
 
-    waitFor(out).map(_._2.clusters)
+    waitFor(out).map(_.clusters)
   }
 
   it should "work with mixed filters" in {
@@ -144,7 +143,7 @@ class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources w
     in.onNext(p_pca_0)
     in.onCompleted()
 
-    waitFor(out).map(_._2.clusters)
+    waitFor(out).map(_.clusters)
   }
 
   behavior of "assocFilterMemos"

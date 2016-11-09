@@ -5,7 +5,6 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale._
-import shapeless.HNil
 
 import TDAParams._
 

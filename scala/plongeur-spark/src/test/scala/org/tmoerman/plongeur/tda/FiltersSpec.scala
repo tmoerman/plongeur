@@ -10,7 +10,6 @@ import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.Sketch.{RandomCandidate, SketchParams}
 import org.tmoerman.plongeur.test.SparkContextSpec
-import shapeless._
 
 /**
   * @author Thomas Moerman
@@ -140,7 +139,7 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
   behavior of "Maps vs. SparseVectors"
 
   it should "yield equal results" in {
-    val ps = Right(INFINITY) :: Left(1) :: Left(2) :: Left(3) :: HNil
+    val ps = Right(INFINITY) :: Left(1) :: Left(2) :: Left(3) :: Nil
 
     ps
       .toList

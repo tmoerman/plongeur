@@ -58,7 +58,7 @@ class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
         collapseDuplicateClusters = false,
         colouring = Colouring(Brewer.palettes("Blues").get(9), LocalPercentage(9, cat)))
 
-    val (outParams, result) =
+    val result =
       TDAMachine.run(ctx, Observable.just(inParams))
         .toBlocking
         .single

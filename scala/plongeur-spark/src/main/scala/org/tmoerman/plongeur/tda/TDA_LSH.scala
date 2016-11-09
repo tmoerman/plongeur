@@ -4,7 +4,6 @@ import java.util.UUID
 
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Model._
-import shapeless.{HList, HNil}
 
 /**
   * @author Thomas Moerman
@@ -23,8 +22,7 @@ object TDA_LSH extends TDA {
                            nrHashTables: Int,
                            k: Int,
                            r: Double,
-                           A: Double = 1.4,
-                           distanceSpec: HList = "manhattan" :: HNil) extends Serializable {
+                           A: Double = 1.4) extends Serializable {
     // TODO verify only euclidean or manhattan distances.
   }
 

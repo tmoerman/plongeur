@@ -1,13 +1,10 @@
 package org.tmoerman.plongeur.tda
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
+import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Filters.toFilterFunction
+import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.test.TestResources
-
-import Covering._
-import Model._
-import TDAProcedure._
-import shapeless.HNil
 
 /**
   * @author Thomas Moerman

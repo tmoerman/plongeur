@@ -5,8 +5,6 @@ import java.util.UUID._
 
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.cluster.Scale._
-import shapeless.{HNil, HList}
 
 import scalaz.Memo.mutableHashMapMemo
 

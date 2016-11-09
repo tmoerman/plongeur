@@ -31,14 +31,12 @@ libraryDependencies ++= Seq(
   "com.github.haifengl"    % "smile-core"        % "1.2.0",
 
   "io.reactivex"           %% "rxscala"          % "0.26.1",
-  "org.scalaz"             %% "scalaz-core"      % "7.2.0",
-  "com.chuusai"            %% "shapeless"        % "2.3.0",
-  "org.typelevel"          %% "shapeless-scalaz" % "0.4",
+  "org.scalaz"             % "scalaz-core_2.10"  % "7.2.0",
 
   "com.github.karlhigley"  %% "spark-neighbors"  % "0.3.6-FORK" exclude("org.apache.spark", "*") exclude("org.scalanlp", "*"),
 
-  "com.softwaremill.quicklens" %% "quicklens" % "1.4.4",
-  
+  "com.softwaremill.quicklens" %% "quicklens"    % "1.4.4",
+
   "org.scalatest"          %% "scalatest"        % "2.2.4"  % "test",
 
   compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)

@@ -8,7 +8,6 @@ import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
 import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
-import shapeless.HNil
 
 /**
   * @author Thomas Moerman
