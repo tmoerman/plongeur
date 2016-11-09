@@ -2,10 +2,12 @@ package org.tmoerman.plongeur.tda.geometry
 
 import java.lang.Math.{exp, pow}
 
-import breeze.linalg._
+import breeze.linalg.Matrix
+import org.apache.spark.SparkContext
+import org.apache.spark.mllib.feature.Normalizer
 import org.apache.spark.mllib.linalg.BreezeConversions._
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
-import org.apache.spark.mllib.linalg.{SparseMatrix => MLSparseMatrix, Vector => MLVector}
+import org.apache.spark.mllib.linalg.{SparseMatrix, Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distances.Distance
 import org.tmoerman.plongeur.tda.Model._
@@ -30,19 +32,14 @@ object Laplacian {
 
   val DEFAULT_SIGMA = 1.0d
 
-  sealed trait Variant {
-    // def apply(weights: SparseMatrix)
-  }
-
-//  case object Unnormalized        extends Variant
-//  case object SymmetricNormalized extends Variant
-//  case object RandomWalk          extends Variant
-//  case object Geometric           extends Variant
-
+  /**
+    * @param normalized
+    * @param nrEigenVectors
+    * @param sigma
+    */
   case class LaplacianParams(normalized: Boolean = true,
-                             sigma:      Double  = DEFAULT_SIGMA) extends Serializable
-                             // variant:    Variant = Geometric
-
+                             nrEigenVectors: Int = 2,
+                             sigma: Double       = DEFAULT_SIGMA) extends Serializable
 
   /**
     * Here we use the version proposed in "On Spectral Clustering" -- Ng et al. 2003
@@ -50,9 +47,9 @@ object Laplacian {
     * @param ctx
     * @param rdd
     * @param params
-    * @return
+    * @return Returns the Laplacian as a RowMatrix in function of the specified KNN data structure.
     */
-  def toLaplacian(ctx: TDAContext, rdd: KNN_RDD_Set, params: LaplacianParams): RowMatrix = {
+  def apply(ctx: TDAContext, rdd: KNN_RDD_Set, params: LaplacianParams): RowMatrix = {
     import params._
 
     val N = ctx.N
@@ -61,19 +58,42 @@ object Laplacian {
 
     val A = toSparseMatrix(N, affinityRDD)
 
+    fromAffinities(ctx, A, params)
+  }
+
+  /**
+    * @param ctx
+    * @param A
+    * @param params
+    * @return Returns the Laplacian as a RowMatrix in function of the specified affinity matrix.
+    */
+  def fromAffinities(ctx: TDAContext, A: SparseMatrix, params: LaplacianParams): RowMatrix = {
+    import params._
+
     val Dpow = degrees(A, -0.5).toBreeze
 
     val W = A.toBreeze
 
-    val L = Dpow :* W :* Dpow
+    val L = Dpow * W * Dpow
 
-//    val L_RDD: RowMatrix = new RowMatrix(ctx.sc.parallelize(L.toMLLib.asInstanceOf[MLSparseMatrix].rowVectors.toSeq))
-//
-//    val svd = L_RDD.computeSVD(3, computeU = true)
-//
-//    svd.U
+    val svd = toRowMatrix(ctx.sc, L).computeSVD(nrEigenVectors, computeU = true)
 
-    ???
+    val normalizer = new Normalizer()
+
+    val UNormalized = svd.U.rows.map(normalizer.transform(_)).cache
+
+    new RowMatrix(UNormalized)
+  }
+
+  /**
+    * @param sc
+    * @param m
+    * @return Returns the specified matrix transformed into a Spark RowMatrix.
+    */
+  def toRowMatrix(sc: SparkContext, m: Matrix[Distance]): RowMatrix = {
+    val LRowVectors = m.toMLLib.asInstanceOf[SparseMatrix].rowVectors
+
+    new RowMatrix(sc.parallelize(LRowVectors.toSeq).cache)
   }
 
   /**
@@ -95,11 +115,10 @@ object Laplacian {
     * @param m
     * @return Returns the ML Vector of degrees of the specified SparseMatrix.
     */
-  def degrees(m: MLSparseMatrix, exp: Double) = {
-    val diagonalValues = m.rowVectors.map(_.values.sum).map(sum => pow(sum, exp))
+  def degrees(m: SparseMatrix, exp: Double) = {
+    val diagonalValues = m.rowVectors.map(_.toArray.sum).map(pow(_, exp))
 
-    MLSparseMatrix.fromCOO(m.numRows, m.numCols, diagonalValues.zipWithIndex.map{ case (v, i) => (i, i, v) }.toIterable)
+    SparseMatrix.fromCOO(m.numRows, m.numCols, diagonalValues.zipWithIndex.map{ case (v, i) => (i, i, v) }.toIterable)
   }
-
 
 }
