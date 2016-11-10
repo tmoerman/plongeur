@@ -2,10 +2,11 @@ package org.tmoerman.plongeur.tda
 
 import java.lang.Math.{PI, exp, min, sqrt}
 
-import breeze.linalg.{SparseVector, max => elmax}
+import breeze.linalg.{max => elmax, DenseVector, SparseVector}
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
 import org.apache.spark.mllib.linalg.BreezeConversions._
-import org.apache.spark.mllib.linalg.{Vector => MLLibVector}
+import org.apache.spark.mllib.linalg.{Vector => MLLibVector, DenseVector => MLLibDenseVector}
+import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distances.DistanceFunction
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.MapFunctions._
@@ -158,6 +159,47 @@ object Filters extends Serializable {
           .getOrElse(broadcastKey))
 
   /**
+    * @param p
+    * @param ctx
+    * @param distance
+    * @return Returns an RDD by Index to the L_n eccentricity of that point.
+    *         L_n eccentricity assigns to each point the distance to the point most distant from it.
+    *
+    *         See: Extracting insights from the shape of complex data using topology
+    *              -- P. Y. Lum, G. Singh, [...], and G. Carlsson
+    *
+    *         See: http://danifold.net/mapper/filters.html
+    */
+  def eccentricityRDD(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): RDD[(Index, Double)] = {
+    val N = ctx.N
+
+    val unfolded =
+      ctx
+        .dataPoints
+        .distinctComboPairs
+        .flatMap{ case (p, q) => val d = distance(p, q); (p.index, d) :: (q.index, d) :: Nil }
+
+    p match {
+      case Right(INFINITY) =>
+        unfolded
+          .reduceByKey(max)
+
+      case Left(1) =>
+        unfolded
+          .reduceByKey(_ + _)
+          .map{ case (i, sum) => (i, sum / N) }
+
+      case Left(n) =>
+        unfolded
+          .mapValues(d => pow(d, n))
+          .reduceByKey(_ + _)
+          .map{ case (i, sum) => (i, pow(sum, 1d / n) / N) }
+
+      case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$p'")
+    }
+  }
+
+  /**
     * @param p The exponent
     * @param ctx
     * @param distance
@@ -170,44 +212,8 @@ object Filters extends Serializable {
     *         See: http://danifold.net/mapper/filters.html
     */
   @deprecated("use eccentricityVec instead")
-  def eccentricityMap(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): Map[Index, Double] = {
-    val N = ctx.N
-
-    val EMPTY: Map[Index, Double] = Map.empty
-
-    p match {
-      case Right(INFINITY) =>
-        ctx
-          .dataPoints
-          .distinctComboPairs
-          .aggregate(EMPTY)(
-            { case (acc, (a, b)) => val d = distance(a, b)
-                                    Map(a.index -> d, b.index -> d).merge(max)(acc) },
-            { case (acc1, acc2) => acc1.merge(max)(acc2) })
-
-      case Left(1) =>
-        ctx
-          .dataPoints
-          .distinctComboPairs
-          .aggregate(EMPTY)(
-            { case (acc, (a, b)) => val d = distance(a, b)
-                                    Map(a.index -> d, b.index -> d).merge(_ + _)(acc) },
-            { case (acc1, acc2) => acc1.merge(_ + _)(acc2) })
-          .map{ case (i, sum) => (i, sum / N) }
-
-      case Left(n) =>
-        ctx
-          .dataPoints
-          .distinctComboPairs
-          .aggregate(EMPTY)(
-            { case (acc, (a, b)) => val d = distance(a, b)
-                                    val v = pow(d, n)
-                                    Map(a.index -> v, b.index -> v).merge(_ + _)(acc) },
-            { case (acc1, acc2) => acc1.merge(_ + _)(acc2) })
-          .map{ case (i, sum) => (i, pow(sum, 1d / n) / N) }
-
-      case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$p'")
-    }}
+  def eccentricityMap(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): Map[Index, Double] =
+    eccentricityRDD(p, ctx, distance).collectAsMap.toMap
 
   /**
     * @param p cfr. $L_p$ - the exponent of the norm
@@ -220,56 +226,8 @@ object Filters extends Serializable {
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  def eccentricityVec(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): MLLibVector = {
-    val N = ctx.N
-
-    val ZEROS: SparseVector[Double] = SparseVector.zeros(N)
-
-    p match {
-      case Right(INFINITY) =>
-        val result: SparseVector[Double] =
-          ctx
-            .dataPoints
-            .distinctComboPairs
-            .aggregate(ZEROS)(
-              { case (acc, (a, b)) => val d = distance(a, b)
-                                      elmax(acc, SparseVector(N)(a.index -> d, b.index -> d)) },
-              { case (acc1, acc2) => elmax(acc1, acc2) })
-
-        result.toDenseVector.toMLLib
-
-      case Left(1) =>
-        val sums: SparseVector[Double] =
-          ctx
-            .dataPoints
-            .distinctComboPairs
-            .aggregate(ZEROS)(
-              { case (acc, (a, b)) => val d = distance(a, b)
-                                      acc += SparseVector(N)(a.index -> d, b.index -> d) },
-              { case (acc1, acc2) => acc1 += acc2 })
-
-        val result: SparseVector[Double] = sums /= N.toDouble
-
-        result.toDenseVector.toMLLib
-
-      case Left(n) =>
-        val sums: SparseVector[Double] =
-          ctx
-            .dataPoints
-            .distinctComboPairs
-            .aggregate(ZEROS)(
-              { case (acc, (a, b)) => val d = distance(a, b)
-                                      val v = pow(d, n)
-                                      acc += SparseVector(N)(a.index -> v, b.index -> v) },
-              { case (acc1, acc2) => acc1 += acc2 })
-
-        val result = (sums :^= (1d / n)) /= N.toDouble
-
-        result.toDenseVector.toMLLib
-
-      case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$p'")
-
-    }}
+  def eccentricityVec(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): MLLibVector =
+    new MLLibDenseVector(eccentricityRDD(p, ctx, distance).sortByKey().map(_._2).collect)
 
   /**
     * @param sigma
