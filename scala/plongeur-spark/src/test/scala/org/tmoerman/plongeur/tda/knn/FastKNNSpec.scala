@@ -43,7 +43,7 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
 
     val acc = bruteForceAcc(points)
 
-    val sparse = toSparseMatrix(points.size, acc)
+    val sparse = toSparseMatrix_(points.size, acc)
 
     assertDistanceFrequenciesM(sparse)
   }
@@ -59,7 +59,7 @@ class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with Test
     implicit val d: DistanceFunction = EuclideanDistance
 
     val acc    = bruteForceAcc(points)
-    val sparse = toSparseMatrix(points.size, acc)
+    val sparse = toSparseMatrix_(points.size, acc)
     val rows   = sparse.rowVectors.toList
 
     rows.size shouldBe 9

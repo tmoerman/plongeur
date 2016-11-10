@@ -59,6 +59,7 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
   it should "correctly compute the mutual weighted symmetric kNN graph (AND)" in {
     val mutualSymmetric =
       symmetricize(asymmetricRDD, SymmetricizeParams(mutual = true))
+        .map{ case (i, bpq) => (i, bpq.toSet) }
         .collectAsMap
         .toMap
 
@@ -74,6 +75,7 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
   it should "correctly compute the mutual unweighted symmetric kNN graph (AND)" in {
     val mutualSymmetric =
       symmetricize(asymmetricRDD, SymmetricizeParams(mutual = true, weighted = false))
+        .map{ case (i, bpq) => (i, bpq.toSet) }
         .collectAsMap
         .toMap
 
@@ -89,6 +91,7 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
   it should "correctly compute the symmetric weighted kNN graph (OR)" in {
     val symmetric =
       symmetricize(asymmetricRDD, SymmetricizeParams(mutual = false))
+        .map{ case (i, bpq) => (i, bpq.toSet) }
         .collectAsMap
         .toMap
 
@@ -104,6 +107,7 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
   it should "correctly compute the symmetric unweighted kNN graph (OR)" in {
     val symmetric =
       symmetricize(asymmetricRDD, SymmetricizeParams(mutual = false, weighted = false))
+        .map{ case (i, bpq) => (i, bpq.toSet) }
         .collectAsMap
         .toMap
 
@@ -119,6 +123,7 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
   it should "correctly compute the symmetric weighted kNN graph with half non-mutual edge weights (OR)" in {
     val symmetric =
       symmetricize(asymmetricRDD, SymmetricizeParams(mutual = false))
+        .map{ case (i, bpq) => (i, bpq.toSet) }
         .collectAsMap
         .toMap
 
@@ -134,7 +139,7 @@ class KNNSpec extends FlatSpec with SparkContextSpec with Matchers {
   it should "convert to a SparseMatrix correctly" in {
     val symmetric = symmetricize(asymmetricRDD, SymmetricizeParams(mutual = false))
 
-    val m = toSparseMatrix(5, symmetric)
+    val m = toSparseMatrix(5, symmetric.asInstanceOf[KNN_RDD_Like])
 
     m.numRows shouldBe 5
   }

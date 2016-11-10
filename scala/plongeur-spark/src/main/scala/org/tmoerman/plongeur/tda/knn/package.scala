@@ -13,11 +13,11 @@ import org.tmoerman.plongeur.util.IterableFunctions._
   */
 package object knn {
 
-  type PQEntry     = (Index, Distance)
-  type BPQ         = BoundedPriorityQueue[PQEntry]
-  type Accumulator = List[(DataPoint, BPQ)]
-  type KNN_RDD     = RDD[(Index, BPQ)]
-  type KNN_RDD_Set = RDD[(Index, Set[PQEntry])]
+  type PQEntry      = (Index, Distance)
+  type BPQ          = BoundedPriorityQueue[PQEntry]
+  type Accumulator  = List[(DataPoint, BPQ)]
+  type KNN_RDD      = RDD[(Index, BPQ)]
+  type KNN_RDD_Like = RDD[(Index, Iterable[(Index, Distance)])]
 
   /**
     * @param k The k in kNN.
@@ -31,6 +31,7 @@ package object knn {
                            blockSize: Int,
                            nrHashTables: Int = 1,
                            nrJobs: Int = 1,
+                           symmetricizeParams: SymmetricizeParams = SymmetricizeParams(),
                            lshParams: LSHParams) {
     require(k > 0)
     require(nrHashTables > 0)
@@ -95,7 +96,7 @@ package object knn {
   /**
     * @return Returns a SparseMatrix in function of the calculated kNN data structure.
     */
-  def toSparseMatrix(N: Int, acc: Accumulator) =
+  def toSparseMatrix_(N: Int, acc: Accumulator) =
     SparseMatrix.fromCOO(N, N, for { (p, bpq) <- acc; (q, dist) <- bpq } yield (p.index, q, dist))
 
   /**
@@ -134,7 +135,6 @@ package object knn {
   }
 
   /**
-    *
     * @param weighted If false, all edge weights are 1.
     * @param mutual Consider only mutual kNN edges.
     * @param halveNonMutual cfr. (A + A.T) / 2
@@ -149,10 +149,14 @@ package object knn {
     * -> Section 2.2 "Different similarity graphs"
     *
     * @param directedKnnGraph
+    * @param params
     * @return Returns a symmetric counterpart of the specified asymmetric KNN_RDD
     */
-  def symmetricize(directedKnnGraph: KNN_RDD, params: SymmetricizeParams): KNN_RDD_Set = {
+  def symmetricize(directedKnnGraph: KNN_RDD, params: SymmetricizeParams): KNN_RDD = {
     import params._
+
+    val k = directedKnnGraph.map(_._2.size).max
+    val K = if (mutual) k else 2*k
 
     def init(d: Distance) = (d, 1)
 
@@ -178,22 +182,22 @@ package object knn {
       .flatMap { case (set, d) =>
         set.toArray match {
           case Array(a, b) =>
-            (a, Set((b, d))) ::
-            (b, Set((a, d))) :: Nil }}
-      .reduceByKey(_ ++ _)
+            (a, new BPQ(K) += ((b, d))) ::
+            (b, new BPQ(K) += ((a, d))) :: Nil }}
+      .reduceByKey(_ ++= _)
   }
 
   /**
     * @param rdd
     * @return Returns a flattened RDD of triplets (a, b, distance).
     */
-  def flatten(rdd: KNN_RDD_Set) = rdd.flatMap{ case (p, bpq) => bpq.map{ case (q, dist) => (p, q, dist) }}
+  def flatten(rdd: KNN_RDD_Like) = rdd.flatMap{ case (p, it) => it.map{ case (q, dist) => (p, q, dist) }}
 
   /**
     * @param N The matrix dimension N*N
-    * @param rdd The RDD of nearest neighbour sets.
+    * @param rdd The RDD of nearest neighbour.
     * @return Returns a SparseMatrix in function of the calculated kNN data structure.
     */
-  def toSparseMatrix(N: Int, rdd: KNN_RDD_Set) = SparseMatrix.fromCOO(N, N, flatten(rdd).collect)
+  def toSparseMatrix(N: Int, rdd: KNN_RDD_Like) = SparseMatrix.fromCOO(N, N, flatten(rdd).collect)
 
 }
