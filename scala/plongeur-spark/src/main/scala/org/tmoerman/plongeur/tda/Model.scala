@@ -20,6 +20,8 @@ import scala.collection.immutable.Map.empty
 import scala.util.Try
 
 /**
+  * TODO restructure the packaging hierarchy, e.g. tda and knn should be on equal level instead of nested...
+  *
   * @author Thomas Moerman
   */
 object Model {
@@ -179,6 +181,8 @@ object Model {
   case class Feature(n: Int) extends FilterSpec
 
   case class PrincipalComponent(n: Int) extends FilterSpec
+
+  case class LaplacianEigenVector(n: Int) extends FilterSpec
 
   case class Eccentricity(p: Either[Int, _], distance: DistanceFunction = DEFAULT) extends FilterSpec
 

@@ -11,7 +11,7 @@ import org.apache.spark.mllib.linalg.{SparseMatrix, Vector => MLVector}
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distances.Distance
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.tda.knn.{KNN_RDD_Set, _}
+import org.tmoerman.plongeur.tda.knn._
 import org.tmoerman.plongeur.util.MatrixFunctions._
 
 /**
@@ -23,7 +23,7 @@ import org.tmoerman.plongeur.util.MatrixFunctions._
   *   2. "On Spectral Clustering"
   *     -- Andrew Y. Ng et al. 2003
   *
-  *   2. "megaman: Manifold Learning with Millions of points"
+  *   3. "megaman: Manifold Learning with Millions of points"
   *     -- VanderPlas et al.
   *
   * @author Thomas Moerman
@@ -49,7 +49,7 @@ object Laplacian {
     * @param params
     * @return Returns the Laplacian as a RowMatrix in function of the specified KNN data structure.
     */
-  def apply(ctx: TDAContext, rdd: KNN_RDD_Set, params: LaplacianParams): RowMatrix = {
+  def apply(ctx: TDAContext, rdd: KNN_RDD, params: LaplacianParams): RowMatrix = {
     import params._
 
     val N = ctx.N
@@ -101,8 +101,8 @@ object Laplacian {
     * @param sigma
     * @return Returns an affinity RDD in function of the distance RDD.
     */
-  def toAffinities(rdd: KNN_RDD_Set, sigma: Double): RDD[(Index, Set[(Index, Distance)])] =
-    rdd.map { case (p, set) => (p, set.map { case (q, d) => (q, gaussianSimilarity(d, sigma)) }) }
+  def toAffinities(rdd: KNN_RDD, sigma: Double): KNN_RDD_Like =
+    rdd.map { case (p, bpq) => (p, bpq.map { case (q, d) => (q, gaussianSimilarity(d, sigma)) }) }
 
   /**
     * @param sigma

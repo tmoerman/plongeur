@@ -96,8 +96,7 @@ object Filters extends Serializable {
     */
   def toBroadcastAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
     val amended = for {
-      broadcastKey <- toBroadcastKey(filter);
-
+      broadcastKey <- toBroadcastKey(filter)
       ctx1 <- ctx.broadcasts
                  .get(broadcastKey)
                  .orElse(toBroadcastValue(filter, ctx).map(value => ctx.sc.broadcast(value)))
@@ -113,9 +112,16 @@ object Filters extends Serializable {
     val ctxLike: ContextLike = toSketchKey(filter).flatMap(key => ctx.sketches.get(key)).getOrElse(ctx)
 
     spec match {
+
       case PrincipalComponent(_) => {
         val pcaModel = new PCA(min(MAX_PCs, ctxLike.D)).fit(ctxLike.dataPoints.map(_.features))
         Some(pcaModel)
+      }
+
+      case LaplacianEigenVector(_) => {
+        val laplacianModel = ???
+
+        Some(laplacianModel)
       }
 
       case Eccentricity(n, distance) => {
@@ -136,8 +142,9 @@ object Filters extends Serializable {
 
   def toFilterSpecKey(spec: FilterSpec): Option[BroadcastKey] =
     spec match {
-      case _: PrincipalComponent |
-           _: Eccentricity       |
+      case _: PrincipalComponent   |
+           _: LaplacianEigenVector |
+           _: Eccentricity         |
            _: Density => Some(spec)
 
       case _: Feature => None
