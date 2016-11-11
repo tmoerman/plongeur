@@ -2,14 +2,12 @@ package org.tmoerman.plongeur.tda
 
 import java.lang.Math.{PI, exp, min, sqrt}
 
-import breeze.linalg.{max => elmax, DenseVector, SparseVector}
+import breeze.linalg.{max => elmax}
 import org.apache.spark.mllib.feature.{PCA, PCAModel}
-import org.apache.spark.mllib.linalg.BreezeConversions._
-import org.apache.spark.mllib.linalg.{Vector => MLLibVector, DenseVector => MLLibDenseVector}
+import org.apache.spark.mllib.linalg.{DenseVector => MLLibDenseVector, Vector => MLLibVector}
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Distances.DistanceFunction
+import org.tmoerman.plongeur.tda.Distances.{Distance, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.util.MapFunctions._
 import org.tmoerman.plongeur.util.RDDFunctions._
 
 import scala.math.{max, pow}
@@ -173,24 +171,19 @@ object Filters extends Serializable {
   def eccentricityRDD(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): RDD[(Index, Double)] = {
     val N = ctx.N
 
-    val unfolded =
-      ctx
-        .dataPoints
-        .distinctComboPairs
-        .flatMap{ case (p, q) => val d = distance(p, q); (p.index, d) :: (q.index, d) :: Nil }
-
     p match {
+
       case Right(INFINITY) =>
-        unfolded
+        unfold(ctx.dataPoints, distance)
           .reduceByKey(max)
 
       case Left(1) =>
-        unfolded
+        unfold(ctx.dataPoints, distance)
           .reduceByKey(_ + _)
           .map{ case (i, sum) => (i, sum / N) }
 
       case Left(n) =>
-        unfolded
+        unfold(ctx.dataPoints, distance)
           .mapValues(d => pow(d, n))
           .reduceByKey(_ + _)
           .map{ case (i, sum) => (i, pow(sum, 1d / n) / N) }
@@ -199,35 +192,11 @@ object Filters extends Serializable {
     }
   }
 
-  /**
-    * @param p The exponent
-    * @param ctx
-    * @param distance
-    * @return Returns a Map by Index to the L_n eccentricity of that point.
-    *         L_n eccentricity assigns to each point the distance to the point most distant from it.
-    *
-    *         See: Extracting insights from the shape of complex data using topology
-    *              -- P. Y. Lum, G. Singh, [...], and G. Carlsson
-    *
-    *         See: http://danifold.net/mapper/filters.html
-    */
-  @deprecated("use eccentricityVec instead")
   def eccentricityMap(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): Map[Index, Double] =
     eccentricityRDD(p, ctx, distance).collectAsMap.toMap
 
-  /**
-    * @param p cfr. $L_p$ - the exponent of the norm
-    * @param ctx
-    * @param distance
-    * @return Returns a MLLibVector with L_n eccentricity values of that point.
-    *
-    *         See: Extracting insights from the shape of complex data using topology
-    *              -- P. Y. Lum, G. Singh, [...], and G. Carlsson
-    *
-    *         See: http://danifold.net/mapper/filters.html
-    */
-  def eccentricityVec(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): MLLibVector =
-    new MLLibDenseVector(eccentricityRDD(p, ctx, distance).sortByKey().map(_._2).collect)
+  def eccentricityVec(p: Either[Index, _], ctx: ContextLike, distance: DistanceFunction): MLLibVector =
+    toMLVector(eccentricityRDD(p, ctx, distance))
 
   /**
     * @param sigma
@@ -241,23 +210,23 @@ object Filters extends Serializable {
     val N = ctx.N
     val D = ctx.D
 
-    val ZEROS: SparseVector[Double] = SparseVector.zeros(N)
-
     val denominator = -2 * sigma * sigma
 
     val sums =
-      ctx
-        .dataPoints
-        .distinctComboPairs
-        .aggregate(ZEROS)(
-          { case (acc, (a, b)) => val d = distance(a, b)
-                                  val v = exp( pow(d, 2) / denominator )
-                                  acc += SparseVector(N)(a.index -> v, b.index -> v) },
-          { case (acc1, acc2) => acc1 += acc2 })
+      unfold(ctx.dataPoints, distance)
+        .mapValues(d => exp(pow(d, 2) / denominator))
+        .reduceByKey(_ + _)
+        .mapValues(_ / (N * pow(sqrt(2 * PI * sigma), D)))
 
-    val result = sums /= (N * pow(sqrt(2 * PI * sigma), D))
-
-    result.toDenseVector.toMLLib
+    toMLVector(sums)
   }
+
+  def toMLVector(sums: RDD[(Index, Distance)]): MLLibVector =
+    new MLLibDenseVector(sums.sortByKey().map(_._2).collect)
+
+  def unfold(points: RDD[DataPoint], distance: DistanceFunction): RDD[(Index, Distance)] =
+    points
+      .distinctComboPairs
+      .flatMap { case (p, q) => val d = distance(p, q); (p.index, d) ::(q.index, d) :: Nil }
 
 }
