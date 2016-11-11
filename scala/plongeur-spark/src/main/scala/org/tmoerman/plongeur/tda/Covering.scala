@@ -1,8 +1,10 @@
 package org.tmoerman.plongeur.tda
 
+import org.apache.spark.Partitioner._
 import org.apache.spark.mllib.linalg.Vectors._
 import org.apache.spark.mllib.stat.Statistics._
-import org.apache.spark.rdd.RDD
+import org.apache.spark.rdd.{CoGroupedRDD, RDD}
+import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
 
 /**
@@ -14,7 +16,7 @@ object Covering {
     * @param coveringBoundaries The boundaries in function of which to define the covering function.
     * @param lens The TDA Lens specification.
     * @param filterFunctions The reified filter functions.
-    * @return Returns the CoveringFunction instance.
+    * @return Returns a levelsets inverse function instance.
     */
   def levelSetsInverseFunction(coveringBoundaries: Boundaries,
                                lens: TDALens,
@@ -30,41 +32,61 @@ object Covering {
   }
 
   /**
-    * @param filterFunctions The filter functions.
-    * @param dataPoints The data RDD.
-    * @return Returns an Array of Double tuples, representing the (min, max) boundaries of the filter functions applied
-    *         on the RDD.
+    * @param ctx
+    * @param lens
+    * @return
     */
-  def calculateBoundaries(filterFunctions: Seq[FilterFunction],
-                          dataPoints: RDD[DataPoint]): Array[(Double, Double)] = {
+  def levelSetInverseRDD(ctx: TDAContext, lens: TDALens): RDD[(LevelSetID, DataPoint)] = {
+    val filterRDDs =
+      lens
+        .filters
+        .flatMap(filter => ctx.filterCache.get(toFilterKey(filter)).map(factory => factory.apply(filter.spec)))
 
-    val filterValues = dataPoints.map(p => dense(filterFunctions.toArray.map(f => f(p))))
+    val boundaries = calculateBoundaries(filterRDDs)
 
-    val stats = colStats(filterValues)
+    val pointsByIndex = ctx.dataPoints.keyBy(_.index)
 
-    stats.min.toArray zip stats.max.toArray
+    val coGrouped = new CoGroupedRDD(pointsByIndex :: filterRDDs, defaultPartitioner(pointsByIndex, filterRDDs: _*))
+
+    coGrouped
+      .flatMap{ case (index, it) => it.map(_.head).toList match {
+        case p :: values =>
+          val point = p.asInstanceOf[DataPoint]
+
+          val filterValues = values.map(_.asInstanceOf[FilterValue])
+
+          val coveringIntervals =
+            (boundaries, lens.filters, filterValues)
+              .zipped
+              .map{ case ((min, max), filter, v) => uniformCoveringIntervals(min, max, filter.nrBins, filter.overlap)(v) }
+
+          combineToLevelSetIDs(coveringIntervals)
+            .map(levelSetID => (levelSetID, point))}}
   }
+
+  def calculateBoundaries(filterRDDs: Seq[FilterRDD]): Seq[(Double, Double)] =
+    filterRDDs.map(rdd => (rdd.values.min, rdd.values.max))
 
   /**
     * @param boundaryMin The lower boundary of the filter function span.
     * @param boundaryMax The upper boundary of the filter function span.
     * @param nrBins The number of bins.
     * @param overlap The percentage of overlap between intervals.
-    * @param x A filter function value.
+    * @param image A filter function value.
     * @return Returns the lower coordinates of the intervals covering the specified filter value x.
     */
   def uniformCoveringIntervals(boundaryMin: BigDecimal,
                                boundaryMax: BigDecimal,
                                nrBins:      Int,
                                overlap:     Percentage)
-                              (x: BigDecimal): Seq[BigDecimal] = {
+                              (image: BigDecimal): Seq[BigDecimal] = {
 
     val binLength = getBinLength(boundaryMax - boundaryMin, nrBins, overlap)
 
     val increment = (1 - overlap) * binLength
 
-    val diff = (x - boundaryMin) % increment
-    val base = x - diff
+    val diff = (image - boundaryMin) % increment
+    val base = image - diff
 
     val q = binLength quot increment
     val r = binLength  %   increment

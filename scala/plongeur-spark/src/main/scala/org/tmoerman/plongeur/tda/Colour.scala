@@ -14,6 +14,8 @@ object Colour extends Serializable {
   type Name = String
   type Palette = Vector[RGB]
 
+  // TODO change colouring on cached filterRDD Factories...
+
   trait Selector[T] extends Serializable
 
   trait BroadcastSelector[T] extends Selector[T] {
@@ -42,7 +44,7 @@ object Colour extends Serializable {
 
   trait BinningStrategy extends Serializable {
 
-    def toBinner(broadcasts: Map[BroadcastKey, Broadcast[_]]): Binner
+    def toBinner(broadcasts: Map[CacheKey, Broadcast[_]]): Binner
 
   }
 

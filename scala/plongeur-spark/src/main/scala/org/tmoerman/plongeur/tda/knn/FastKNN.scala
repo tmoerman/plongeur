@@ -20,6 +20,25 @@ import scalaz.Scalaz._
 object FastKNN {
 
   /**
+    * @param k The k in kNN.
+    * @param nrHashTables Also known as the L parameter, cfr. LSH literature.
+    * @param nrJobs A technical parameter for breaking up the task in multiple jobs. Motivation is to have a strategy
+    *               to limit the amount of memory needed for all table-related tuples in flight.
+    * @param blockSize The FastKNN block size.
+    * @param lshParams Parameters for the LSH step.
+    */
+  case class FastKNNParams(k: Int            = 50,
+                           blockSize: Int    = 100,
+                           nrHashTables: Int = 5,
+                           nrJobs: Int       = 1,
+                           symmetricizeParams: SymmetricizeParams = SymmetricizeParams(),
+                           // TODO budget parameter,
+                           lshParams: LSHParams) {
+    require(k > 0)
+    require(nrHashTables > 0)
+  }
+
+  /**
     * @param ctx
     * @param kNNParams
     * @return Returns a _directed_ kNN graph data structure.
@@ -114,7 +133,7 @@ object FastKNN {
           if (acc.isEmpty) accNext else (acc intersectWith accNext)(_ ++= _)
         }}
 
-    ctx.sc.parallelize(result.toSeq) // TODO hacketyhack
+    ctx.sc.parallelize(result.toSeq) // TODO incorporate budget!
 
     // ???
   }

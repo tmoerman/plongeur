@@ -8,6 +8,7 @@ import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH.{LSHParams, toVector}
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
 import org.tmoerman.plongeur.util.IterableFunctions._
 
 

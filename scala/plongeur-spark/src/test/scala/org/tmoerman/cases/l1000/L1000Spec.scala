@@ -9,6 +9,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distances.LpNormDistance
 import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model.{DataPoint, TDAContext, dp}
+import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
 import org.tmoerman.plongeur.tda.knn.SampledKNN.SampledKNNParams
 import org.tmoerman.plongeur.tda.knn.{FastKNN, SampledKNN, _}
 import org.tmoerman.plongeur.test.SparkContextSpec

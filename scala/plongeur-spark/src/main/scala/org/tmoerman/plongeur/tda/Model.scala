@@ -10,11 +10,13 @@ import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Colour.Colouring
-import org.tmoerman.plongeur.tda.Distances.{DEFAULT, DistanceFunction}
-import org.tmoerman.plongeur.tda.Filters.toContextAmendment
+import org.tmoerman.plongeur.tda.Distances.{DEFAULT_DISTANCE, DistanceFunction}
+import org.tmoerman.plongeur.tda.Filters.{FilterRDDFactory, toContextAmendment}
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
 import org.tmoerman.plongeur.tda.cluster.Clustering.{ClusteringParams, ScaleSelection}
 import org.tmoerman.plongeur.tda.cluster.Scale._
+import org.tmoerman.plongeur.tda.geometry.Laplacian.DEFAULT_SIGMA
+import org.tmoerman.plongeur.tda.knn.KNN_RDD
 
 import scala.collection.immutable.Map.empty
 import scala.util.Try
@@ -71,14 +73,13 @@ object Model {
 
   }
 
-  type Boundaries = Array[(Double, Double)]
+  type Boundaries = Seq[(Double, Double)]
 
   type FilterFunction = (DataPoint) => Double
 
   type Percentage = BigDecimal
 
-  type BroadcastKey = Serializable
-  type SketchKey    = Serializable
+  type CacheKey = Serializable
 
   type ContextAmendment = TDAContext => TDAContext
 
@@ -88,13 +89,23 @@ object Model {
     def dataPoints: RDD[DataPoint]
   }
 
-  type Broadcasts = Map[BroadcastKey, Broadcast[_]]
-  type Sketches   = Map[SketchKey,    Sketch]
+  type Broadcasts  = Map[CacheKey, Broadcast[_]]
+  type SketchCache = Map[CacheKey, Sketch]
+  type FilterCache = Map[CacheKey, FilterRDDFactory]
+  type KNNCache    = Map[CacheKey, KNN_RDD]
 
-  case class TDAContext(val sc: SparkContext,
-                        val dataPoints: RDD[DataPoint],
-                        val broadcasts: Broadcasts = empty,
-                        val sketches: Sketches = empty) extends ContextLike with Serializable {
+  /**
+    * State data structure for the TDA pipeline.
+    *
+    * @param sc
+    * @param dataPoints
+    */
+  case class TDAContext(sc: SparkContext,
+                        dataPoints: RDD[DataPoint],
+                        broadcasts:  Broadcasts  = empty,
+                        filterCache: FilterCache = empty,
+                        knnCache:    KNNCache    = empty,
+                        sketchCache: SketchCache = empty) extends ContextLike with Serializable {
 
     val self = this
 
@@ -105,7 +116,6 @@ object Model {
     lazy val indexBound = dataPoints.map(_.index).max + 1
 
     lazy val stats = Statistics.colStats(dataPoints.map(_.features))
-
   }
 
   case class TDAParams(val lens: TDALens,
@@ -176,17 +186,26 @@ object Model {
 
   case object INFINITY extends Serializable
 
-  sealed trait FilterSpec extends Serializable
+  sealed trait FilterSpec extends Serializable {
+    def usesKNN = false
+  }
 
   case class Feature(n: Int) extends FilterSpec
 
   case class PrincipalComponent(n: Int) extends FilterSpec
 
-  case class LaplacianEigenVector(n: Int) extends FilterSpec
+  case class LaplacianEigenVector(n: Int,
+                                  k: Option[Int] = None,
+                                  sigma: Double = DEFAULT_SIGMA,
+                                  distance: DistanceFunction = DEFAULT_DISTANCE) extends FilterSpec {
+    override def usesKNN = true
+  }
 
-  case class Eccentricity(p: Either[Int, _], distance: DistanceFunction = DEFAULT) extends FilterSpec
+  case class Eccentricity(p: Either[Int, _],
+                          distance: DistanceFunction = DEFAULT_DISTANCE) extends FilterSpec
 
-  case class Density(sigma: Double, distance: DistanceFunction = DEFAULT) extends FilterSpec
+  case class Density(sigma: Double,
+                     distance: DistanceFunction = DEFAULT_DISTANCE) extends FilterSpec
 
   implicit def toFilter(spec: FilterSpec): Filter = Filter(spec)
 

@@ -7,6 +7,7 @@ import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.LSH
 import org.tmoerman.plongeur.tda.LSH._
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
 
 /**
   * Alternative implementation that partitions by table index.

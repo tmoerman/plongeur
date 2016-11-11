@@ -70,7 +70,7 @@ object Sketch extends Serializable {
     }
 
     override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)],
-                       distance: DistanceFunction = DEFAULT) =
+                       distance: DistanceFunction = DEFAULT_DISTANCE) =
       pointsByHashKey
         .combineByKey(init, concat, merge)
         .values
@@ -101,7 +101,7 @@ object Sketch extends Serializable {
     }
 
     override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)],
-                       distance: DistanceFunction = DEFAULT) =
+                       distance: DistanceFunction = DEFAULT_DISTANCE) =
       pointsByHashKey
         .combineByKey(init, concat, merge)
         .values
@@ -148,7 +148,7 @@ object Sketch extends Serializable {
     }
 
     override def apply(pointsByHashKey: RDD[(HashKey, DataPoint)],
-                       distance: DistanceFunction = DEFAULT) =
+                       distance: DistanceFunction = DEFAULT_DISTANCE) =
       pointsByHashKey
         .groupByKey
         .map{ case (key, candidatePoints) =>

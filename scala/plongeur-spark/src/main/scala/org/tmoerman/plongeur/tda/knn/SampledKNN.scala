@@ -16,7 +16,7 @@ object SampledKNN {
 
   case class SampledKNNParams(k: Int,
                               sampleSize: Either[Amount, Fraction] = Right(0.10),
-                              distance: DistanceFunction = DEFAULT)
+                              distance: DistanceFunction = DEFAULT_DISTANCE)
                              (implicit val seed: Long = nextLong)
 
   /**

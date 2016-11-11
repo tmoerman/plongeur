@@ -26,4 +26,10 @@ object TDAProcedure extends TDA {
     result
   }
 
+  def spike(params: TDAParams, ctx: TDAContext) = {
+    import params._
+
+    val amendedCtx = params.amend(ctx)
+  }
+
 }

@@ -67,4 +67,5 @@ class MachineSpec extends FlatSpec with Matchers {
       .combineLatest(clusteringParams$)
       .combineLatestWith(scaleSelection$){ case ((a, b), c) => (a, b, c) }
   }
+
 }

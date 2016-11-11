@@ -4,7 +4,6 @@ import org.apache.spark.RangePartitioner
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Colour.Colouring
 import org.tmoerman.plongeur.tda.Covering._
-import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.SimpleSmileClusteringProvider
@@ -16,22 +15,11 @@ import org.tmoerman.plongeur.util.IterableFunctions._
 trait TDA {
 
   def createLevelSets(lens: TDALens, ctx: TDAContext): RDD[(LevelSetID, DataPoint)] = {
-    import ctx._
+    val levelSetsRDD = levelSetInverseRDD(ctx, lens)
 
-    val filterFunctions = lens.filters.map(filter => toFilterFunction(filter, ctx))
-
-    val boundaries = calculateBoundaries(filterFunctions, dataPoints)
-
-    val levelSetsInverse = levelSetsInverseFunction(boundaries, lens, filterFunctions)
-
-    val levelSetsRDD =
-      dataPoints
-        .flatMap(dataPoint => levelSetsInverse(dataPoint).map(levelSetID => (levelSetID, dataPoint)))
-
-    // TODO where does this belong?
-    val result =
+    val result = // TODO where does this belong?
       if (lens.partitionByLevelSetID)
-        levelSetsRDD.partitionBy(new RangePartitioner(32, levelSetsRDD))
+        levelSetsRDD.partitionBy(new RangePartitioner(ctx.sc.defaultParallelism, levelSetsRDD))
       else
         levelSetsRDD
 

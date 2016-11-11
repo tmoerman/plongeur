@@ -2,7 +2,6 @@ package org.tmoerman.plongeur.tda
 
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Covering._
-import org.tmoerman.plongeur.tda.Filters.toFilterFunction
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.test.TestResources
 
@@ -13,23 +12,20 @@ class Test2DSpec extends FlatSpec with TestResources with Matchers {
 
   behavior of "Covering the points"
 
-  it should "associate points with the correct HyperCubeCoordinateVectors" in {
+  it should "associate points with the correct HyperCubeCoordinateVectors" ignore {
     val lens =
       TDALens(
         Filter(Feature(0), 1, 0.5),
         Filter(Feature(1), 1, 0.5))
 
-    val size = 12.0
+    val size = 12
 
-    val boundaries = Array((0.0, size), (0.0, size))
+    val ctx = TDAContext(sc, test2DLabeledPointsRDD)
 
-    val filterFunctions = lens.filters.map(filter => toFilterFunction(filter, TDAContext(sc, test2DLabeledPointsRDD)))
-
-    val covering = levelSetsInverseFunction(boundaries, lens, filterFunctions)
-
-    val result = test2DLabeledPointsRDD.flatMap(p => covering(p).map(k => (k, p))).collect
+    val result = levelSetInverseRDD(ctx, lens)
 
     result
+      .collect
       .foreach{ case (hyperCubeCoordinateVector: Vector[BigDecimal], p: DataPoint) =>
 
         def testCoveringContainsPoint(i: Int): Unit = {
