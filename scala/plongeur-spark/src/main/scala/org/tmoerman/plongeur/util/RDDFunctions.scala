@@ -16,6 +16,8 @@ object RDDFunctions {
 
   implicit def pimpDataPointRDD(rdd: RDD[DataPoint]): DataPointRDDFunctions = new DataPointRDDFunctions(rdd)
 
+  implicit def pimpNumericRDD[K: ClassTag](rdd: RDD[(K, Double)]): NumericRDDFunctions[K] = new NumericRDDFunctions[K](rdd)
+
 }
 
 class RDDFunctions[T: ClassTag](val rdd: RDD[T]) extends Serializable {
@@ -71,5 +73,23 @@ class DataPointRDDFunctions(val rdd: RDD[DataPoint]) extends Serializable {
     * @return Returns an RDD of all non-equal combination sets of the specified RDD.
     */
   def distinctComboSets: RDD[Set[DataPoint]] = new RDDFunctions(rdd).distinctComboSets(p => p.index)
+
+}
+
+// TODO generalize to other numeric types
+class NumericRDDFunctions[K: ClassTag](val rdd: RDD[(K, Double)]) extends Serializable {
+
+  type ACC = (Double, Int)
+
+  def init(v: Double) = (v, 1)
+
+  def concat(acc: ACC, v: Double) = acc match { case (sum, count) => (sum + v, count + 1) }
+
+  def merge(a: ACC, b: ACC) = (a, b) match { case ((s1, c1), (s2, c2)) => (s1 + s2, c1 + c2) }
+
+  def averageByKey =
+    rdd
+      .combineByKey(init, concat, merge)
+      .mapValues{ case (a, b) => a / b }
 
 }
