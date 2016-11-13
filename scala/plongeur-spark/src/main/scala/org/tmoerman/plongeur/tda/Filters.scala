@@ -35,7 +35,7 @@ object Filters extends Serializable {
     * @param rdd
     * @return Returns the (min, max) boundaries of the specified FilterRDD.
     */
-  def minMax(rdd: FilterRDD) = {
+  def boundaries(rdd: FilterRDD) = {
     val values = rdd.map(_._2).cache
     (values.min, values.max)
   }

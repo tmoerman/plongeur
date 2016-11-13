@@ -42,7 +42,7 @@ object Covering {
         .filters
         .flatMap(filter => ctx.filterCache.get(toFilterKey(filter)).map(factory => factory.apply(filter.spec)))
 
-    val boundaries = filterRDDs.map(minMax)
+    val minMaxPerRDD = filterRDDs.map(boundaries)
 
     val pointsByIndex = ctx.dataPoints.keyBy(_.index)
 
@@ -56,7 +56,7 @@ object Covering {
           val filterValues = values.map(_.asInstanceOf[FilterValue])
 
           val coveringIntervals =
-            (boundaries, lens.filters, filterValues)
+            (minMaxPerRDD, lens.filters, filterValues)
               .zipped
               .map{ case ((min, max), filter, v) => uniformCoveringIntervals(min, max, filter.nrBins, filter.overlap)(v) }
 

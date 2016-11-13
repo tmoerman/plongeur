@@ -1,7 +1,7 @@
 package org.tmoerman.plongeur.tda
 
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Filters.toFilterKey
+import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.util.IterableFunctions._
 import org.tmoerman.plongeur.util.RDDFunctions._
@@ -19,9 +19,7 @@ object Colour extends Serializable {
 
   type ContinuousPalette = (Double) => RGB // TODO later
 
-  // TODO Colouring can specify a filter as well as the lens!
-
-  // TODO Colouring in combination of multiple filters -> feasible?
+  // TODO take into account negative filter values!
 
   val DEFAULT_NR_BINS = 3
 
@@ -36,13 +34,17 @@ object Colour extends Serializable {
   case class AverageFilterValue(palette: Palette, filter: Filter) extends Colouring {
 
     override def apply(ctx: TDAContext) = (rdd: RDD[Cluster]) => {
-      val filterValuesByIndex = ctx.filterCache(toFilterKey(filter)).apply(filter.spec)
+      val filterRDD = ctx.filterCache(toFilterKey(filter)).apply(filter.spec)
+
+      val min = filterRDD.values.min
+
+      val filterRDDCorrected = filterRDD.mapValues(_ - min)
 
       val clusterPointsByIndex =
         rdd.flatMap(cluster => cluster.dataPoints.map(p => (p.index, cluster.id)))
 
       val averageByCluster =
-        (filterValuesByIndex cogroup clusterPointsByIndex)
+        (filterRDDCorrected cogroup clusterPointsByIndex)
           .flatMap{ case (p, (vs, cs)) => cs.map(c => (c, vs.head)) }
           .averageByKey
 
