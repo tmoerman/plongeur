@@ -82,14 +82,14 @@ class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Mat
   it should "pass smoke test with colouring" in {
     val ctx = TDAContext(sc, irisDataPointsRDD)
 
-    val setosa = new AttributePredicate("cat", "setosa")
+    val setosa = (d: DataPoint) => d.meta.get("cat") == "setosa"
 
     val tdaParams =
       TDAParams(
         lens = TDALens(Filter(PrincipalComponent(0), 10, 0.5)),
         clusteringParams = ClusteringParams(),
         scaleSelection = histogram(10),
-        colouring = Colouring(palettes("Blues").get(9), LocalPercentage(9, setosa)))
+        colouring = ClusterPercentage(palettes("Blues")(9), setosa))
 
     val result = TDAProcedure.apply(tdaParams, ctx)
   }

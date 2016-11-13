@@ -9,7 +9,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Colour.Colouring
+import org.tmoerman.plongeur.tda.Colour.{Nop, Colouring}
 import org.tmoerman.plongeur.tda.Distances.{DEFAULT_DISTANCE, DistanceFunction}
 import org.tmoerman.plongeur.tda.Filters.{FilterRDDFactory, toContextAmendment}
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
@@ -58,18 +58,20 @@ object Model {
     * @param id         The cluster ID.
     * @param levelSetID The level set ID.
     * @param dataPoints The data points contained by this cluster.
-    * @param colours    The colours.
+    * @param colour     The colour.
     */
   case class Cluster(val id: ID,
                      val levelSetID: LevelSetID,
                      val dataPoints: Set[DataPoint],
-                     val colours: Iterable[String] = Nil) extends Serializable {
+                     val colour: Option[String] = None) extends Serializable {
 
     def size = dataPoints.size
 
     def verbose = s"""Cluster($id, $dataPoints)"""
 
     override def toString = s"Cluster($id)"
+
+    def colours = colour.toSeq
 
   }
 
@@ -122,7 +124,7 @@ object Model {
                        val clusteringParams: ClusteringParams = ClusteringParams(),
                        val collapseDuplicateClusters: Boolean = true,
                        val scaleSelection: ScaleSelection = histogram(),
-                       val colouring: Colouring = Colouring()) extends Serializable {
+                       val colouring: Colouring = Nop()) extends Serializable {
 
     def amend(ctx: TDAContext): TDAContext =
       lens

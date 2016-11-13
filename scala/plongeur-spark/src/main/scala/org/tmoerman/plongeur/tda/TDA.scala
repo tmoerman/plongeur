@@ -70,13 +70,7 @@ trait TDA {
       .cache
 
   def applyColouring(clustersRDD: RDD[Cluster], edgesRDD: RDD[ClusterEdge], colouring: Colouring, ctx: TDAContext) = {
-    import colouring._
-
-    val broadcasts = ctx.broadcasts
-
-    val colouredClustersRDD =
-      clustersRDD
-        .map(cluster => cluster.copy(colours = palette.toSeq.flatMap(rgbs => strategy.toBinner(broadcasts).apply(cluster).map(bin => rgbs(bin)))))
+    val colouredClustersRDD = colouring(ctx)(clustersRDD).cache
 
     TDAResult(colouredClustersRDD, edgesRDD)
   }

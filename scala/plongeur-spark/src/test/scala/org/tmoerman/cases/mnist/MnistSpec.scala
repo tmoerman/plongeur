@@ -4,10 +4,10 @@ import org.apache.commons.lang.StringUtils.trim
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.rdd.RDD
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Colour.{AttributePredicate, Colouring, LocalPercentage}
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.Colour._
+import org.tmoerman.plongeur.tda.{Brewer, Colour, TDAMachine}
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
-import org.tmoerman.plongeur.tda.{Brewer, TDAMachine}
 import org.tmoerman.plongeur.test.SparkContextSpec
 import org.tmoerman.plongeur.util.IterableFunctions._
 import rx.lang.scala.Observable
@@ -47,7 +47,7 @@ class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
 
     val ctx = TDAContext(sc, mnistSampleRDD)
 
-    val cat = AttributePredicate("cat", "0")
+    val zero = (d: DataPoint) => d.meta.get("cat") == "0"
 
     val inParams =
       TDAParams(
@@ -56,7 +56,8 @@ class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
           Filter(PrincipalComponent(1), 20, 0.33)),
         clusteringParams = ClusteringParams(),
         collapseDuplicateClusters = false,
-        colouring = Colouring(Brewer.palettes("Blues").get(9), LocalPercentage(9, cat)))
+        colouring = ClusterPercentage(Brewer.palettes("Blues")(9), zero)
+      )
 
     val result =
       TDAMachine.run(ctx, Observable.just(inParams))

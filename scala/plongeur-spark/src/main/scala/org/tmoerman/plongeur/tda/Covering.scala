@@ -42,14 +42,14 @@ object Covering {
         .filters
         .flatMap(filter => ctx.filterCache.get(toFilterKey(filter)).map(factory => factory.apply(filter.spec)))
 
-    val boundaries = calculateBoundaries(filterRDDs)
+    val boundaries = filterRDDs.map(minMax)
 
     val pointsByIndex = ctx.dataPoints.keyBy(_.index)
 
     val coGrouped = new CoGroupedRDD(pointsByIndex :: filterRDDs, defaultPartitioner(pointsByIndex, filterRDDs: _*))
 
     coGrouped
-      .flatMap{ case (index, it) => it.map(_.head).toList match {
+      .flatMap{ case (index, it) => (it.map(_.head).toList: @unchecked) match {
         case p :: values =>
           val point = p.asInstanceOf[DataPoint]
 
@@ -63,9 +63,6 @@ object Covering {
           combineToLevelSetIDs(coveringIntervals)
             .map(levelSetID => (levelSetID, point))}}
   }
-
-  def calculateBoundaries(filterRDDs: Seq[FilterRDD]): Seq[(Double, Double)] =
-    filterRDDs.map(rdd => (rdd.values.min, rdd.values.max))
 
   /**
     * @param boundaryMin The lower boundary of the filter function span.

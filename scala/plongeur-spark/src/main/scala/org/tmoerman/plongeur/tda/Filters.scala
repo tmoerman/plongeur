@@ -32,6 +32,15 @@ object Filters extends Serializable {
     toFilterAmendment(filter)
 
   /**
+    * @param rdd
+    * @return Returns the (min, max) boundaries of the specified FilterRDD.
+    */
+  def minMax(rdd: FilterRDD) = {
+    val values = rdd.map(_._2).cache
+    (values.min, values.max)
+  }
+
+  /**
     * @param filter
     * @return Returns a ContextAmendment function that updates both the specified TDAContext's sketches and broadcasts
     *         in function of the
