@@ -19,10 +19,6 @@ object Colour extends Serializable {
 
   type ContinuousPalette = (Double) => RGB // TODO later
 
-  // TODO take into account negative filter values!
-
-  val DEFAULT_NR_BINS = 3
-
   trait Colouring extends (TDAContext => RDD[Cluster] => RDD[Cluster])
 
   /**

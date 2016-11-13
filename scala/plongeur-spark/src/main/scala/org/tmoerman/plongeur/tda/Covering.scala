@@ -1,8 +1,6 @@
 package org.tmoerman.plongeur.tda
 
 import org.apache.spark.Partitioner._
-import org.apache.spark.mllib.linalg.Vectors._
-import org.apache.spark.mllib.stat.Statistics._
 import org.apache.spark.rdd.{CoGroupedRDD, RDD}
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
