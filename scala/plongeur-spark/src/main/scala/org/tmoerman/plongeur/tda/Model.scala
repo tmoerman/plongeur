@@ -81,6 +81,7 @@ object Model {
 
   type Percentage = BigDecimal
 
+  type FilterKey = FilterSpec
   type CacheKey = Serializable
 
   type ContextAmendment = TDAContext => TDAContext
@@ -93,8 +94,8 @@ object Model {
 
   type Broadcasts  = Map[CacheKey, Broadcast[_]]
   type SketchCache = Map[CacheKey, Sketch]
-  type FilterCache = Map[CacheKey, FilterRDDFactory]
   type KNNCache    = Map[CacheKey, KNN_RDD]
+  type FilterCache = Map[FilterKey, FilterRDDFactory]
 
   /**
     * State data structure for the TDA pipeline.

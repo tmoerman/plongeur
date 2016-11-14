@@ -140,7 +140,7 @@ object Filters extends Serializable {
     * @param filter
     * @return Returns a cache key for the specified filter.
     */
-  def toFilterKey(filter: Filter): CacheKey = {
+  def toFilterKey(filter: Filter): FilterKey = {
     val COMMON_KEY_n = -1
 
     filter.spec match {
