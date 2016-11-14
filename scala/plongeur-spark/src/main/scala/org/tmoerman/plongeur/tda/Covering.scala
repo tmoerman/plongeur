@@ -11,34 +11,15 @@ import org.tmoerman.plongeur.tda.Model._
 object Covering {
 
   /**
-    * @param coveringBoundaries The boundaries in function of which to define the covering function.
-    * @param lens The TDA Lens specification.
-    * @param filterFunctions The reified filter functions.
-    * @return Returns a levelsets inverse function instance.
-    */
-  def levelSetsInverseFunction(coveringBoundaries: Boundaries,
-                               lens: TDALens,
-                               filterFunctions: Seq[FilterFunction]): LevelSetsInverseFunction = (p: DataPoint) => {
-
-    val coveringIntervals =
-      coveringBoundaries
-        .zip(lens.filters)
-        .zip(filterFunctions)
-        .map { case (((min, max), filter), fn) => uniformCoveringIntervals(min, max, filter.nrBins, filter.overlap)(fn(p)) }
-
-    combineToLevelSetIDs(coveringIntervals)
-  }
-
-  /**
     * @param ctx
     * @param lens
     * @return
     */
   def levelSetInverseRDD(ctx: TDAContext, lens: TDALens): RDD[(LevelSetID, DataPoint)] = {
-    val filterRDDs =
-      lens
-        .filters
-        .flatMap(filter => ctx.filterCache.get(toFilterKey(filter)).map(factory => factory.apply(filter.spec)))
+    val filterRDDs: List[FilterRDD] = for {
+      filter  <- lens.filters
+      key     <- toFilterKey(filter)
+      factory <- ctx.filterCache.get(key) } yield factory.apply(filter.spec)
 
     val minMaxPerRDD = filterRDDs.map(boundaries)
 

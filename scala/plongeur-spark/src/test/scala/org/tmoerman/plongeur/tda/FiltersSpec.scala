@@ -37,30 +37,7 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
     toFilterKey(den) shouldBe Some(den)
   }
 
-//  behavior of "toBroadcastKey"
-//
-//  it should "return None when no broadcast is available for the filter" in {
-//    val filter = Filter(Feature(0))
-//
-//    val broadcastKey = toBroadcastKey(filter)
-//    broadcastKey shouldBe None
-//  }
-//
-//  it should "return filter key when no sketch is specified" in {
-//    val filter = Filter(Eccentricity(Left(1)))
-//
-//    val broadcastKey = toBroadcastKey(filter)
-//
-//    broadcastKey shouldBe Some(filter.spec)
-//  }
-//
-//  it should "return filter key with sketch key if specified" in {
-//    val filter = Filter(Eccentricity(Left(1)), sketch = Some(SketchParams(LSHParams(10, Some(1.0)), new RandomCandidate())))
-//
-//    val broadcastKey = toBroadcastKey(filter)
-//
-//    broadcastKey shouldBe Some((filter.spec, filter.sketch.get))
-//  }
+
 
   behavior of "toSketchKey"
 
@@ -71,6 +48,8 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
     sketchKey shouldBe filter.sketch
   }
+
+
 
   behavior of "reifying filter specs"
 
@@ -83,15 +62,16 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   val rdd = sc.parallelize(dataPoints)
 
-//  it should "reify a feature by index" in {
-//    val f = toFilterFunction(Feature(1), ctx)
-//
-//    val dataPoint = (0, dense(1, 2, 3))
-//
-//    f(dataPoint) shouldBe 2
-//  }
-
   val ctx = TDAContext(sc, rdd)
+
+  it should "make a filterRDD factory for the Feature(n) lens" in {
+    val spec = Feature(0)
+
+    toFilterRDDFactory(spec, ctx)
+      .apply(spec)
+      .collect
+      .toMap shouldBe Map(0 -> 0d, 1 -> 0d, 2 -> 2d, 3 -> 2d)
+  }
 
   it should "reify L_1 eccentricity" in {
     val spec = Eccentricity(Left(1), distance = EuclideanDistance) // "eccentricity" :: 1 :: "euclidean" :: HNil
