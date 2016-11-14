@@ -18,8 +18,8 @@ object Covering {
   def levelSetInverseRDD(ctx: TDAContext, lens: TDALens): RDD[(LevelSetID, DataPoint)] = {
     val filterRDDs: List[FilterRDD] = for {
       filter  <- lens.filters
-      key     <- toFilterKey(filter)
-      factory <- ctx.filterCache.get(key) } yield factory.apply(filter.spec)
+      factory <- ctx.filterCache.get(toFilterKey(filter))
+    } yield factory.apply(filter.spec)
 
     val minMaxPerRDD = filterRDDs.map(boundaries)
 

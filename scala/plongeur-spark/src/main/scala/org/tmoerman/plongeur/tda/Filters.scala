@@ -69,15 +69,14 @@ object Filters extends Serializable {
     * @return Returns a TDAContext amendment function.
     */
   def toFilterAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
-    val maybeAmended = for {
-      filterKey  <- toFilterKey(filter)
-      amendedCtx <- ctx.filterCache
-                       .get(filterKey)
-                       .orElse(Some(toFilterRDDFactory(filter, ctx)))
-                       .map(filterRDDFactory => ctx.copy(filterCache = ctx.filterCache + (filterKey -> filterRDDFactory)))
-    } yield amendedCtx
+    val filterKey = toFilterKey(filter)
 
-    maybeAmended.getOrElse(ctx)
+    ctx
+      .filterCache
+      .get(filterKey)
+      .orElse(Some(toFilterRDDFactory(filter, ctx)))
+      .map(filterRDDFactory => ctx.copy(filterCache = ctx.filterCache + (filterKey -> filterRDDFactory)))
+      .getOrElse(ctx)
   }
 
   /**
@@ -141,15 +140,15 @@ object Filters extends Serializable {
     * @param filter
     * @return Returns a cache key for the specified filter.
     */
-  def toFilterKey(filter: Filter): Option[CacheKey] = {
+  def toFilterKey(filter: Filter): CacheKey = {
     val COMMON_KEY_n = -1
 
     filter.spec match {
-      case x @ (_: Feature)              => Some(x)
-      case x @ (_: Density)              => Some(x)
-      case x @ (_: Eccentricity)         => Some(x)
-      case x @ (_: PrincipalComponent)   => Some(x.copy(n = COMMON_KEY_n))
-      case x @ (_: LaplacianEigenVector) => Some(x.copy(n = COMMON_KEY_n))
+      case x @ (_: Feature)              => x
+      case x @ (_: Density)              => x
+      case x @ (_: Eccentricity)         => x
+      case x @ (_: PrincipalComponent)   => x.copy(n = COMMON_KEY_n)
+      case x @ (_: LaplacianEigenVector) => x.copy(n = COMMON_KEY_n)
     }
   }
 

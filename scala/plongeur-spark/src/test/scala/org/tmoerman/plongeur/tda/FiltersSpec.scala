@@ -20,21 +20,21 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   implicit val seed: Long = 666
 
-  it should "yield a Some(_) in cases" in {
+  it should "yield the correct key" in {
     val feat = Feature(2)
-    toFilterKey(feat) shouldBe Some(feat)
+    toFilterKey(feat) shouldBe feat
 
     val pc0 = PrincipalComponent(0)
-    toFilterKey(pc0) shouldBe Some(pc0.copy(n = -1))
+    toFilterKey(pc0) shouldBe pc0.copy(n = -1)
 
     val lap = LaplacianEigenVector(0)
-    toFilterKey(lap) shouldBe Some(lap.copy(n = -1))
+    toFilterKey(lap) shouldBe lap.copy(n = -1)
 
     val ecc = Eccentricity(Left(1))
-    toFilterKey(ecc) shouldBe Some(ecc)
+    toFilterKey(ecc) shouldBe ecc
 
     val den = Density(1.0)
-    toFilterKey(den) shouldBe Some(den)
+    toFilterKey(den) shouldBe den
   }
 
 
