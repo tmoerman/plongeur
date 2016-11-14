@@ -11,20 +11,11 @@ class ColourSpec extends FlatSpec with Matchers {
   behavior of "pctToBin"
 
   it should "correctly calculate the bin for percentages" in {
-    toBin(7)(0d)    shouldBe 0
-    toBin(7)(0.55d) shouldBe 3
-    toBin(7)((1d / 7)*6 + 0.1) shouldBe 6
-  }
-
-  behavior of "Brewer"
-
-  import Colour._
-
-  it should "correctly parse the palettes.json" in {
-
-    // val cat0 = new AttributeEquals("cat", "0")
-
-    // Colouring(Brewer.palettes("Blues").get(9), PercentageInCluster(9, cat0))
+    toBin(10)(0.09d) shouldBe 0
+    toBin(10)(0.11d) shouldBe 1
+    toBin(10)(0.55d) shouldBe 5
+    toBin(10)(0.99d) shouldBe 9
+    toBin(10)(1.00d) shouldBe 9
   }
 
 }

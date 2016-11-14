@@ -1,5 +1,7 @@
 package org.tmoerman.plongeur.tda
 
+import java.lang.Math.{min, floor}
+
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
@@ -71,7 +73,7 @@ object Colour extends Serializable {
 
   }
 
-  def toBin(nrBins: Int)(pct: Double) = (pct * nrBins).toInt
+  def toBin(nrBins: Int)(pct: Double) = min(floor(pct * nrBins).toInt, nrBins - 1)
 
   /**
     * A Colouring that maps a cluster to the first (0) bin if it has any DataPoint instances that are
