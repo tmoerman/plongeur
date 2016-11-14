@@ -29,7 +29,7 @@ class MLLab extends FlatSpec with Matchers with SparkContextSpec with TestResour
 
   behavior of "matrix power"
 
-  it should "compute matrix power" in {
+  it should "compute matrix power" ignore {
 
     val diagonal = Seq(3.0, 5.0, 7.0).zipWithIndex.map{ case (v, i) => (i, i, v) }
 

@@ -30,7 +30,7 @@ object Distances {
     result
   }
 
-  val DEFAULT: DistanceFunction = ManhattanDistance
+  val DEFAULT_DISTANCE: DistanceFunction = ManhattanDistance
 
   type Distance = Double
 

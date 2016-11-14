@@ -2,68 +2,43 @@ package org.tmoerman.plongeur.tda
 
 import java.lang.Math.{PI, exp, min, sqrt}
 
-import breeze.linalg.{max => elmax}
-import org.apache.spark.mllib.feature.{PCA, PCAModel}
-import org.apache.spark.mllib.linalg.{DenseVector => MLLibDenseVector, Vector => MLLibVector}
+import org.apache.spark.mllib.feature.PCA
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distances.{Distance, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model._
+import org.tmoerman.plongeur.tda.geometry.Laplacian
 import org.tmoerman.plongeur.util.RDDFunctions._
 
-import scala.math.{max, pow}
+import scala.math._
 
 /**
   * @author Thomas Moerman
   */
 object Filters extends Serializable {
 
-  /**
-    * @param filter
-    * @param ctx
-    * @return Returns a FilterFunction for the specified filter specification.
-    *         Closes over TDAContext for references to SparkContext and DataPoints.
-    */
-  def toFilterFunction(filter: Filter, ctx: TDAContext): FilterFunction = {
-    import filter._
+  // TODO delegate to its own package
+  // TODO extract Eccentricity and Density
 
-    val broadcasts = ctx.broadcasts
-
-    val result = (spec, sketch) match {
-
-      case (Feature(n), _) =>
-        val fn = (d: DataPoint) => d.features(n)
-        Some(fn)
-
-      case (PrincipalComponent(n), _) => for {
-        broadcastKey      <- toBroadcastKey(filter)
-        broadcastPCAModel <- broadcasts.get(broadcastKey).map(_.value.asInstanceOf[PCAModel]) }
-
-        yield (d: DataPoint) => broadcastPCAModel.transform(d.features)(n)
-
-      case (_: Eccentricity | _: Density, None) => for {
-        broadcastKey    <- toBroadcastKey(filter)
-        broadcastVector <- broadcasts.get(broadcastKey).map(_.value.asInstanceOf[MLLibVector]) }
-
-        yield (d: DataPoint) => broadcastVector(d.index)
-
-      case (_: Eccentricity | _: Density, Some(params)) => for {
-        broadcastKey    <- toBroadcastKey(filter)
-        broadcastVector <- broadcasts.get(broadcastKey).map(_.value.asInstanceOf[MLLibVector])
-        sketchKey       <- toSketchKey(filter)
-        broadcastLookup <- broadcasts.get(sketchKey).map(_.value.asInstanceOf[Map[Index, Index]])}
-
-        yield (d: DataPoint) => broadcastVector(broadcastLookup(d.index))
-
-      case _ => None
-    }
-
-    result.getOrElse(throw new IllegalArgumentException(
-      s"No filter function for ($spec, $sketch). Current broadcasts: ${broadcasts.keys.mkString(", ")}."))
-  }
+  type FilterValue      = Double
+  type FilterRDD        = RDD[(Index, FilterValue)]
+  type FilterRDDFactory = (FilterSpec) => FilterRDD
+  type LevelSetsRDD     = RDD[(Index, Seq[LevelSetID])]
 
   val MAX_PCs: Int = 10
 
-  def toContextAmendment(filter: Filter) = toSketchAmendment(filter) andThen toBroadcastAmendment(filter)
+  def toContextAmendment(filter: Filter) =
+    toSketchAmendment(filter) andThen
+    // toKNNAmendment(filter) andThen // TODO for now we expect a knn data structure to be present in the TDAContext  knn cache
+    toFilterAmendment(filter)
+
+  /**
+    * @param rdd
+    * @return Returns the (min, max) boundaries of the specified FilterRDD.
+    */
+  def boundaries(rdd: FilterRDD) = {
+    val values = rdd.map(_._2).cache
+    (values.min, values.max)
+  }
 
   /**
     * @param filter
@@ -71,90 +46,111 @@ object Filters extends Serializable {
     *         in function of the
     */
   def toSketchAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
-    val amended = for {
-      sketchKey <- toSketchKey(filter);
+    val maybeAmended = for {
+      sketchKey <- toSketchKey(filter)
 
-      ctx1 <- ctx.sketches
+      ctx1 <- ctx.sketchCache
                  .get(sketchKey)
                  .orElse(filter.sketch.map(params => Sketch(ctx, params)))
-                 .map(sketch => ctx.copy(sketches = ctx.sketches + (sketchKey -> sketch)));
+                 .map(sketch => ctx.copy(sketchCache = ctx.sketchCache + (sketchKey -> sketch)))
 
       ctx2 <- ctx1.broadcasts
                   .get(sketchKey)
-                  .orElse(ctx1.sketches.get(sketchKey).map(sketch => ctx1.sc.broadcast(sketch.lookupMap)))
+                  .orElse(ctx1.sketchCache.get(sketchKey).map(sketch => ctx1.sc.broadcast(sketch.lookupMap)))
                   .map(value => ctx1.copy(broadcasts = ctx1.broadcasts + (sketchKey -> value)))
 
     } yield ctx2
 
-    amended.getOrElse(ctx)
+    maybeAmended.getOrElse(ctx)
   }
 
   /**
     * @param filter
-    * @return
+    * @return Returns a TDAContext amendment function.
     */
-  def toBroadcastAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
-    val amended = for {
-      broadcastKey <- toBroadcastKey(filter)
-      ctx1 <- ctx.broadcasts
-                 .get(broadcastKey)
-                 .orElse(toBroadcastValue(filter, ctx).map(value => ctx.sc.broadcast(value)))
-                 .map(value => ctx.copy(broadcasts = ctx.broadcasts + (broadcastKey -> value)))
-    } yield ctx1
+  def toFilterAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
+    val filterKey = toFilterKey(filter)
 
-    amended.getOrElse(ctx)
+    ctx
+      .filterCache
+      .get(filterKey)
+      .orElse(Some(toFilterRDDFactory(filter, ctx)))
+      .map(filterRDDFactory => ctx.copy(filterCache = ctx.filterCache + (filterKey -> filterRDDFactory)))
+      .getOrElse(ctx)
   }
 
-  def toBroadcastValue(filter: Filter, ctx: TDAContext): Option[_] = {
+  /**
+    * @param filter
+    * @param ctx
+    * @return Returns a FilterRDD factory function.
+    */
+  def toFilterRDDFactory(filter: Filter, ctx: TDAContext): FilterRDDFactory = {
     import filter._
 
-    val ctxLike: ContextLike = toSketchKey(filter).flatMap(key => ctx.sketches.get(key)).getOrElse(ctx)
+    // TODO: fold in sketch/coreset stuff
+    // TODO: val ctxLike: ContextLike = toSketchKey(filter).flatMap(key => ctx.sketchCache.get(key)).getOrElse(ctx)
 
     spec match {
 
-      case PrincipalComponent(_) => {
-        val pcaModel = new PCA(min(MAX_PCs, ctxLike.D)).fit(ctxLike.dataPoints.map(_.features))
-        Some(pcaModel)
-      }
+      case Feature(n) =>
+        val result = ctx.dataPoints.map(p => (p.index, p.features(n))).cache
 
-      case LaplacianEigenVector(_) => {
-        val laplacianModel = ???
+        { case Feature(n) => result }
 
-        Some(laplacianModel)
-      }
+      case _: PrincipalComponent =>
+        val pcaModel = new PCA(min(MAX_PCs, ctx.D)).fit(ctx.dataPoints.map(_.features))
 
-      case Eccentricity(n, distance) => {
-        val vec = eccentricityVec(n, ctxLike, distance)
-        Some(vec)
-      }
+        { case PrincipalComponent(n) => ctx.dataPoints.map(p => (p.index, pcaModel.transform(p.features)(n))) }
 
-      case Density(sigma, distance) => {
-        val vec = densityVec(sigma, ctxLike, distance)
-        Some(vec)
-      }
+      case LaplacianEigenVector(_, k, sigma, distance) =>
+        val knnRDD = ctx.knnCache.getOrElse(toKNNKey(spec), throw new IllegalStateException(s"No KNN found for $distance"))
 
-      case _ => None
+        val laplacianEigenVectors = Laplacian.apply(ctx, knnRDD, k, sigma)
+
+        { case LaplacianEigenVector(n, _, _, _) => laplacianEigenVectors.mapValues(_(n)) }
+
+      case Eccentricity(p, distance) =>
+        val result = eccentricityRDD(ctx, p, distance)
+
+        { case _: Eccentricity => result }
+
+      case Density(sigma, distance) =>
+        val result = densityRDD(ctx, sigma, distance)
+
+        { case _: Density => result }
+
     }
   }
 
-  def toSketchKey(filter: Filter): Option[SketchKey] = filter.sketch
+  def toSketchKey(filter: Filter): Option[CacheKey] = filter.sketch
 
-  def toFilterSpecKey(spec: FilterSpec): Option[BroadcastKey] =
-    spec match {
-      case _: PrincipalComponent   |
-           _: LaplacianEigenVector |
-           _: Eccentricity         |
-           _: Density => Some(spec)
+  def toKNNKey(filter: Filter): Option[CacheKey] = filter.spec match {
+    case LaplacianEigenVector(_,_,_, distance) => Some(distance)
+    case _                                     => None
+  }
 
-      case _: Feature => None
+  /**
+    * Mechanism for computing cache keys:
+    *
+    * For some filter functions (PCA, Laplacian), an intermediate cached data structure is computed that is used in
+    * different instances of the actual filter function: the n-th vector or principal component is picked out of the
+    * same cached data structure. Therefore the cache key needs to be equal among those filter function instances.
+    * Hence the motivation of setting the n variable to magic number -1.
+    *
+    * @param filter
+    * @return Returns a cache key for the specified filter.
+    */
+  def toFilterKey(filter: Filter): FilterKey = {
+    val COMMON_KEY_n = -1
+
+    filter.spec match {
+      case x @ (_: Feature)              => x
+      case x @ (_: Density)              => x
+      case x @ (_: Eccentricity)         => x
+      case x @ (_: PrincipalComponent)   => x.copy(n = COMMON_KEY_n)
+      case x @ (_: LaplacianEigenVector) => x.copy(n = COMMON_KEY_n)
     }
-
-  def toBroadcastKey(filter: Filter): Option[BroadcastKey] =
-    toFilterSpecKey(filter.spec)
-      .map(broadcastKey =>
-        toSketchKey(filter)
-          .map(sketchKey => (broadcastKey, sketchKey))
-          .getOrElse(broadcastKey))
+  }
 
   /**
     * @param p
@@ -168,64 +164,59 @@ object Filters extends Serializable {
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  def eccentricityRDD(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): RDD[(Index, Double)] = {
+  def eccentricityRDD(ctx: ContextLike, p: Either[Index, _], distance: DistanceFunction): FilterRDD = {
     val N = ctx.N
 
-    p match {
+    val rdd = p match {
 
       case Right(INFINITY) =>
-        unfold(ctx.dataPoints, distance)
+        unfoldDistances(ctx, distance)
           .reduceByKey(max)
 
       case Left(1) =>
-        unfold(ctx.dataPoints, distance)
+        unfoldDistances(ctx, distance)
           .reduceByKey(_ + _)
           .map{ case (i, sum) => (i, sum / N) }
 
       case Left(n) =>
-        unfold(ctx.dataPoints, distance)
+        unfoldDistances(ctx, distance)
           .mapValues(d => pow(d, n))
           .reduceByKey(_ + _)
           .map{ case (i, sum) => (i, pow(sum, 1d / n) / N) }
 
-      case _ => throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$p'")
+      case _ =>
+        throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$p'")
+
     }
+
+    rdd.cache
   }
 
-  def eccentricityMap(p: Either[Int, _], ctx: ContextLike, distance: DistanceFunction): Map[Index, Double] =
-    eccentricityRDD(p, ctx, distance).collectAsMap.toMap
-
-  def eccentricityVec(p: Either[Index, _], ctx: ContextLike, distance: DistanceFunction): MLLibVector =
-    toMLVector(eccentricityRDD(p, ctx, distance))
 
   /**
     * @param sigma
     * @param ctx
     * @param distance
-    * @return TODO docs
+    * @return TODO update documentation
     *
     *         See: http://danifold.net/mapper/filters.html
     */
-  def densityVec(sigma: Double, ctx: ContextLike, distance: DistanceFunction): MLLibVector = {
+  def densityRDD(ctx: ContextLike, sigma: Distance, distance: DistanceFunction): FilterRDD = {
     val N = ctx.N
     val D = ctx.D
 
     val denominator = -2 * sigma * sigma
 
-    val sums =
-      unfold(ctx.dataPoints, distance)
-        .mapValues(d => exp(pow(d, 2) / denominator))
-        .reduceByKey(_ + _)
-        .mapValues(_ / (N * pow(sqrt(2 * PI * sigma), D)))
-
-    toMLVector(sums)
+    unfoldDistances(ctx, distance)
+      .mapValues(d => exp(pow(d, 2) / denominator))
+      .reduceByKey(_ + _)
+      .mapValues(_ / (N * pow(sqrt(2 * PI * sigma), D)))
+      .cache
   }
 
-  def toMLVector(sums: RDD[(Index, Distance)]): MLLibVector =
-    new MLLibDenseVector(sums.sortByKey().map(_._2).collect)
-
-  def unfold(points: RDD[DataPoint], distance: DistanceFunction): RDD[(Index, Distance)] =
-    points
+  private def unfoldDistances(ctx: ContextLike, distance: DistanceFunction): RDD[(Index, Distance)] =
+    ctx
+      .dataPoints
       .distinctComboPairs
       .flatMap { case (p, q) => val d = distance(p, q); (p.index, d) ::(q.index, d) :: Nil }
 

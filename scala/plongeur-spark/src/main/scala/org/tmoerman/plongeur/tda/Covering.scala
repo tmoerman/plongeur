@@ -1,8 +1,8 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.spark.mllib.linalg.Vectors._
-import org.apache.spark.mllib.stat.Statistics._
-import org.apache.spark.rdd.RDD
+import org.apache.spark.Partitioner._
+import org.apache.spark.rdd.{CoGroupedRDD, RDD}
+import org.tmoerman.plongeur.tda.Filters._
 import org.tmoerman.plongeur.tda.Model._
 
 /**
@@ -11,38 +11,36 @@ import org.tmoerman.plongeur.tda.Model._
 object Covering {
 
   /**
-    * @param coveringBoundaries The boundaries in function of which to define the covering function.
-    * @param lens The TDA Lens specification.
-    * @param filterFunctions The reified filter functions.
-    * @return Returns the CoveringFunction instance.
+    * @param ctx
+    * @param lens
+    * @return
     */
-  def levelSetsInverseFunction(coveringBoundaries: Boundaries,
-                               lens: TDALens,
-                               filterFunctions: Seq[FilterFunction]): LevelSetsInverseFunction = (p: DataPoint) => {
+  def levelSetInverseRDD(ctx: TDAContext, lens: TDALens): RDD[(LevelSetID, DataPoint)] = {
+    val filterRDDs: List[FilterRDD] = for {
+      filter  <- lens.filters
+      factory <- ctx.filterCache.get(toFilterKey(filter))
+    } yield factory.apply(filter.spec)
 
-    val coveringIntervals =
-      coveringBoundaries
-        .zip(lens.filters)
-        .zip(filterFunctions)
-        .map { case (((min, max), filter), fn) => uniformCoveringIntervals(min, max, filter.nrBins, filter.overlap)(fn(p)) }
+    val minMaxPerRDD = filterRDDs.map(boundaries)
 
-    combineToLevelSetIDs(coveringIntervals)
-  }
+    val pointsByIndex = ctx.dataPoints.keyBy(_.index)
 
-  /**
-    * @param filterFunctions The filter functions.
-    * @param dataPoints The data RDD.
-    * @return Returns an Array of Double tuples, representing the (min, max) boundaries of the filter functions applied
-    *         on the RDD.
-    */
-  def calculateBoundaries(filterFunctions: Seq[FilterFunction],
-                          dataPoints: RDD[DataPoint]): Array[(Double, Double)] = {
+    val coGrouped = new CoGroupedRDD(pointsByIndex :: filterRDDs, defaultPartitioner(pointsByIndex, filterRDDs: _*))
 
-    val filterValues = dataPoints.map(p => dense(filterFunctions.toArray.map(f => f(p))))
+    coGrouped
+      .flatMap{ case (index, it) => (it.map(_.head).toList: @unchecked) match {
+        case p :: values =>
+          val point = p.asInstanceOf[DataPoint]
 
-    val stats = colStats(filterValues)
+          val filterValues = values.map(_.asInstanceOf[FilterValue])
 
-    stats.min.toArray zip stats.max.toArray
+          val coveringIntervals =
+            (minMaxPerRDD, lens.filters, filterValues)
+              .zipped
+              .map{ case ((min, max), filter, v) => uniformCoveringIntervals(min, max, filter.nrBins, filter.overlap)(v) }
+
+          combineToLevelSetIDs(coveringIntervals)
+            .map(levelSetID => (levelSetID, point))}}
   }
 
   /**
@@ -50,21 +48,21 @@ object Covering {
     * @param boundaryMax The upper boundary of the filter function span.
     * @param nrBins The number of bins.
     * @param overlap The percentage of overlap between intervals.
-    * @param x A filter function value.
+    * @param image A filter function value.
     * @return Returns the lower coordinates of the intervals covering the specified filter value x.
     */
   def uniformCoveringIntervals(boundaryMin: BigDecimal,
                                boundaryMax: BigDecimal,
                                nrBins:      Int,
                                overlap:     Percentage)
-                              (x: BigDecimal): Seq[BigDecimal] = {
+                              (image: BigDecimal): Seq[BigDecimal] = {
 
     val binLength = getBinLength(boundaryMax - boundaryMin, nrBins, overlap)
 
     val increment = (1 - overlap) * binLength
 
-    val diff = (x - boundaryMin) % increment
-    val base = x - diff
+    val diff = (image - boundaryMin) % increment
+    val base = image - diff
 
     val q = binLength quot increment
     val r = binLength  %   increment

@@ -19,24 +19,6 @@ package object knn {
   type KNN_RDD      = RDD[(Index, BPQ)]
   type KNN_RDD_Like = RDD[(Index, Iterable[(Index, Distance)])]
 
-  /**
-    * @param k The k in kNN.
-    * @param nrHashTables Also known as the L parameter, cfr. LSH literature.
-    * @param nrJobs A technical parameter for breaking up the task in multiple jobs. Motivation is to have a strategy
-    *               to limit the amount of memory needed for all table-related tuples in flight.
-    * @param blockSize
-    * @param lshParams
-    */
-  case class FastKNNParams(k: Int,
-                           blockSize: Int,
-                           nrHashTables: Int = 1,
-                           nrJobs: Int = 1,
-                           symmetricizeParams: SymmetricizeParams = SymmetricizeParams(),
-                           lshParams: LSHParams) {
-    require(k > 0)
-    require(nrHashTables > 0)
-  }
-
   val ORD = Ordering.by((e: PQEntry) => (-e._2, e._1)) // why `e._1`? -> to disambiguate between equal distances
   def bpq(k: Int) = new BPQ(k)(ORD)
 

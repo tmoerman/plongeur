@@ -48,7 +48,7 @@ object Clustering extends Serializable {
     * @param distance Distance function in the hierarchical clustering effort.
     * @param clusteringMethod Single, Complete, etc...
     */
-  case class ClusteringParams(distance: DistanceFunction = DEFAULT,
+  case class ClusteringParams(distance: DistanceFunction = DEFAULT_DISTANCE,
                               clusteringMethod: String = "single") extends Serializable
 
   /**

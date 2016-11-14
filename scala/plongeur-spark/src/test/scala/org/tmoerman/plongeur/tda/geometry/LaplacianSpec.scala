@@ -34,15 +34,11 @@ class LaplacianSpec extends FlatSpec with SparkContextSpec with TestResources wi
   it should "should compute the laplacian embedding of an affinity matrix" in {
     val A = toSparseMatrix(N, affinitiesRDD.collect)
 
-    val E = 3
+    val laplacian = Laplacian.fromAffinities(ctx, A)
 
-    val params = new LaplacianParams(nrEigenVectors = E)
+    laplacian.first._2.size shouldBe rdd.first.features.size
 
-    val laplacian = Laplacian.fromAffinities(ctx, A, params)
-
-    laplacian.numCols shouldBe E
-
-    laplacian.numRows shouldBe N
+    laplacian.count shouldBe N
   }
 
 }

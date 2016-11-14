@@ -31,7 +31,7 @@ object LSH extends Serializable {
     */
   case class LSHParams(signatureLength: SignatureLength,
                        radius: Option[Radius] = Some(10.0),
-                       distance: DistanceFunction = DEFAULT,
+                       distance: DistanceFunction = DEFAULT_DISTANCE,
                        seed: Long = nextLong)
 
   /**
@@ -46,7 +46,7 @@ object LSH extends Serializable {
     lazy val r = radius.get
 
     Try(distance match {
-      case CosineDistance    => SignRandomProjectionFunction   generate   (d, signatureLength, random)
+      case CosineDistance    => SignRandomProjectionFunction   generate   (d, signatureLength,    random)
       case EuclideanDistance => ScalarRandomProjectionFunction generateL2 (d, signatureLength, r, random)
       case ManhattanDistance => ScalarRandomProjectionFunction generateL1 (d, signatureLength, r, random)
       case LpNormDistance(_) => ScalarRandomProjectionFunction generateL1 (d, signatureLength, r, random)

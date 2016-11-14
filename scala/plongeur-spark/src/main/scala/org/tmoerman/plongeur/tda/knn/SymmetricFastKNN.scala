@@ -4,6 +4,7 @@ import java.util.{Random => JavaRandom}
 
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Model.{Index, TDAContext}
+import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
 
 /**
   * @author Thomas Moerman

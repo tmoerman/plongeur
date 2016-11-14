@@ -1,6 +1,6 @@
 package org.tmoerman.plongeur.tda.cluster
 
-import org.tmoerman.plongeur.tda.Distances.{DEFAULT, DistanceFunction}
+import org.tmoerman.plongeur.tda.Distances.{DEFAULT_DISTANCE, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model.DataPoint
 
 /**
@@ -11,7 +11,7 @@ object LSHLinkClustering {
   case class LSHLinkClusteringParams(val k: Int,
                                      val L: Int,
                                      val A: Double,
-                                     val distance: DistanceFunction = DEFAULT) extends Serializable {
+                                     val distance: DistanceFunction = DEFAULT_DISTANCE) extends Serializable {
 
   }
 
