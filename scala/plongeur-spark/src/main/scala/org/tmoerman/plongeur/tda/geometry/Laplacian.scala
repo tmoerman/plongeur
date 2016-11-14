@@ -114,6 +114,8 @@ object Laplacian {
     * @return Returns the ML Vector of degrees of the specified SparseMatrix.
     */
   def degrees(m: SparseMatrix, exp: Double) = {
+    // TODO vectorize this calculation
+
     val diagonalValues = m.rowVectors.map(_.toArray.sum).map(pow(_, exp))
 
     SparseMatrix.fromCOO(m.numRows, m.numCols, diagonalValues.zipWithIndex.map{ case (v, i) => (i, i, v) }.toIterable)
