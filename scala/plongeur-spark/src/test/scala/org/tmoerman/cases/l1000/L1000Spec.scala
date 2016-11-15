@@ -89,7 +89,7 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
 
 object L1000Reader extends Serializable {
 
-  def read(file: String)(implicit sc: SparkContext): (Array[String], RDD[DataPoint]) = {
+  def read(file: String)(sc: SparkContext): (Array[String], RDD[DataPoint]) = {
 
     def parseLine(index: Long, cols: Array[String]) =
       dp(

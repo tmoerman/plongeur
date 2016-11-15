@@ -12,8 +12,8 @@ import org.tmoerman.plongeur.util.RDDFunctions._
   */
 trait TestResources extends SparkContextSpec with FileResources {
 
-  val test2DFile    = wd + "test2D.csv"
-  val irisFile      = wd + "iris.csv"
+  val test2DFile = wd + "test2D.csv"
+  val irisFile   = wd + "iris.csv"
 
   val circle100 = wd + "circle.100.csv"
   val circle250 = wd + "circle.250.csv"
