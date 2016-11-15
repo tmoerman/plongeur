@@ -74,7 +74,7 @@ class ModelSpec extends FlatSpec with Matchers {
   }
 
   it should "be able to update subtypes of ScaleSelection" in {
-    setHistogramScaleSelectionNrBins(666)(base) shouldBe TDAParams(
+    setScaleResolution(666)(base) shouldBe TDAParams(
       lens = TDALens(
         Filter(Feature(0), 10, 0.6),
         Filter(Feature(1), 20, 0.6)),

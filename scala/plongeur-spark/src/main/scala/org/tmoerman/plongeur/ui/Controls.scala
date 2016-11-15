@@ -1,7 +1,7 @@
 package org.tmoerman.plongeur.ui
 
 import org.tmoerman.plongeur.tda.Model.TDAParams
-import org.tmoerman.plongeur.tda.Model.TDAParams.{setCollapseDuplicateClusters, setFilterNrBins, setFilterOverlap, setHistogramScaleSelectionNrBins}
+import org.tmoerman.plongeur.tda.Model.TDAParams._
 import rx.lang.scala.subjects.PublishSubject
 import rx.lang.scala.{Observable, Subject, Subscription}
 
@@ -90,7 +90,7 @@ class HtmlControls(val tdaParams: TDAParams) extends Serializable {
           <th colspan="2" class="code">General</th>
         </tr>
         <tr>
-          <th>Nr of scale bins</th>
+          <th>Scale resolution</th>
           <td class="wide"><paper-slider min="0" max="150" step="1" value="{{scaleBins}}"/></td>
           <td>[[scaleBins]]</td>
         </tr>
@@ -116,7 +116,7 @@ class HtmlControls(val tdaParams: TDAParams) extends Serializable {
   }
 
   def scaleBins$(channel: ChannelDuck) =
-    makeSource[Int](scaleBinsVarName, channel).map(v => setHistogramScaleSelectionNrBins(v))
+    makeSource[Int](scaleBinsVarName, channel).map(v => setScaleResolution(v))
 
   def collapse$(channel: ChannelDuck) =
     makeSource[Boolean](collapseVarName, channel).map(v => setCollapseDuplicateClusters(v))
@@ -132,8 +132,7 @@ class HtmlControls(val tdaParams: TDAParams) extends Serializable {
      collapse$(channel) ::
      tdaParams.lens.filters.zipWithIndex.flatMap{ case (_, idx) =>
        nrBins$(idx, channel) ::
-       overlap$(idx, channel) ::
-       Nil })
+       overlap$(idx, channel) :: Nil })
     .reduce(_ merge _)
     .scan(tdaParams){ (params, fn) => fn.apply(params) }
 

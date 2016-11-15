@@ -151,8 +151,13 @@ object Model {
     def setFilterOverlap(idx: Int, value: Percentage) =
       (params: TDAParams) => Try((modFilter(idx) andThenModify modFilterOverlap) (params).setTo(value)).getOrElse(params)
 
-    def setHistogramScaleSelectionNrBins(nrBins: Int) =
-      (params: TDAParams) => modify(params)(_.scaleSelection).setTo(HistogramScaleSelection(nrBins))
+    def setScaleResolution(resolution: Int) =
+      (params: TDAParams) => params.copy(scaleSelection = params.scaleSelection match {
+        case histogram@HistogramScaleSelection(_) => histogram.copy(nrBins = resolution)
+        case firstGap@FirstGapScaleSelection(_)   => firstGap.copy(gapPct = resolution)
+        case danifold@DanifoldScaleSelection(_)   => danifold.copy(nrBins = resolution)
+        case x: ScaleSelection => x
+      })
 
     def setCollapseDuplicateClusters(collapse: Boolean) =
       (params: TDAParams) => params.copy(collapseDuplicateClusters = collapse)

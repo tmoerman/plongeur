@@ -10,7 +10,7 @@ object Scale extends Serializable {
 
   def histogram(nrBins: Int = 10) = HistogramScaleSelection(nrBins)
 
-  def danifold(nrBins: Int = 10) = DanifoldHistogramScaleSelection(nrBins)
+  def danifold(nrBins: Int = 10) = DanifoldScaleSelection(nrBins)
 
   def firstGap(gapSizePct: Int = 10) = FirstGapScaleSelection(gapSizePct)
 
@@ -53,7 +53,7 @@ object Scale extends Serializable {
     *
     * @param nrBins The number of histogram bins.
     */
-  case class DanifoldHistogramScaleSelection(val nrBins: Int) extends ScaleSelection with Serializable {
+  case class DanifoldScaleSelection(val nrBins: Int) extends ScaleSelection with Serializable {
 
     override def apply(heights: Seq[Double]): Double = heights.toList match {
       case Nil => 0
