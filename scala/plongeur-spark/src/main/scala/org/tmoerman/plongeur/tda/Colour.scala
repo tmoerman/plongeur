@@ -32,7 +32,7 @@ object Colour extends Serializable {
   case class AverageFilterValue(palette: Palette, filter: Filter) extends Colouring {
 
     override def apply(ctx: TDAContext) = (rdd: RDD[Cluster]) => {
-      val filterRDD = ctx.filterCache(toFilterKey(filter)).apply(filter.spec)
+      val filterRDD = ctx.filterCache(filter.spec.key).apply(filter.spec)
 
       val min = filterRDD.values.min
 

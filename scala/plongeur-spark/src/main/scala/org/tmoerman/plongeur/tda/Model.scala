@@ -9,7 +9,7 @@ import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.mllib.linalg.{Vector => MLVector}
 import org.apache.spark.mllib.stat.Statistics
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Colour.{Nop, Colouring}
+import org.tmoerman.plongeur.tda.Colour.{Colouring, Nop}
 import org.tmoerman.plongeur.tda.Distances.{DEFAULT_DISTANCE, DistanceFunction}
 import org.tmoerman.plongeur.tda.Filters.{FilterRDDFactory, toContextAmendment}
 import org.tmoerman.plongeur.tda.Sketch.SketchParams
@@ -195,18 +195,44 @@ object Model {
   case object INFINITY extends Serializable
 
   sealed trait FilterSpec extends Serializable {
+
     def usesKNN = false
+
+    /**
+      * Mechanism for computing cache keys:
+      *
+      * For some filter functions (PCA, Laplacian), an intermediate cached data structure is computed that is used in
+      * different instances of the actual filter function: the n-th vector or principal component is picked out of the
+      * same cached data structure. Therefore the cache key needs to be equal among those filter function instances.
+      * Hence the motivation of setting the n variable to magic number -1.
+      *
+      * @return Returns a cache key for the specified filter.
+      */
+    def key: FilterKey = this
+
+    val COMMON_KEY_n = -1
   }
+
+  // TODO move this to Filters
 
   case class Feature(n: Int) extends FilterSpec
 
-  case class PrincipalComponent(n: Int) extends FilterSpec
+  case object FeatureMin      extends FilterSpec
+  case object FeatureMax      extends FilterSpec
+  case object FeatureMean     extends FilterSpec
+  case object FeatureStDev    extends FilterSpec
+  case object FeatureVariance extends FilterSpec
+
+  case class PrincipalComponent(n: Int) extends FilterSpec {
+    override def key = this.copy(n = COMMON_KEY_n)
+  }
 
   case class LaplacianEigenVector(n: Int,
                                   k: Option[Int] = None,
                                   sigma: Double = DEFAULT_SIGMA,
                                   distance: DistanceFunction = DEFAULT_DISTANCE) extends FilterSpec {
     override def usesKNN = true
+    override def key = this.copy(n = COMMON_KEY_n)
   }
 
   case class Eccentricity(p: Either[Int, _],

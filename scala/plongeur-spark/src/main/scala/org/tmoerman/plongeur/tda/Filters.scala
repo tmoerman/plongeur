@@ -2,7 +2,10 @@ package org.tmoerman.plongeur.tda
 
 import java.lang.Math.{PI, exp, min, sqrt}
 
+import breeze.linalg.{DenseVector => BDV}
+import breeze.{linalg, stats}
 import org.apache.spark.mllib.feature.PCA
+import org.apache.spark.mllib.linalg.BreezeConversions._
 import org.apache.spark.rdd.RDD
 import org.tmoerman.plongeur.tda.Distances.{Distance, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model._
@@ -68,16 +71,13 @@ object Filters extends Serializable {
     * @param filter
     * @return Returns a TDAContext amendment function.
     */
-  def toFilterAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) => {
-    val filterKey = toFilterKey(filter)
-
+  def toFilterAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) =>
     ctx
       .filterCache
-      .get(filterKey)
+      .get(filter.spec.key)
       .orElse(Some(toFilterRDDFactory(filter, ctx)))
-      .map(filterRDDFactory => ctx.copy(filterCache = ctx.filterCache + (filterKey -> filterRDDFactory)))
+      .map(filterRDDFactory => ctx.copy(filterCache = ctx.filterCache + (filter.spec.key -> filterRDDFactory)))
       .getOrElse(ctx)
-  }
 
   /**
     * @param filter
@@ -95,7 +95,32 @@ object Filters extends Serializable {
       case Feature(n) =>
         val result = ctx.dataPoints.map(p => (p.index, p.features(n))).cache
 
-        { case Feature(n) => result }
+        { case _: FilterSpec => result }
+
+      case FeatureMin =>
+        val result = ctx.dataPoints.map(p => (p.index, linalg.min(p.features.toBreeze)))
+
+        { case _: FilterSpec => result }
+
+      case FeatureMax =>
+        val result = ctx.dataPoints.map(p => (p.index, linalg.max(p.features.toBreeze)))
+
+        { case _: FilterSpec => result }
+
+      case FeatureMean =>
+        val result = ctx.dataPoints.map(p => (p.index, stats.mean(p.features.toBreeze)))
+
+        { case _: FilterSpec => result }
+
+      case FeatureVariance =>
+        val result = ctx.dataPoints.map(p => (p.index, stats.variance(p.features.toBreeze)))
+
+        { case _: FilterSpec => result }
+
+      case FeatureStDev =>
+        val result = ctx.dataPoints.map(p => (p.index, stats.stddev(p.features.toBreeze)))
+
+        { case _: FilterSpec => result }
 
       case _: PrincipalComponent =>
         val pcaModel = new PCA(min(MAX_PCs, ctx.D)).fit(ctx.dataPoints.map(_.features))
@@ -112,12 +137,12 @@ object Filters extends Serializable {
       case Eccentricity(p, distance) =>
         val result = eccentricityRDD(ctx, p, distance)
 
-        { case _: Eccentricity => result }
+        { case _: FilterSpec => result }
 
       case Density(sigma, distance) =>
         val result = densityRDD(ctx, sigma, distance)
 
-        { case _: Density => result }
+        { case _: FilterSpec => result }
 
     }
   }
@@ -127,29 +152,6 @@ object Filters extends Serializable {
   def toKNNKey(filter: Filter): Option[CacheKey] = filter.spec match {
     case LaplacianEigenVector(_,_,_, distance) => Some(distance)
     case _                                     => None
-  }
-
-  /**
-    * Mechanism for computing cache keys:
-    *
-    * For some filter functions (PCA, Laplacian), an intermediate cached data structure is computed that is used in
-    * different instances of the actual filter function: the n-th vector or principal component is picked out of the
-    * same cached data structure. Therefore the cache key needs to be equal among those filter function instances.
-    * Hence the motivation of setting the n variable to magic number -1.
-    *
-    * @param filter
-    * @return Returns a cache key for the specified filter.
-    */
-  def toFilterKey(filter: Filter): FilterKey = {
-    val COMMON_KEY_n = -1
-
-    filter.spec match {
-      case x @ (_: Feature)              => x
-      case x @ (_: Density)              => x
-      case x @ (_: Eccentricity)         => x
-      case x @ (_: PrincipalComponent)   => x.copy(n = COMMON_KEY_n)
-      case x @ (_: LaplacianEigenVector) => x.copy(n = COMMON_KEY_n)
-    }
   }
 
   /**

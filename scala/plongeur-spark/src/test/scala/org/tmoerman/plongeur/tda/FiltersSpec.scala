@@ -22,19 +22,19 @@ class FiltersSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   it should "yield the correct key" in {
     val feat = Feature(2)
-    toFilterKey(feat) shouldBe feat
+    feat.key shouldBe feat
 
     val pc0 = PrincipalComponent(0)
-    toFilterKey(pc0) shouldBe pc0.copy(n = -1)
+    pc0.key shouldBe pc0.copy(n = -1)
 
     val lap = LaplacianEigenVector(0)
-    toFilterKey(lap) shouldBe lap.copy(n = -1)
+    lap.key shouldBe lap.copy(n = -1)
 
     val ecc = Eccentricity(Left(1))
-    toFilterKey(ecc) shouldBe ecc
+    ecc.key shouldBe ecc
 
     val den = Density(1.0)
-    toFilterKey(den) shouldBe den
+    den.key shouldBe den
   }
 
 
