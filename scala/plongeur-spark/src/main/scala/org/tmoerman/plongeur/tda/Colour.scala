@@ -98,6 +98,29 @@ object Colour extends Serializable {
   }
 
   /**
+    * A Colouring that maps a cluster to its size.
+    *
+    * @param palette
+    */
+  case class ClusterSize(palette: Palette) extends Colouring {
+
+    override def apply(ctx: TDAContext) = (rdd: RDD[Cluster]) => {
+
+      val sizes = rdd.map(_.dataPoints.size).cache
+      val min = sizes.min
+      val max = sizes.max
+      val maxCorrected = max - min
+
+      rdd.map(cluster => {
+        val ratio = (cluster.dataPoints.size - min).toDouble / maxCorrected
+
+        cluster.copy(colour = Some(ratio).map(toBin(palette.size)).map(palette))
+      })
+    }
+
+  }
+
+  /**
     * A Colouring that maps a cluster to the bin corresponding to the category of which the cluster has
     * the most DataPoint instances.
     *
