@@ -1,6 +1,5 @@
 package org.tmoerman.plongeur.tda
 
-import java.io.Serializable
 import java.util.UUID
 
 import com.softwaremill.quicklens
@@ -40,11 +39,11 @@ object Model {
 
   def dp(index: Long,
          features: MLVector,
-         meta: Map[String, _ <: Serializable]) = DataPoint(index.toInt, features, Some(meta))
+         meta: Map[String, Any]) = DataPoint(index.toInt, features, Some(meta))
 
   case class DataPoint(val index: Index,
                        val features: MLVector,
-                       val meta: Option[Map[String, _ <: Serializable]] = None) extends Serializable
+                       val meta: Option[Map[String, Any]] = None) extends Serializable
 
   type LevelSetID = Vector[BigDecimal]
 
