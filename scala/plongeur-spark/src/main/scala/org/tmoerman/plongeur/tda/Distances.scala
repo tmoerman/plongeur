@@ -4,6 +4,8 @@ import breeze.linalg.functions._
 import org.apache.spark.mllib.linalg.BreezeConversions._
 import org.tmoerman.plongeur.tda.Model._
 
+import com.github.karlhigley.spark.neighbors.linalg.{JaccardDistance => SNJaccardDistance}
+
 /**
   * @author Thomas Moerman
   */
@@ -39,6 +41,17 @@ object Distances {
   // TODO Pearson correlation, closing over ~~TDAContext~~ / over broadcast variable
 
   // TODO Spearman
+
+  case object TanimotoDistance extends DistanceFunction {
+    override def apply(a: DataPoint, b: DataPoint) = breeze.linalg.functions.tanimotoDistance(a.features.toBreeze, b.features.toBreeze)
+  }
+
+  /**
+    * Caution: only works with sparse feature vectors!
+    */
+  case object JaccardDistance extends DistanceFunction {
+    override def apply(a: DataPoint, b: DataPoint) = SNJaccardDistance.apply(a.features, b.features)
+  }
 
   case object ChebyshevDistance extends DistanceFunction {
     override def apply(a: DataPoint, b: DataPoint) = chebyshevDistance(a.features.toBreeze, b.features.toBreeze)
