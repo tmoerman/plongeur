@@ -93,34 +93,44 @@ object Filters extends Serializable {
     spec match {
 
       case Feature(n) =>
-        val result = ctx.dataPoints.map(p => (p.index, p.features(n))).cache
+        val result = ctx.dataPoints.map(p => (p.index, p.features(n)))
 
-        { case _: FilterSpec => result }
+        { case _: FilterSpec => result.cache }
 
       case FeatureMin =>
         val result = ctx.dataPoints.map(p => (p.index, linalg.min(p.features.toBreeze)))
 
-        { case _: FilterSpec => result }
+        { case _: FilterSpec => result.cache }
 
       case FeatureMax =>
         val result = ctx.dataPoints.map(p => (p.index, linalg.max(p.features.toBreeze)))
 
-        { case _: FilterSpec => result }
+        { case _: FilterSpec => result.cache }
 
       case FeatureMean =>
         val result = ctx.dataPoints.map(p => (p.index, stats.mean(p.features.toBreeze)))
 
-        { case _: FilterSpec => result }
+        { case _: FilterSpec => result.cache }
 
       case FeatureVariance =>
         val result = ctx.dataPoints.map(p => (p.index, stats.variance(p.features.toBreeze)))
 
-        { case _: FilterSpec => result }
+        { case _: FilterSpec => result.cache }
 
       case FeatureStDev =>
         val result = ctx.dataPoints.map(p => (p.index, stats.stddev(p.features.toBreeze)))
 
-        { case _: FilterSpec => result }
+        { case _: FilterSpec => result.cache }
+
+      case Eccentricity(p, distance) =>
+        val result = eccentricityRDD(ctx, p, distance)
+
+        { case _: FilterSpec => result.cache }
+
+      case Density(sigma, distance) =>
+        val result = densityRDD(ctx, sigma, distance)
+
+        { case _: FilterSpec => result.cache }
 
       case _: PrincipalComponent =>
         val pcaModel = new PCA(min(MAX_PCs, ctx.D)).fit(ctx.dataPoints.map(_.features))
@@ -133,16 +143,6 @@ object Filters extends Serializable {
         val laplacianEigenVectors = Laplacian.apply(ctx, knnRDD, k, sigma)
 
         { case LaplacianEigenVector(n, _, _, _) => laplacianEigenVectors.mapValues(_(n)) }
-
-      case Eccentricity(p, distance) =>
-        val result = eccentricityRDD(ctx, p, distance)
-
-        { case _: FilterSpec => result }
-
-      case Density(sigma, distance) =>
-        val result = densityRDD(ctx, sigma, distance)
-
-        { case _: FilterSpec => result }
 
     }
   }
@@ -169,7 +169,7 @@ object Filters extends Serializable {
   def eccentricityRDD(ctx: ContextLike, p: Either[Index, _], distance: DistanceFunction): FilterRDD = {
     val N = ctx.N
 
-    val rdd = p match {
+    p match {
 
       case Right(INFINITY) =>
         unfoldDistances(ctx, distance)
@@ -188,10 +188,7 @@ object Filters extends Serializable {
 
       case _ =>
         throw new IllegalArgumentException(s"invalid value for eccentricity argument: '$p'")
-
     }
-
-    rdd.cache
   }
 
 
@@ -207,13 +204,12 @@ object Filters extends Serializable {
     val N = ctx.N
     val D = ctx.D
 
-    val denominator = -2 * sigma * sigma
+    val denominator = 2 * sigma * sigma
 
     unfoldDistances(ctx, distance)
-      .mapValues(d => exp(pow(d, 2) / denominator))
+      .mapValues(d => exp(-pow(d, 2) / denominator))
       .reduceByKey(_ + _)
-      .mapValues(_ / (N * pow(sqrt(2 * PI * sigma), D)))
-      .cache
+      //.mapValues(_ / (N * pow(sqrt(2 * PI * sigma), D))) -> TODO: useless denominator?
   }
 
   private def unfoldDistances(ctx: ContextLike, distance: DistanceFunction): RDD[(Index, Distance)] =
