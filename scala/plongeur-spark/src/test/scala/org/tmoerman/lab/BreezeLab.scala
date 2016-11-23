@@ -1,6 +1,6 @@
 package org.tmoerman.lab
 
-import breeze.linalg.{CSCMatrix, SparseVector}
+import breeze.linalg._
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
@@ -60,17 +60,21 @@ class BreezeLab extends FlatSpec with Matchers {
   behavior of "Breeze matrices"
 
   it should "be possible to slice rows of a sparse matrix" in {
-    import breeze.linalg._
-
     val sparse = CSCMatrix(
       (1d, 2d, 3d, 4d),
       (5d, 6d, 7d, 8d),
       (9d, 10d, 11d, 12d),
-      (13d, 14d, 15d, 16d)).toDense
+      (13d, 14d, 15d, 16d))
 
-    val result = sparse(*, ::)
+    val r2 = sparse * DenseVector.ones[Double](4)
 
-    println(result)
+    val result = sum(sparse.toDense(*, ::))
+
+    val D = diag(SparseVector(r2.toArray))
+
+    println(result, D)
   }
+
+
 
 }
