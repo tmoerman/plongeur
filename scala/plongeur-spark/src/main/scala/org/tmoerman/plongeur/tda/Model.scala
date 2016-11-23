@@ -68,6 +68,24 @@ object Model {
 
     def verbose = s"""Cluster($id, $dataPoints)"""
 
+    import org.tmoerman.plongeur.util.IterableFunctions._
+
+    def categoryFrequencies =
+      dataPoints
+        .flatMap(_.meta)
+        .flatMap(_.iterator)
+        .filter(_._2.isInstanceOf[String])
+        .groupBy(_._1)
+        .map{ case (cat, set) => s"$cat \n  ${set.map(_._2).frequencies.mkString("\n  ")}" }
+        .mkString("\n\n")
+
+    def info =
+      s"""
+         |size: $size
+         |
+         |$categoryFrequencies
+       """.stripMargin
+
     override def toString = s"Cluster($id)"
 
     def colours = colour.toSeq
