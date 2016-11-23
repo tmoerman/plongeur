@@ -1,6 +1,6 @@
 package org.tmoerman.plongeur.util
 
-import org.apache.spark.mllib.linalg.{Vector => MLVector, SparseVector, SparseMatrix, DenseMatrix, DenseVector}
+import org.apache.spark.mllib.linalg.{Vector => MLVector, SparseVector, Matrix, SparseMatrix, DenseMatrix, DenseVector}
 import scala.collection.mutable.{ArrayBuilder => MArrayBuilder}
 import com.github.fommil.netlib.BLAS.{getInstance => blas}
 
@@ -9,11 +9,22 @@ import com.github.fommil.netlib.BLAS.{getInstance => blas}
   */
 object MatrixFunctions {
 
-  implicit def pimpSparse(m: SparseMatrix): SparseMatrixFunctions = new SparseMatrixFunctions(m)
+  implicit def pimpSparse(m: Matrix): MatrixFunctions = m match {
+    case sm: SparseMatrix => new SparseMatrixFunctions(sm)
+    case dm: DenseMatrix  => new DenseMatrixFunctions(dm)
+  }
 
 }
 
-class DenseMatrixFunctions(m: DenseMatrix) {
+trait MatrixFunctions {
+
+  def rowVectors: Iterator[MLVector]
+
+  def colVectors: Iterator[MLVector]
+
+}
+
+class DenseMatrixFunctions(m: DenseMatrix) extends MatrixFunctions{
 
   def rowVectors = colIter(m.transpose)
 
@@ -40,7 +51,7 @@ class DenseMatrixFunctions(m: DenseMatrix) {
 
 }
 
-class SparseMatrixFunctions(m: SparseMatrix) {
+class SparseMatrixFunctions(m: SparseMatrix) extends MatrixFunctions {
 
   def rowVectors = colIter(m.transpose)
 
