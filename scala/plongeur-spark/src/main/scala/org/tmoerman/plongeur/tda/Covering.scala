@@ -10,6 +10,8 @@ import org.tmoerman.plongeur.tda.Model._
   */
 object Covering {
 
+  // TODO major overhaul of this mechanism, build some kind of lookup structure to close over in the filter function, maybe with a broadcast variable...
+
   /**
     * @param ctx
     * @param lens
@@ -56,6 +58,9 @@ object Covering {
                                nrBins:      Int,
                                overlap:     Percentage)
                               (image: BigDecimal): Seq[BigDecimal] = {
+
+    // TODO this actually sucks major overhaul of this mechanism, build some kind of lookup structure to close over
+    // TODO in the filter function, maybe with a broadcast variable...
 
     val binLength = getBinLength(boundaryMax - boundaryMin, nrBins, overlap)
 
