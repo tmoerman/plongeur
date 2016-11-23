@@ -29,7 +29,11 @@ object Scale extends Serializable {
         val max = heights.max
         val inc = (max - min) / nrBins
 
-        def bin(d: Double) = (BigDecimal(d - min) quot inc).toInt
+        def bin(d: Double) = try {
+          (BigDecimal(d - min) quot inc).toInt
+        } catch {
+          case e: Exception => throw new Exception(s"d=$d, inc=$inc, min=$min, max=$max", e)
+        }
 
         val frequencies = heights.map(bin).frequencies
 
