@@ -7,7 +7,7 @@ import breeze.{linalg, stats}
 import org.apache.spark.mllib.feature.PCA
 import org.apache.spark.mllib.linalg.BreezeConversions._
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Distances.{Distance, DistanceFunction}
+import org.tmoerman.plongeur.tda.Distances.{TanimotoDistance, Distance, DistanceFunction}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.geometry.Laplacian
 import org.tmoerman.plongeur.util.RDDFunctions._
@@ -71,11 +71,11 @@ object Filters extends Serializable {
     * @param filter
     * @return Returns a TDAContext amendment function.
     */
-  def toFilterAmendment(filter: Filter): ContextAmendment = (ctx: TDAContext) =>
+  def toFilterAmendment(filter: Filter, filterRDDFactory: Option[FilterRDDFactory] = None): ContextAmendment = (ctx: TDAContext) =>
     ctx
       .filterCache
       .get(filter.spec.key)
-      .orElse(Some(toFilterRDDFactory(filter, ctx)))
+      .orElse(filterRDDFactory.orElse(Some(toFilterRDDFactory(filter, ctx))))
       .map(filterRDDFactory => ctx.copy(filterCache = ctx.filterCache + (filter.spec.key -> filterRDDFactory)))
       .getOrElse(ctx)
 
@@ -91,6 +91,20 @@ object Filters extends Serializable {
     // TODO: val ctxLike: ContextLike = toSketchKey(filter).flatMap(key => ctx.sketchCache.get(key)).getOrElse(ctx)
 
     spec match {
+
+      case Meta(key: String) =>
+        val result = ctx.dataPoints.map(p => {
+          val value = p.meta.get(key) match {
+            case f: Float  => f.toDouble
+            case d: Double => d
+            case i: Int    => i.toDouble
+            case s: String => s.toDouble
+          }
+
+          (p.index, value)
+        })
+
+        {case _: FilterSpec => result.cache }
 
       case Feature(n) =>
         val result = ctx.dataPoints.map(p => (p.index, p.features(n)))
@@ -136,6 +150,13 @@ object Filters extends Serializable {
         val pcaModel = new PCA(min(MAX_PCs, ctx.D)).fit(ctx.dataPoints.map(_.features))
 
         { case PrincipalComponent(n) => ctx.dataPoints.map(p => (p.index, pcaModel.transform(p.features)(n))) }
+
+      // TODO temporary
+      case LaplacianEigenVector(_, _, sigma, TanimotoDistance) =>
+
+        val laplacianEigenVectors = Laplacian.tanimoto(ctx, sigma)
+
+      { case LaplacianEigenVector(n, _, _, _) => laplacianEigenVectors.mapValues(_(n)) }
 
       case LaplacianEigenVector(_, k, sigma, distance) =>
         val knnRDD = ctx.knnCache.getOrElse(toKNNKey(spec), throw new IllegalStateException(s"No KNN found for $distance"))

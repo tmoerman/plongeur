@@ -214,6 +214,8 @@ object Model {
 
   // TODO move this to Filters
 
+  case class Meta(name: String) extends FilterSpec
+
   case class Feature(n: Int) extends FilterSpec
 
   case object FeatureMin      extends FilterSpec
