@@ -14,12 +14,12 @@ resolvers ++= Seq(
   Resolver.sonatypeRepo("releases"),
   Resolver.sonatypeRepo("snapshots"),
 
-  "local .m2" at "file://" + localM2
+  Resolver.mavenLocal
 )
 
 val sparkVersion  = "1.6.1"
 
-publishTo := Some(Resolver.file("file",  new File(localM2)))
+publishTo := Some(Resolver.mavenLocal)
 
 libraryDependencies ++= Seq(
 
