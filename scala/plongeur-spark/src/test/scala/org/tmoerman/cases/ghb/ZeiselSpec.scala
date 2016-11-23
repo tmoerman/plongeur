@@ -6,13 +6,17 @@ import org.apache.commons.lang.StringUtils.trim
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.BreezeConversions._
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Colour.ClusterSize
-import org.tmoerman.plongeur.tda.Distances.TanimotoDistance
+import org.tmoerman.plongeur.tda.Colour.{AverageFilterValue, ClusterMaxFrequency, ClusterSize}
+import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
 import org.tmoerman.plongeur.tda.cluster.Scale.histogram
-import org.tmoerman.plongeur.tda.{Brewer, TDAMachine}
+import org.tmoerman.plongeur.tda.geometry.Laplacian
+import org.tmoerman.plongeur.tda.knn.ExactKNN
+import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
+import org.tmoerman.plongeur.tda.{Filters, Brewer, TDAMachine}
 import org.tmoerman.plongeur.test.SparkContextSpec
+import org.tmoerman.plongeur.util.TimeUtils
 import rx.lang.scala.subjects.PublishSubject
 
 /**
@@ -45,27 +49,69 @@ class ZeiselSpec extends FlatSpec with SparkContextSpec with Matchers {
     */
   val exp_mRNA = wd + "expression_mRNA_17-Aug-2014.txt"
 
-  "parsing the Zeisel file" should "work" in {
-    val L = 500
+  val L = Some(100)
 
-    val rdd = parseZeisel(sc, exp_mRNA, limit=Some(L))
+  val rdd = parseZeisel(sc, exp_mRNA, limit=L)
 
-    val ctx = TDAContext(sc, rdd)
+  val ctx = TDAContext(sc, rdd)
 
-    val dist = TanimotoDistance
+  val dist = TanimotoDistance
 
+  "ExactKNN on the (partial) Zeisel dataset" should "work" ignore {
+    val (knnRDD, duration) = TimeUtils.time{
+      val kNNParams = ExactKNNParams(k = 20, distance = dist)
+
+      ExactKNN(ctx, kNNParams).collect
+    }
+
+    println(s"Zeisel top $L exact kNN: ${duration.toMinutes} minutes")
+  }
+
+  "Laplacian eigenvectors for Zeisel dataset" should "work" ignore {
+    val (lapEig, duration) = TimeUtils.time{
+      Laplacian.tanimoto(ctx).collect
+    }
+
+    println(s"Zeisel top $L laplacian eigenvectors: ${duration.toMinutes} minutes")
+
+    println(lapEig.head)
+  }
+
+  "TDA on the (partial) Zeisel dataset)" should "work" ignore {
+
+    val lap0 = Filter(LaplacianEigenVector(0, distance = TanimotoDistance), 30, 0.3)
+    val lap1 = Filter(LaplacianEigenVector(1, distance = TanimotoDistance), 30, 0.3)
+    val den = Filter(Density(sigma=1.0, distance = dist), 45, 0.30)
+    val ecc = Filter(Eccentricity(Right(INFINITY), distance = dist), 45, 0.30)
+
+    val pc0  = Filter(PrincipalComponent(0), 45, 0.3)
+    val pc1  = Filter(PrincipalComponent(1), 30, 0.3)
+    val mean = Filter(FeatureMean, 30, 0.3)
     val vari = Filter(FeatureVariance, 30, 0.3)
-    val dens = Filter(Density(sigma=1.0, dist), 30, 0.30)
+    val age  = Filter(Meta("age"), 30, 0.3)
+    val diam = Filter(Meta("diameter"), 30, 0.3)
+    val mRNA = Filter(Meta("total mRNA mol"), 30, 0.3)
 
-    val clusterSize = ClusterSize(Brewer.palettes("RdYlBu")(9).reverse)
+    val bySex    = ClusterMaxFrequency(Brewer.palettes("Set1")(3), (d: DataPoint) => d.meta.get("sex"))
+    val byTissue = ClusterMaxFrequency(Brewer.palettes("Set1")(4), (d: DataPoint) => d.meta.get("tissue"))
+    val byLevel1 = ClusterMaxFrequency(Brewer.palettes("Set1")(7), (d: DataPoint) => d.meta.get("level1class"))
+    val byGroup  = ClusterMaxFrequency(Brewer.palettes("Set1")(7), (d: DataPoint) => d.meta.get("group"))
+
+    val clSize = ClusterSize(Brewer.palettes("RdYlBu")(9).reverse)
+
+    val avgEcc = AverageFilterValue(Brewer.palettes("Blues")(9), ecc)
+    val avgDen = AverageFilterValue(Brewer.palettes("Reds")(9), den)
+    val avgAge = AverageFilterValue(Brewer.palettes("RdYlBu")(9), age)
+    val avgDia = AverageFilterValue(Brewer.palettes("RdYlBu")(9), diam)
+    val avgRNA = AverageFilterValue(Brewer.palettes("RdYlBu")(9), mRNA)
 
     val BASE =
       TDAParams(
-        lens = TDALens(dens),
+        lens = TDALens(lap0),
         clusteringParams = ClusteringParams(distance = dist),
         scaleSelection = histogram(30),
-        collapseDuplicateClusters = false,
-        colouring = clusterSize)
+        collapseDuplicateClusters = true,
+        colouring = clSize)
 
     val in$ = PublishSubject[TDAParams]
 
@@ -117,7 +163,7 @@ object ZeiselReader {
     case 4 => toMeta(columns, limit, _.toInt)     // sex
     case 5 => toMeta(columns, limit, _.toInt)     // age
     case 6 => toMeta(columns, limit, _.toDouble)  // diameter
-    case 7 => toMeta(columns, limit)              // cell ID
+    case 7 => Nil //toMeta(columns, limit)              // cell ID
     case 8 => toMeta(columns, limit)              // level 1 class
     case 9 => toMeta(columns, limit)              // level 2 class
     case 10 => Nil                                // empty line
