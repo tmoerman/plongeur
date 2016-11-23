@@ -127,27 +127,28 @@ object Colour extends Serializable {
     * @param projection
     * @param palette
     */
-  case class ClusterMaxFrequency(palette: Palette, projection: (DataPoint) => Any) extends Colouring {
+  case class ClusterMaxFrequency(palette: Palette,
+                                 projection: (DataPoint) => Any,
+                                 projectionToBin: Option[Map[Any, ColourBin]] = None) extends Colouring {
 
     override def apply(ctx: TDAContext) = (rdd: RDD[Cluster]) => {
 
-      val attributesRDD =
+      lazy val autoBinMap =
         rdd
           .flatMap(_.dataPoints.map(p => projection(p)))
           .distinct
           .zipWithIndex
           .map{ case (any, l) => (any, l.toInt) }
-
-      val attributesToBin: Map[Any, ColourBin] =
-        attributesRDD
           .collect
           .toMap
 
-      require(palette.size >= attributesToBin.size, s"palette size ${palette.size} <  nr distinct attributes${attributesToBin.size}")
+      val binMap: Map[Any, ColourBin] = projectionToBin.getOrElse(autoBinMap)
+
+      require(palette.size >= binMap.size, s"palette size ${palette.size} <  nr distinct attributes${binMap.size}")
 
       def maxFreqProjection(cluster: Cluster) = cluster.dataPoints.map(projection).frequencies.maxBy(_._2)._1
 
-      rdd.map(cluster => cluster.copy(colour = Some(maxFreqProjection(cluster)).map(attributesToBin).map(palette)))
+      rdd.map(cluster => cluster.copy(colour = Some(maxFreqProjection(cluster)).map(binMap).map(palette)))
     }
 
   }
