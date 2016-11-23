@@ -1,6 +1,11 @@
 package org.tmoerman.plongeur.tda.geometry
 
-import org.apache.spark.mllib.linalg.SparseMatrix
+import breeze.linalg.DenseVector.ones
+import org.apache.spark.mllib.linalg.{SparseMatrix, Vector => MLVector}
+import breeze.linalg.{Vector => BV, SparseVector => BSV, CSCMatrix => BSM, DenseVector => BDV}
+import breeze.linalg._
+import breeze.math._
+import breeze.numerics._
 import org.apache.spark.rdd.RDD
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distances._
@@ -39,6 +44,57 @@ class LaplacianSpec extends FlatSpec with SparkContextSpec with TestResources wi
     laplacian.first._2.size shouldBe rdd.first.features.size
 
     laplacian.count shouldBe N
+  }
+
+  "computing a vectorized laplacian for tanimoto distance" should "work" in {
+    import org.apache.spark.mllib.linalg.BreezeConversions._
+
+    val N = 5
+
+    val rawFeatures: Array[BSV[Double]] = Array(
+      BSV(N)((0, 1d), (2, 1d), (4, 1d)),
+      BSV(N)((1, 1d), (3, 1d), (4, 1d)),
+      BSV(N)((1, 1d), (2, 1d), (3, 1d)),
+      BSV(N)((2, 1d), (3, 1d), (4, 1d)),
+      BSV(N)((0, 1d), (1, 1d), (4, 1d)))
+
+    // Turn the raw features into a sparse matrix
+    val data: BSM[Double] =
+      SparseMatrix
+        .fromCOO(N, N,
+          rawFeatures
+            .view
+            .zipWithIndex
+            .flatMap{ case (v, rowIdx) => v.activeIterator.map{ case (colIdx, v) => (rowIdx, colIdx, v) }})
+        .toBreeze
+        .asInstanceOf[BSM[Double]]
+
+    val IPM = data * data.t
+
+    val W = SparseMatrix.fromCOO(N, N, for {
+      i <- (0 to N-1)
+      j <- (0 to N-1)
+      if i != j // 0 diagonal
+      d <- {
+        val dotp = IPM(i, j)
+        val denom = IPM(i, i) + IPM(j, j) - dotp
+        val tanimotoDistance = if (denom == 0d) None else Some(1 - (dotp / denom))
+
+        tanimotoDistance
+      }
+    } yield (i, j, gaussianSimilarity(d))).toBreeze.asInstanceOf[BSM[Double]]
+
+    //val Degrees = sum(W(*, ::))
+
+    //Degrees
+
+//    val Dv_pow: BDV[Double] = Degrees.toDenseVector :^ -0.5d
+//
+//    val D_pow = diag(Dv_pow)
+//
+//    val L = D_pow * W * D_pow
+//
+//    println(L)
   }
 
 }

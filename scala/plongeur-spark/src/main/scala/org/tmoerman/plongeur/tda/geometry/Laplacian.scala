@@ -2,14 +2,15 @@ package org.tmoerman.plongeur.tda.geometry
 
 import java.lang.Math.{min, exp, pow}
 
-import breeze.linalg.Matrix
+import breeze.linalg.DenseVector._
+import breeze.linalg.{*, sum, diag, Matrix => BM, SparseVector => BSV, CSCMatrix => BSM, DenseVector => BDV}
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.feature.Normalizer
 import org.apache.spark.mllib.linalg.BreezeConversions._
-import org.apache.spark.mllib.linalg.distributed.{IndexedRow, IndexedRowMatrix}
+import org.apache.spark.mllib.linalg.distributed.{RowMatrix, IndexedRow, IndexedRowMatrix}
 import org.apache.spark.mllib.linalg.{SparseMatrix, Vector => MLVector}
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Distances.Distance
+import org.tmoerman.plongeur.tda.Distances.{TanimotoDistance, DistanceFunction, Distance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.knn._
 import org.tmoerman.plongeur.util.MatrixFunctions._
@@ -57,23 +58,135 @@ object Laplacian {
 
   /**
     * @param ctx
-    * @param A
-    * @return Returns the Laplacian as a RowMatrix in function of the specified affinity matrix.
+    * @param gaussianAffinities
+    * @return Returns the normalized Laplacian as a RowMatrix in function of the specified affinity matrix.
     */
-  def fromAffinities(ctx: TDAContext, A: SparseMatrix, sigma: Double = DEFAULT_SIGMA): RDD[(Index, MLVector)] = {
-    val D_pow = degrees(A, -0.5).toBreeze
+  def fromAffinities(ctx: TDAContext, gaussianAffinities: SparseMatrix, sigma: Double = DEFAULT_SIGMA): RDD[(Index, MLVector)] = {
+    val D_pow = degrees(gaussianAffinities, -0.5).toBreeze
 
-    val W = A.toBreeze
+    val W = gaussianAffinities.toBreeze
 
     val L = D_pow * W * D_pow
 
+    normalizedEigenvectors(ctx, L)
+  }
+
+  def normalizedEigenvectors(ctx: TDAContext, L: BM[Distance]): RDD[(Index, MLVector)] = {
     val svd = toIndexedRowMatrix(ctx.sc, L).computeSVD(min(ctx.D, NR_EIGENVECTORS), computeU = true)
 
     val normalizer = new Normalizer()
 
     val U_normalized = svd.U.rows.map(r => (r.index.toInt, normalizer.transform(r.vector)))
 
-    U_normalized.cache
+    U_normalized
+  }
+
+  /**
+    * A Breeze implementation.
+    *
+    * @param ctx
+    * @param sigma
+    * @return Returns the normalized Laplacian as a RowMatrix. A vectorized implementation of the Tanimoto distance
+    *         is used to compute the distance matrix.
+    */
+  @deprecated("experimental") def tanimotoBreeze(ctx: TDAContext, sigma: Double = DEFAULT_SIGMA): RDD[(Index, MLVector)] = {
+    val N = ctx.N
+    val D = ctx.D
+
+    val rawFeatures = ctx.dataPoints.map(_.features.toBreeze).collect
+
+    val data: BSM[Double] =
+      SparseMatrix
+        .fromCOO(N, D,
+          rawFeatures
+            .view
+            .zipWithIndex
+            .flatMap{ case (v, rowIdx) => v.activeIterator.map{ case (colIdx, v) => (rowIdx, colIdx, v) }})
+        .toBreeze
+        .asInstanceOf[BSM[Double]]
+
+    val IPM = data * data.t // inner product matrix
+
+    def lookup(i: Int, j: Int) = IPM(i,j)
+
+    val W = SparseMatrix.fromCOO(N, N, for {
+      i <- (0 to N-1)
+      j <- (0 to N-1)
+      if i != j // 0s on the diagonal
+      d <- {
+        val dotp = lookup(i, j)
+        val denom = lookup(i, i) + lookup(j, j) - dotp
+        val tanimotoDistance = if (denom == 0d) None else Some(1 - (dotp / denom))
+
+        tanimotoDistance
+      }
+    } yield (i, j, gaussianSimilarity(d))).toBreeze.asInstanceOf[BSM[Double]]
+
+    val Degrees = W * ones[Double](N)
+
+    val Dv_pow = Degrees :^ -0.5d
+
+    val D_pow = diag(BSV(Dv_pow.toArray))
+
+    val L = D_pow * W * D_pow
+
+    normalizedEigenvectors(ctx, L)
+  }
+
+  /**
+    * A Spark implementation.
+    *
+    * @param ctx
+    * @param sigma
+    * @return Returns the normalized Laplacian as a RowMatrix. A vectorized implementation of the Tanimoto distance
+    *         is used to compute the distance matrix.
+    */
+  def tanimoto(ctx: TDAContext, sigma: Double = DEFAULT_SIGMA): RDD[(Index, MLVector)] = {
+    val N = ctx.N
+    val D = ctx.D
+
+    val rawFeatures = ctx.dataPoints.map(_.features.toBreeze).collect
+
+    val featuresRDD = ctx.dataPoints.map(_.features).cache
+
+    val rowMatrix = new RowMatrix(featuresRDD)
+
+    val dataMatrix =
+      SparseMatrix
+        .fromCOO(N, D,
+          rawFeatures
+            .view
+            .zipWithIndex
+            .flatMap{ case (v, rowIdx) => v.activeIterator.map{ case (colIdx, v) => (rowIdx, colIdx, v) }})
+
+    val IPM = rowMatrix.multiply(dataMatrix.toDense.transpose)
+
+    val C = IPM.rows.map(_.vector).collect
+
+    def lookup(i: Int, j: Int): Double = C(i)(j)
+
+    val W = SparseMatrix.fromCOO(N, N, for {
+      i <- (0 to N-1)
+      j <- (0 to N-1)
+      if i != j // 0s on the diagonal
+      d <- {
+        val dotp = lookup(i, j)
+        val denom = lookup(i, i) + lookup(j, j) - dotp
+        val tanimotoDistance = if (denom == 0d) None else Some(1 - (dotp / denom))
+
+        tanimotoDistance
+      }
+    } yield (i, j, gaussianSimilarity(d))).toBreeze.asInstanceOf[BSM[Double]]
+
+    val Degrees = W * ones[Double](N)
+
+    val Dv_pow = Degrees :^ -0.5d
+
+    val D_pow = diag(BSV(Dv_pow.toArray))
+
+    val L = D_pow * W * D_pow
+
+    normalizedEigenvectors(ctx, L)
   }
 
   /**
@@ -81,8 +194,8 @@ object Laplacian {
     * @param m
     * @return Returns the specified matrix transformed into a Spark RowMatrix.
     */
-  def toIndexedRowMatrix(sc: SparkContext, m: Matrix[Distance]): IndexedRowMatrix = {
-    val LRowVectors = m.toMLLib.asInstanceOf[SparseMatrix].rowVectors
+  def toIndexedRowMatrix(sc: SparkContext, m: BM[Distance]): IndexedRowMatrix = {
+    val LRowVectors = m.toMLLib.rowVectors
 
     val indexedRows =
       sc
