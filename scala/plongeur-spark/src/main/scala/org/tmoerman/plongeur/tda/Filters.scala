@@ -1,13 +1,13 @@
 package org.tmoerman.plongeur.tda
 
-import java.lang.Math.{PI, exp, min, sqrt}
+import java.lang.Math.{exp, min}
 
 import breeze.linalg.{DenseVector => BDV}
 import breeze.{linalg, stats}
 import org.apache.spark.mllib.feature.PCA
 import org.apache.spark.mllib.linalg.BreezeConversions._
 import org.apache.spark.rdd.RDD
-import org.tmoerman.plongeur.tda.Distances.{TanimotoDistance, Distance, DistanceFunction}
+import org.tmoerman.plongeur.tda.Distances.{Distance, DistanceFunction, TanimotoDistance}
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.geometry.Laplacian
 import org.tmoerman.plongeur.util.RDDFunctions._
@@ -212,8 +212,9 @@ object Filters extends Serializable {
     }
   }
 
-
   /**
+    * TODO: see https://en.wikipedia.org/wiki/Multivariate_kernel_density_estimation
+    *
     * @param sigma
     * @param ctx
     * @param distance
