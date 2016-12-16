@@ -6,7 +6,7 @@ name := "plongeur-spark"
 
 description := "Plongeur Spark algorithms module"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.8"
 
 val localM2 = Path.userHome.absolutePath + "/.m2/repository"
 
@@ -17,28 +17,31 @@ resolvers ++= Seq(
   Resolver.mavenLocal
 )
 
-val sparkVersion  = "1.6.1"
+val sparkVersion  = "2.0.2"
 
 publishTo := Some(Resolver.mavenLocal)
 
+javaOptions ++= Seq("-Xms512M", "-Xmx2048M", "-XX:MaxPermSize=2048M", "-XX:+CMSClassUnloadingEnabled")
+
+parallelExecution in Test := false
+
 libraryDependencies ++= Seq(
 
-  "org.apache.spark"       % "spark-core_2.10"   % sparkVersion % "provided",
-  "org.apache.spark"       % "spark-mllib_2.10"  % sparkVersion exclude("com.chuusai", "*"),
+  "org.apache.spark"       %% "spark-core"       % sparkVersion % "provided",
+  "org.apache.spark"       %% "spark-mllib"      % sparkVersion exclude("com.chuusai", "*"),
   "org.scalanlp"           %% "breeze-natives"   % "0.11.2"     exclude("com.chuusai", "*"),
   "com.esotericsoftware"   % "kryo"              % "4.0.0",
 
   "com.github.haifengl"    % "smile-core"        % "1.2.0",
 
   "io.reactivex"           %% "rxscala"          % "0.26.1",
-  "org.scalaz"             % "scalaz-core_2.10"  % "7.2.0",
+  "org.scalaz"             %% "scalaz-core"      % "7.2.0",
 
-  "com.github.karlhigley"  %% "spark-neighbors"  % "0.3.6-FORK" exclude("org.apache.spark", "*") exclude("org.scalanlp", "*"),
+  "com.github.karlhigley"  % "spark-neighbors_2.10"  % "0.3.6-FORK" exclude("org.apache.spark", "*") exclude("org.scalanlp", "*"),
 
-  "com.softwaremill.quicklens" %% "quicklens"    % "1.4.4",
+  "com.softwaremill.quicklens" %% "quicklens"    % "1.4.8",
 
-  "org.scalatest"          %% "scalatest"        % "2.2.4"  % "test",
-
-  compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+  "org.scalatest"          %% "scalatest"          % "3.0.1"       % "test",
+  "com.holdenkarau"        %% "spark-testing-base" % "1.6.1_0.3.3" % "test"
 
 )

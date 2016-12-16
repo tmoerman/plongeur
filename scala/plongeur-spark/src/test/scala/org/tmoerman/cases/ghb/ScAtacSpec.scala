@@ -1,16 +1,16 @@
 package org.tmoerman.cases.ghb
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.commons.lang.StringUtils._
 import org.apache.spark.mllib.linalg.Vectors
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Model.dp
-import org.tmoerman.plongeur.test.SparkContextSpec
 import org.tmoerman.plongeur.util.RDDFunctions._
 
 /**
   * @author Thomas Moerman
   */
-class ScAtacSpec extends FlatSpec with SparkContextSpec with Matchers {
+class ScAtacSpec extends FlatSpec with SharedSparkContext with Matchers {
 
   val wd = "/Users/tmo/Work/ghb2016/data/scATAC/"
 

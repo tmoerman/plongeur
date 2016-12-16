@@ -1,5 +1,6 @@
 package org.tmoerman.cases.mnist
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.commons.lang.StringUtils.trim
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.rdd.RDD
@@ -9,14 +10,13 @@ import org.tmoerman.plongeur.tda.Colour._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.TDAMachine
 import org.tmoerman.plongeur.tda.cluster.Clustering.ClusteringParams
-import org.tmoerman.plongeur.test.SparkContextSpec
-import rx.lang.scala.Observable
 import org.tmoerman.plongeur.util.IterableFunctions._
+import rx.lang.scala.Observable
 
 /**
   * @author Thomas Moerman
   */
-class MnistSpec extends FlatSpec with SparkContextSpec with Matchers {
+class MnistSpec extends FlatSpec with SharedSparkContext with Matchers {
 
   val wd = "src/test/resources/mnist/"
 

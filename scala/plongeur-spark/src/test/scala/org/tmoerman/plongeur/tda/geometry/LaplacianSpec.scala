@@ -1,22 +1,19 @@
 package org.tmoerman.plongeur.tda.geometry
 
-import breeze.linalg.DenseVector.ones
+import breeze.linalg.{CSCMatrix => BSM, DenseVector => BDV, SparseVector => BSV, Vector => BV}
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.mllib.linalg.{SparseMatrix, Vector => MLVector}
-import breeze.linalg.{Vector => BV, SparseVector => BSV, CSCMatrix => BSM, DenseVector => BDV}
-import breeze.linalg._
-import breeze.math._
-import breeze.numerics._
 import org.apache.spark.rdd.RDD
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distances._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.geometry.Laplacian._
-import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
+import org.tmoerman.plongeur.test.TestResources
 
 /**
   * @author Thomas Moerman
   */
-class LaplacianSpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
+class LaplacianSpec extends FlatSpec with SharedSparkContext with TestResources with Matchers {
 
   import LaplacianSpec._
 
@@ -24,26 +21,24 @@ class LaplacianSpec extends FlatSpec with SparkContextSpec with TestResources wi
 
   val sigma = 1.0
 
-  val rdd = irisDataPointsRDD.cache
-
-  val ctx = TDAContext(sc, rdd)
-
-  val N = rdd.count.toInt
-
-  val distancesRDD = distances(rdd)
-
-  val affinitiesRDD = toAffinities(distancesRDD, sigma)
-
   behavior of "Laplacian"
 
   it should "should compute the laplacian embedding of an affinity matrix" in {
-    val A = toSparseMatrix(N, affinitiesRDD.collect)
+    val rdd = irisDataPointsRDD.cache
+
+    val ctx = TDAContext(sc, rdd)
+
+    val distancesRDD = distances(rdd)
+
+    val affinitiesRDD = toAffinities(distancesRDD, sigma)
+
+    val A = toSparseMatrix(ctx.N, affinitiesRDD.collect)
 
     val laplacian = Laplacian.fromAffinities(ctx, A)
 
     laplacian.first._2.size shouldBe rdd.first.features.size
 
-    laplacian.count shouldBe N
+    laplacian.count shouldBe ctx.N
   }
 
   "computing a vectorized laplacian for tanimoto distance" should "work" in {

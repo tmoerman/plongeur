@@ -1,15 +1,16 @@
 package org.tmoerman.lab
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.mllib.linalg.SparseMatrix
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
+import org.tmoerman.plongeur.test.TestResources
 import org.tmoerman.plongeur.util.RDDFunctions._
 
 /**
   * @author Thomas Moerman
   */
-class MLLab extends FlatSpec with Matchers with SparkContextSpec with TestResources {
+class MLLab extends FlatSpec with Matchers with SharedSparkContext with TestResources {
 
   behavior of "columnSimilarities"
 

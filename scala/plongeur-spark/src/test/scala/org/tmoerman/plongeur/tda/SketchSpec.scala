@@ -1,17 +1,18 @@
 package org.tmoerman.plongeur.tda
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.mllib.linalg.Vectors.dense
 import org.scalatest.{FlatSpec, Matchers}
-import org.tmoerman.plongeur.tda.Distances.{ManhattanDistance, EuclideanDistance}
+import org.tmoerman.plongeur.tda.Distances.EuclideanDistance
 import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.Sketch._
-import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
+import org.tmoerman.plongeur.test.TestResources
 
 /**
   * @author Thomas Moerman
   */
-class SketchSpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
+class SketchSpec extends FlatSpec with SharedSparkContext with TestResources with Matchers {
 
   val square = List(
     (0.0, 0.0), // lower row

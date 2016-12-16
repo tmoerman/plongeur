@@ -1,5 +1,6 @@
 package org.tmoerman.cases.l1000
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.commons.lang.StringUtils.trim
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vectors.dense
@@ -12,24 +13,19 @@ import org.tmoerman.plongeur.tda.Model.{DataPoint, TDAContext, dp}
 import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
 import org.tmoerman.plongeur.tda.knn.SampledKNN.SampledKNNParams
 import org.tmoerman.plongeur.tda.knn.{FastKNN, SampledKNN, _}
-import org.tmoerman.plongeur.test.SparkContextSpec
 import org.tmoerman.plongeur.util.RDDFunctions._
 import org.tmoerman.plongeur.util.TimeUtils.time
 
 /**
   * @author Thomas Moerman
   */
-class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
+class L1000Spec extends FlatSpec with SharedSparkContext with Matchers {
 
   val wd = "src/test/resources/l1000/"
 
   val geneXPSignatures =  wd + "LINCS_Gene_Expression_signatures_CD.csv"
 
   behavior of "L1000"
-
-  val perts = L1000Reader.read(geneXPSignatures)(sc)._2
-
-  val s = perts.count.toInt
 
   val fastKNNParams = {
     val k   = 10
@@ -50,6 +46,8 @@ class L1000Spec extends FlatSpec with SparkContextSpec with Matchers {
     // val (pctTotal, sampleSize) = (1.0, Right(0.01))
     val (pctTotal, sampleSize) = (0.25, Right(0.10))
     // val (pctTotal, sampleSize) = (0.1, Right(0.25))
+
+    val perts = L1000Reader.read(geneXPSignatures)(sc)._2
 
     val ctx = TDAContext(sc, if (pctTotal < 1.0) perts.sample(false, pctTotal) else perts)
 

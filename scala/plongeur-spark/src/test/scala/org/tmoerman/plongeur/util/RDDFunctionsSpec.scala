@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.util
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.scalatest.{Matchers, FlatSpec}
 import org.tmoerman.plongeur.test.TestResources
 
@@ -8,7 +9,7 @@ import RDDFunctions._
 /**
   * @author Thomas Moerman
   */
-class RDDFunctionsSpec extends FlatSpec with TestResources with Matchers {
+class RDDFunctionsSpec extends FlatSpec with SharedSparkContext with TestResources with Matchers {
 
   behavior of "dropping lines of an RDD"
 

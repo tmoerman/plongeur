@@ -2,13 +2,14 @@ package org.tmoerman.plongeur.tda
 
 import java.util.concurrent.TimeUnit.SECONDS
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Inspections._
 import org.tmoerman.plongeur.tda.Model.TDAParams._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
-import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
+import org.tmoerman.plongeur.test.TestResources
 import org.tmoerman.plongeur.util.RxUtils._
 import rx.lang.scala.Observable
 import rx.lang.scala.subjects.PublishSubject
@@ -18,7 +19,7 @@ import scala.concurrent.duration.Duration
 /**
   * @author Thomas Moerman
   */
-class TDAMachineSpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
+class TDAMachineSpec extends FlatSpec with SharedSparkContext with TestResources with Matchers {
 
   behavior of "TDA Machine"
 

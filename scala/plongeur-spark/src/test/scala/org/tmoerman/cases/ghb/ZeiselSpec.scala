@@ -2,6 +2,7 @@ package org.tmoerman.cases.ghb
 
 import breeze.linalg.SparseVector
 import breeze.linalg.SparseVector.zeros
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.commons.lang.StringUtils.trim
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.BreezeConversions._
@@ -14,15 +15,14 @@ import org.tmoerman.plongeur.tda.cluster.Scale.histogram
 import org.tmoerman.plongeur.tda.geometry.Laplacian
 import org.tmoerman.plongeur.tda.knn.ExactKNN
 import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
-import org.tmoerman.plongeur.tda.{Filters, Brewer, TDAMachine}
-import org.tmoerman.plongeur.test.SparkContextSpec
+import org.tmoerman.plongeur.tda.{Brewer, TDAMachine}
 import org.tmoerman.plongeur.util.TimeUtils
 import rx.lang.scala.subjects.PublishSubject
 
 /**
   * @author Thomas Moerman
   */
-class ZeiselSpec extends FlatSpec with SparkContextSpec with Matchers {
+class ZeiselSpec extends FlatSpec with SharedSparkContext with Matchers {
 
   import ZeiselReader._
 
@@ -51,14 +51,14 @@ class ZeiselSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   val L = Some(100)
 
-  val rdd = parseZeisel(sc, exp_mRNA, limit=L)
-
-  val ctx = TDAContext(sc, rdd)
-
   val dist = TanimotoDistance
+
+  def makeCtx = TDAContext(sc, parseZeisel(sc, exp_mRNA, limit=L))
 
   "ExactKNN on the (partial) Zeisel dataset" should "work" ignore {
     val (knnRDD, duration) = TimeUtils.time{
+      val ctx = makeCtx
+
       val kNNParams = ExactKNNParams(k = 20, distance = dist)
 
       ExactKNN(ctx, kNNParams).collect
@@ -69,6 +69,8 @@ class ZeiselSpec extends FlatSpec with SparkContextSpec with Matchers {
 
   "Laplacian eigenvectors for Zeisel dataset" should "work" ignore {
     val (lapEig, duration) = TimeUtils.time{
+      val ctx = makeCtx
+
       Laplacian.tanimoto(ctx).collect
     }
 
@@ -78,6 +80,7 @@ class ZeiselSpec extends FlatSpec with SparkContextSpec with Matchers {
   }
 
   "TDA on the (partial) Zeisel dataset)" should "work" ignore {
+    val ctx = makeCtx
 
     val lap0 = Filter(LaplacianEigenVector(0, distance = TanimotoDistance), 30, 0.3)
     val lap1 = Filter(LaplacianEigenVector(1, distance = TanimotoDistance), 30, 0.3)

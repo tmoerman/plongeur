@@ -1,14 +1,14 @@
 package org.tmoerman.lab
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.test.SparkContextSpec
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * @author Thomas Moerman
   */
-class PIClusteringLab extends FlatSpec with SparkContextSpec with Matchers {
+class PIClusteringLab extends FlatSpec with SharedSparkContext with Matchers {
 
 
 

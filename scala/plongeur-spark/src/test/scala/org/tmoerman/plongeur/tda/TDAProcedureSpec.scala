@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Brewer.palettes
 import org.tmoerman.plongeur.tda.Colour._
@@ -7,12 +8,12 @@ import org.tmoerman.plongeur.tda.Inspections._
 import org.tmoerman.plongeur.tda.Model._
 import org.tmoerman.plongeur.tda.cluster.Clustering._
 import org.tmoerman.plongeur.tda.cluster.Scale._
-import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
+import org.tmoerman.plongeur.test.TestResources
 
 /**
   * @author Thomas Moerman
   */
-class TDAProcedureSpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
+class TDAProcedureSpec extends FlatSpec with SharedSparkContext with TestResources with Matchers {
 
   behavior of "TDA algorithm"
 

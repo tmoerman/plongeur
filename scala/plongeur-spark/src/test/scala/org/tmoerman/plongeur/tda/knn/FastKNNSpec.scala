@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda.TestCommons
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.apache.spark.RangePartitioner
 import org.apache.spark.rdd.RDD
 import org.scalatest.{FlatSpec, Matchers}
@@ -11,13 +12,13 @@ import org.tmoerman.plongeur.tda.knn.ExactKNN.ExactKNNParams
 import org.tmoerman.plongeur.tda.knn.FastKNN.FastKNNParams
 import org.tmoerman.plongeur.tda.knn.FastKNN_ALT.hashProjectionFunctions
 import org.tmoerman.plongeur.tda.knn.{ExactKNN, _}
-import org.tmoerman.plongeur.test.{SparkContextSpec, TestResources}
+import org.tmoerman.plongeur.test.TestResources
 import org.tmoerman.plongeur.util.MatrixFunctions._
 
 /**
   * @author Thomas Moerman
   */
-class FastKNNSpec extends FlatSpec with SparkContextSpec with Matchers with TestResources {
+class FastKNNSpec extends FlatSpec with SharedSparkContext with Matchers with TestResources {
 
   behavior of "brute force kNN functions"
 

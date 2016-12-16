@@ -1,19 +1,11 @@
 package org.tmoerman.plongeur.tda
 
-import org.scalatest.{Matchers, FlatSpec}
-import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
+import com.holdenkarau.spark.testing.SharedSparkContext
+import org.scalatest.{FunSuite, Matchers, FlatSpec}
 
 /**
   * @author Thomas Moerman
   */
-class TDASpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
-
-  behavior of "createLevelSets"
-
-  it should "yield an RDD of DataPoints by levelSetID" in {
-
-
-
-  }
+class TDASpec extends FunSuite with SharedSparkContext {
 
 }

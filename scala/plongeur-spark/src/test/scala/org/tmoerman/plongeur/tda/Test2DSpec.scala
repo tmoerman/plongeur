@@ -1,5 +1,6 @@
 package org.tmoerman.plongeur.tda
 
+import com.holdenkarau.spark.testing.SharedSparkContext
 import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Covering._
 import org.tmoerman.plongeur.tda.Model._
@@ -8,7 +9,7 @@ import org.tmoerman.plongeur.test.TestResources
 /**
   * @author Thomas Moerman
   */
-class Test2DSpec extends FlatSpec with TestResources with Matchers {
+class Test2DSpec extends FlatSpec with SharedSparkContext with TestResources with Matchers {
 
   behavior of "Covering the points"
 

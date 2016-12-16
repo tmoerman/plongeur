@@ -1,6 +1,7 @@
 package org.tmoerman.plongeur.test
 
 import org.apache.commons.lang.StringUtils.trim
+import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.linalg.Vectors._
 import org.apache.spark.rdd.RDD
@@ -10,7 +11,7 @@ import org.tmoerman.plongeur.util.RDDFunctions._
 /**
   * @author Thomas Moerman
   */
-trait TestResources extends SparkContextSpec with FileResources {
+trait TestResources extends FileResources { self: {def sc: SparkContext} =>
 
   val test2DFile = wd + "test2D.csv"
   val irisFile   = wd + "iris.csv"

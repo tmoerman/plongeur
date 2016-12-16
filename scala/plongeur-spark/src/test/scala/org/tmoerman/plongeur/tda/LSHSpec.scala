@@ -1,16 +1,16 @@
 package org.tmoerman.plongeur.tda
 
-import org.apache.spark.mllib.linalg.Vectors._
-import org.scalatest.{Matchers, FlatSpec}
+import com.holdenkarau.spark.testing.SharedSparkContext
+import org.scalatest.{FlatSpec, Matchers}
 import org.tmoerman.plongeur.tda.Distances.CosineDistance
 import org.tmoerman.plongeur.tda.LSH.LSHParams
 import org.tmoerman.plongeur.tda.Model._
-import org.tmoerman.plongeur.test.{TestResources, SparkContextSpec}
+import org.tmoerman.plongeur.test.TestResources
 
 /**
   * @author Thomas Moerman
   */
-class LSHSpec extends FlatSpec with SparkContextSpec with TestResources with Matchers {
+class LSHSpec extends FlatSpec with SharedSparkContext with TestResources with Matchers {
 
   behavior of "toVector"
 
