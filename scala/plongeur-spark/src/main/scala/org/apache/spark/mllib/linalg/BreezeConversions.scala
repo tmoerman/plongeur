@@ -11,7 +11,7 @@ import org.apache.spark.mllib.linalg.{Vector => MLLibVector, Matrix => MLLibMatr
 object BreezeConversions extends Serializable {
 
   implicit class MLLibVectorConversion(val vector: MLLibVector) extends AnyVal {
-    def toBreeze: BreezeVector[Double] = vector.toBreeze
+    def toBreeze: BreezeVector[Double] = vector.asBreeze
   }
 
   implicit class BreezeVectorConversion(val vector: BreezeVector[Double]) extends AnyVal {
@@ -19,7 +19,7 @@ object BreezeConversions extends Serializable {
   }
 
   implicit class MLLibMatrixConversion(val matrix: MLLibMatrix) extends AnyVal {
-    def toBreeze: BreezeMatrix[Double] = matrix.toBreeze
+    def toBreeze: BreezeMatrix[Double] = matrix.asBreeze
   }
 
   implicit class BreezeMatrixConversion(val matrix: BreezeMatrix[Double]) extends AnyVal {
