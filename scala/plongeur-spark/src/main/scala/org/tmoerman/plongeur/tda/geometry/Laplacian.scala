@@ -220,7 +220,7 @@ object Laplacian {
     * @param d
     * @return Returns $\exp\left(-\left(\frac{d}{\sigma}\right)^2\right)$
     */
-  def gaussianSimilarity(d: Distance, sigma: Double = DEFAULT_SIGMA) = exp(-pow(d / (2 * sigma), 2))
+  def gaussianSimilarity(d: Distance, sigma: Double = DEFAULT_SIGMA) = exp(- pow(d, 2) / (2 * sigma))
 
   /**
     * @param m
