@@ -14,4 +14,5 @@
 /plongeur-nb/.*
 /src/test/resources/mnist/
 /src/test/resources/l1000/
+/src/test/resources/zeisel/
 .idea
