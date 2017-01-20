@@ -25,7 +25,12 @@ javaOptions ++= Seq("-Xms512M", "-Xmx2048M", "-XX:MaxPermSize=2048M", "-XX:+CMSC
 
 parallelExecution in Test := false
 
+// See http://stackoverflow.com/questions/28565837/filename-too-long-sbt
+scalacOptions ++= Seq("-Xmax-classfile-name","78")
+
 libraryDependencies ++= Seq(
+
+  "org.scala-lang.modules" %% "scala-xml"        % "1.0.5",
 
   "org.apache.spark"       %% "spark-core"       % sparkVersion % "provided",
   "org.apache.spark"       %% "spark-mllib"      % sparkVersion exclude("com.chuusai", "*"),
